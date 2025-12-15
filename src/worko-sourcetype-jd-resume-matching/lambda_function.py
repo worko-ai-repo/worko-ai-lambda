@@ -12,7 +12,7 @@ from decimal import Decimal
 from typing import List, Tuple, Dict, Any, Optional, Union
 from boto3.dynamodb.conditions import Key, Attr
 import re
-# iac deploy 8
+# iac deploy 9
 dynamodb = boto3.resource('dynamodb')
 from google.cloud import firestore
 from google.oauth2 import service_account
