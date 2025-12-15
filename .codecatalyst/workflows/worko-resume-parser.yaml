@@ -1,4 +1,4 @@
-Name: DeployResumeParserLambda
+Name: DeployResumeParserLambda-${ENV}
 SchemaVersion: "1.0"
 
 Triggers:

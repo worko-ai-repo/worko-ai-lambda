@@ -1,4 +1,4 @@
-Name: DeploySourcetypeLambda
+Name: DeploySourcetypeLambda-${ENV}
 SchemaVersion: "1.0"
 
 Triggers:
