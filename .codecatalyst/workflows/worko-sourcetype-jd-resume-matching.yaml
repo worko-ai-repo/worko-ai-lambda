@@ -14,150 +14,128 @@ Actions:
         - WorkflowSource
     Configuration:
       Steps:
-        # ============================================================
-        # CLEANUP STEP (COMMENTED OUT)
-        # ============================================================
-        # Uncomment this section ONLY if you need to:
-        # 1. Delete manually created Lambda functions
-        # 2. Fix corrupted CloudFormation stacks
-        # 3. Force a complete clean slate deployment
-        #
-        # WARNING: This will DELETE your Lambda and all associated resources!
-        # ============================================================
-        
-        # - Run: |
-        #     echo "=== Cleaning up existing resources ==="
-        #     
-        #     # Check if Lambda exists and find its stack
-        #     LAMBDA_ARN=$(aws lambda get-function --function-name worko-sourcetype-jd-resume-matching-dev --region ap-south-1 --query 'Configuration.FunctionArn' --output text 2>/dev/null || echo "")
-        #     
-        #     if [ ! -z "$LAMBDA_ARN" ]; then
-        #       echo "Lambda function exists: $LAMBDA_ARN"
-        #       
-        #       # Try to find which stack owns it
-        #       OWNER_STACK=$(aws cloudformation describe-stack-resources --physical-resource-id worko-sourcetype-jd-resume-matching-dev --region ap-south-1 --query 'StackResources[0].StackName' --output text 2>/dev/null || echo "")
-        #       
-        #       if [ ! -z "$OWNER_STACK" ] && [ "$OWNER_STACK" != "None" ]; then
-        #         echo "Lambda is managed by stack: $OWNER_STACK"
-        #         echo "Deleting stack: $OWNER_STACK"
-        #         aws cloudformation delete-stack --stack-name "$OWNER_STACK" --region ap-south-1
-        #         aws cloudformation wait stack-delete-complete --stack-name "$OWNER_STACK" --region ap-south-1 || true
-        #       else
-        #         echo "Lambda is not managed by CloudFormation, deleting manually"
-        #         aws lambda delete-function --function-name worko-sourcetype-jd-resume-matching-dev --region ap-south-1 || true
-        #       fi
-        #     else
-        #       echo "Lambda function does not exist"
-        #     fi
-        #     
-        #     # Delete target stack if it exists
-        #     if aws cloudformation describe-stacks --stack-name worko-sourcetype-jd-resume-matching-dev-stack --region ap-south-1 2>/dev/null; then
-        #       echo "Deleting target stack: worko-sourcetype-jd-resume-matching-dev-stack"
-        #       aws cloudformation delete-stack --stack-name worko-sourcetype-jd-resume-matching-dev-stack --region ap-south-1
-        #       aws cloudformation wait stack-delete-complete --stack-name worko-sourcetype-jd-resume-matching-dev-stack --region ap-south-1 || true
-        #     fi
-        #     
-        #     echo "Cleanup completed"
-        
         - Run: |
-            echo "=== Building and Deploying ==="
+            echo "=== Sourcetype JD Resume Matching Lambda Deployment ==="
             
             # Load environment configuration
             ENV=$(cat env-config.json | jq -r '.ENVIRONMENT')
             export AWS_REGION=$(cat env-config.json | jq -r '.AWS_REGION')
             export AWS_DEFAULT_REGION=$AWS_REGION
             S3_BUCKET_MANAGED=$(cat env-config.json | jq -r '.S3_BUCKET_MANAGED')
-            echo "AWS_REGION=$AWS_REGION"
-            echo "Checking AWS caller identity"
-            aws sts get-caller-identity --region $AWS_REGION || true
-            echo ""
-            echo "========================================"
-            echo "PRE-CHECK: Verifying no resource conflicts"
-            echo "========================================"
+            
+            STACK_NAME="worko-sourcetype-jd-resume-matching-${ENV}-stack"
+            FUNCTION_NAME="worko-sourcetype-jd-resume-matching-${ENV}"
+            
+            # ============================================================
+            # FORCE CLEANUP STEP (COMMENTED OUT) Run only in case of manual deployemnts so it will delete first
+            # ============================================================
+            # Uncomment this section ONLY when you need to:
+            # 1. Delete corrupted CloudFormation stacks
+            # 2. Remove manually deployed Lambda functions
+            # 3. Force a complete clean slate deployment
+            #
+            # WARNING: This will DELETE your Lambda and CloudFormation stack!
+            # ============================================================
+            
+            # echo "=== FORCE CLEANUP: Deleting corrupted resources ==="
+            # 
+            # # Delete manually deployed Lambda function if exists
+            # if aws lambda get-function --function-name $FUNCTION_NAME --region $AWS_REGION 2>/dev/null; then
+            #   echo "Deleting manually deployed Lambda function: $FUNCTION_NAME"
+            #   aws lambda delete-function --function-name $FUNCTION_NAME --region $AWS_REGION || true
+            #   echo "Lambda function deleted"
+            # fi
+            # 
+            # # Delete CloudFormation stack if exists (including corrupted ones)
+            # if aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION 2>/dev/null; then
+            #   echo "Deleting CloudFormation stack: $STACK_NAME"
+            #   aws cloudformation delete-stack --stack-name $STACK_NAME --region $AWS_REGION
+            #   echo "Waiting for stack deletion..."
+            #   aws cloudformation wait stack-delete-complete --stack-name $STACK_NAME --region $AWS_REGION || true
+            #   echo "Stack deleted successfully"
+            # fi
+            # 
+            # echo "Force cleanup completed"
+            
+            # Delete broken stack if it exists
+            echo "Checking for existing stack..."
+            if aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION 2>/dev/null; then
+              STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION --query 'Stacks[0].StackStatus' --output text)
+              echo "Stack status: $STACK_STATUS"
+              
+              if [[ "$STACK_STATUS" == *"ROLLBACK_FAILED"* ]] || [[ "$STACK_STATUS" == *"FAILED"* ]] || [[ "$STACK_STATUS" == *"UPDATE_ROLLBACK_FAILED"* ]]; then
+                echo "Stack is in failed state, deleting..."
+                aws cloudformation delete-stack --stack-name $STACK_NAME --region $AWS_REGION
+                echo "Waiting for stack deletion..."
+                aws cloudformation wait stack-delete-complete --stack-name $STACK_NAME --region $AWS_REGION
+                echo "Broken stack deleted successfully"
+              fi
+            fi
+            
+            # Check if Lambda function exists
             echo "Checking if Lambda function exists..."
-            aws lambda get-function --function-name worko-sourcetype-jd-resume-matching-${ENV} --region $AWS_REGION 2>&1 || echo "Lambda does not exist (OK)"
-            echo ""
-            echo "Checking if IAM role exists..."
-            aws iam get-role --role-name worko-sourcetype-jd-resume-matching-${ENV}-stack-AgencyLambdaRole --region $AWS_REGION 2>&1 || echo "IAM role does not exist (OK)"
-            echo ""
-            echo "Checking if Layer exists..."
-            aws lambda list-layer-versions --layer-name worko-sourcetype-jd-resume-matching-deps-${ENV} --region $AWS_REGION 2>&1 || echo "Layer does not exist (OK)"
-            echo ""
-            cd src/worko-sourcetype-jd-resume-matching-dev
-            echo "========================================"
-            echo "STEP 1: Verifying directory structure"
-            echo "========================================"
-            pwd
-            ls -la
-            echo ""
-            echo "========================================"
-            echo "STEP 2: Checking template.yaml exists"
-            echo "========================================"
-            cat template.yaml | head -20
-            echo ""
-            echo "========================================"
-            echo "STEP 3: Building SAM application"
-            echo "========================================"
+            LAMBDA_EXISTS=false
+            if aws lambda get-function --function-name $FUNCTION_NAME --region $AWS_REGION 2>/dev/null; then
+              echo "Lambda function exists - will update"
+              LAMBDA_EXISTS=true
+            else
+              echo "Lambda function does not exist - will create"
+              LAMBDA_EXISTS=false
+            fi
+            
+            cd src/worko-sourcetype-jd-resume-matching
+            
+            echo "Building SAM application..."
             sam build --use-container
             BUILD_EXIT_CODE=$?
-            echo "Build exit code: $BUILD_EXIT_CODE"
             if [ $BUILD_EXIT_CODE -ne 0 ]; then
-              echo "ERROR: SAM build failed with exit code $BUILD_EXIT_CODE"
+              echo "ERROR: Build failed"
               exit 1
             fi
-            echo ""
-            echo "========================================"
-            echo "STEP 4: Verifying build output"
-            echo "========================================"
-            ls -la .aws-sam/build || true
-            echo ""
-            echo "========================================"
-            echo "STEP 5: Validating built template"
-            echo "========================================"
+            
+            echo "Validating template..."
             aws cloudformation validate-template --template-body file://.aws-sam/build/template.yaml --region $AWS_REGION
-            VALIDATE_EXIT_CODE=$?
-            echo "Validation exit code: $VALIDATE_EXIT_CODE"
-            if [ $VALIDATE_EXIT_CODE -ne 0 ]; then
-              echo "ERROR: Template validation failed"
-              echo "Template content:"
-              cat .aws-sam/build/template.yaml
-              exit 1
+            
+            echo "Deploying to CloudFormation..."
+            if [ "$LAMBDA_EXISTS" = true ]; then
+              echo "Updating existing Lambda function"
+              sam deploy \
+                --template-file .aws-sam/build/template.yaml \
+                --stack-name $STACK_NAME \
+                --region $AWS_REGION \
+                --capabilities CAPABILITY_IAM \
+                --parameter-overrides Environment=$ENV \
+                --s3-bucket $S3_BUCKET_MANAGED \
+                --no-confirm-changeset \
+                --no-fail-on-empty-changeset
+            else
+              echo "Creating new Lambda function"
+              sam deploy \
+                --template-file .aws-sam/build/template.yaml \
+                --stack-name $STACK_NAME \
+                --region $AWS_REGION \
+                --capabilities CAPABILITY_IAM \
+                --parameter-overrides Environment=$ENV \
+                --s3-bucket $S3_BUCKET_MANAGED \
+                --on-failure DELETE \
+                --no-confirm-changeset \
+                --no-fail-on-empty-changeset
             fi
-            echo ""
-            echo "========================================"
-            echo "STEP 6: SAM template validation"
-            echo "========================================"
-            sam validate --template .aws-sam/build/template.yaml
-            echo ""
-            echo "========================================"
-            echo "STEP 7: Deploying to CloudFormation"
-            echo "========================================"
-            sam deploy --debug \
-              --template-file .aws-sam/build/template.yaml \
-              --stack-name worko-sourcetype-jd-resume-matching-${ENV}-stack \
-              --region $AWS_REGION \
-              --capabilities CAPABILITY_IAM \
-              --parameter-overrides Environment=$ENV \
-              --s3-bucket $S3_BUCKET_MANAGED \
-              --on-failure DELETE \
-              --no-confirm-changeset \
-              --no-fail-on-empty-changeset
+            
             DEPLOY_EXIT_CODE=$?
-            echo ""
-            echo "========================================"
-            echo "Deploy exit code: $DEPLOY_EXIT_CODE"
-            echo "========================================"
+            
             if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
               echo "ERROR: Deployment failed with exit code $DEPLOY_EXIT_CODE"
-              echo ""
-              echo "=== Fetching CloudFormation Stack Events ==="
-              aws cloudformation describe-stack-events --stack-name worko-sourcetype-jd-resume-matching-${ENV}-stack --region $AWS_REGION --max-items 20 || true
+              echo "Fetching CloudFormation Stack Events..."
+              aws cloudformation describe-stack-events --stack-name $STACK_NAME --region $AWS_REGION --max-items 20 || true
               exit 1
             fi
-            echo ""
-            echo "========================================"
-            echo "SUCCESS: Deployment completed"
-            echo "========================================"
+            
+            echo "SUCCESS: Sourcetype JD Resume Matching Lambda deployed successfully"
+            
+            # Verify deployment
+            NEW_VERSION=$(aws lambda get-function --function-name $FUNCTION_NAME --region $AWS_REGION --query 'Configuration.Version' --output text)
+            echo "New version deployed: $NEW_VERSION"
     Environment:
       Name: dev
     Compute:
