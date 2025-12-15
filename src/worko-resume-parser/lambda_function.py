@@ -16,7 +16,7 @@ import base64
 # import ulid    
 import uuid
 sqs = boto3.client('sqs')
-# iac deploy 7
+# iac deploy 8
 
 
 # Initialize the AWS service clients
