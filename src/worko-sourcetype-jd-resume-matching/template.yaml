@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Worko AI Lambda - Intelligent Processing Function
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Timeout: 180
+    MemorySize: 256
+    Runtime: python3.10
+
+Resources:
+  AgencyLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Scan
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: "*"
+
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-sourcetype-jd-resume-matching-deps-${Environment}"
+      Description: Python dependencies for worko sourcetype JD resume matching lambda
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.10
+    Metadata:
+      BuildMethod: python3.10
+
+  AgencyTestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "worko-sourcetype-jd-resume-matching-${Environment}"
+      CodeUri: ./
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt AgencyLambdaRole.Arn
+      Layers:
+        - !Ref PythonDependenciesLayer
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          S3_BUCKET_NAME: !Sub "worko-app-${Environment}"
+          DYNAMO_TABLE_NAME: "worko"
+          JOBS_DYNAMO_TABLE_NAME: "worko-job-app"
+          S3_VECTOR_BUCKET_NAME: "worko-s3-vector-bucket"
+          S3_VECTOR_INDEX_NAME: "collegelist-s3-vector-index"
+          AZURE_OPENAI_ENDPOINT: "https://aif-wrk-dev-sin-01.openai.azure.com"
+          AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
+          AZURE_OPENAI_API_KEY: "REDACTED"
+          AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
+          acc_type: "service_account"
+          project_id: !Sub "worko-${Environment}"
+          private_key: "REDACTED\n"
+          client_email: "worko-gcp-firestore@worko-dev.iam.gserviceaccount.com"
+          token_uri: "https://oauth2.googleapis.com/token"
+Outputs:
+  WorkoAILambdaFunctionArn:
+    Description: Worko AI Lambda Function ARN
+    Value: !GetAtt AgencyTestFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-WorkoAILambdaFunctionArn"

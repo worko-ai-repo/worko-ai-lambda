@@ -1,0 +1,30 @@
+# SAM build artifacts
+.aws-sam/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment variables
+env.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test files (optional - remove if you want to commit them)
+test_lambda.py
+test-local.bat
+test-api.bat
+test-direct.bat
+start-api.bat

@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Worko Job Description Parser Lambda
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 256
+    Runtime: python3.10
+
+Resources:
+  JobDescParserLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Scan
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: "*"
+
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-job-description-parser-deps-${Environment}"
+      Description: Python dependencies for worko job description parser lambda
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.10
+    Metadata:
+      BuildMethod: python3.10
+
+  JobDescParserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "worko-job-description-parser-${Environment}"
+      CodeUri: ./
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt JobDescParserLambdaRole.Arn
+      Layers:
+        - !Ref PythonDependenciesLayer
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          S3_BUCKET_NAME: !Sub "worko-app-${Environment}"
+          DYNAMO_TABLE_NAME: "worko"
+          JOBS_DYNAMO_TABLE_NAME: "worko-job-app"
+          acc_type: "service_account"
+          project_id: !Sub "worko-${Environment}"
+          private_key: "REDACTED\n"
+          client_email: "worko-gcp-firestore@worko-dev.iam.gserviceaccount.com"
+          token_uri: "https://oauth2.googleapis.com/token"
+
+Outputs:
+  JobDescParserLambdaFunctionArn:
+    Description: Worko Job Description Parser Lambda Function ARN
+    Value: !GetAtt JobDescParserFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-JobDescParserLambdaFunctionArn"
