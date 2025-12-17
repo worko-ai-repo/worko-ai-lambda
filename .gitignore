@@ -28,3 +28,7 @@ test-local.bat
 test-api.bat
 test-direct.bat
 start-api.bat
+.venv
+
+# Exclude sourcetype lambda template.yaml from push
+# src/worko-sourcetype-jd-resume-matching/template.yaml

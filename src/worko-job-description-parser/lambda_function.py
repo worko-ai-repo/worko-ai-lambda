@@ -539,7 +539,6 @@ def lambda_handler(event, context):
             )
 
     dynamic_prompt=f"Parse this JD:\n{job_desc}"
-    # GCP_secret_name = "GCP-secrect"
     GCP_secret_name = "GCP-firestore-secret-dev"
     credentials = get_secret(GCP_secret_name)
 

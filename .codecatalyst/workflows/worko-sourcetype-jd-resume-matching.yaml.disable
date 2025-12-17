@@ -17,11 +17,20 @@ Actions:
         - Run: |
             echo "=== Sourcetype JD Resume Matching Lambda Deployment ==="
             
+            # Set AWS default profile
+            set AWS_PROFILE=DeveloperAccess-211125353899
+            
             # Load environment configuration
             ENV=$(cat env-config.json | jq -r '.ENVIRONMENT')
             export AWS_REGION=$(cat env-config.json | jq -r '.AWS_REGION')
             export AWS_DEFAULT_REGION=$AWS_REGION
             S3_BUCKET_MANAGED=$(cat env-config.json | jq -r '.S3_BUCKET_MANAGED')
+            
+            echo "Environment Variables:"
+            echo "AWS_PROFILE: $AWS_PROFILE"
+            echo "ENV: $ENV"
+            echo "AWS_REGION: $AWS_REGION"
+            echo "S3_BUCKET_MANAGED: $S3_BUCKET_MANAGED"
             
             STACK_NAME="worko-sourcetype-jd-resume-matching-${ENV}-stack"
             FUNCTION_NAME="worko-sourcetype-jd-resume-matching-${ENV}"
