@@ -12,7 +12,8 @@ from decimal import Decimal
 from typing import List, Tuple, Dict, Any, Optional, Union
 from boto3.dynamodb.conditions import Key, Attr
 import re
-# iac deploy 10
+from botocore.exceptions import ClientError
+# iac deploy 11
 dynamodb = boto3.resource('dynamodb')
 from google.cloud import firestore
 from google.oauth2 import service_account
@@ -654,33 +655,37 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
     return Rejection_object
 
 class FirestoreManager:
-    def __init__(self):
+    def __init__(self,GCP_secret_name):
+        self.GCP_secret_name = GCP_secret_name
         self.db = self._initialize_firestore()
 
-    def _initialize_firestore(self):
-        acc_type = os.getenv("acc_type")
-        project_id = os.getenv("project_id")
-        private_key = os.getenv("private_key")
-        client_email = os.getenv("client_email")
-        token_uri = os.getenv("token_uri")
-        private_key = private_key.replace('\\n', '\n')
+    def get_secret(self,secret_name):
+        secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
 
-        FIRESTORE_PROJECT_ID ="worko-dev"
-        GCP_DATABASE_NAME="worko-corp-db-dev"
-        creds_dict = {
-            "type": "service_account",
-            "project_id": "worko-dev",
-            "private_key": "REDACTED\n",
-            "client_email": "worko-gcp-firestore@worko-dev.iam.gserviceaccount.com",
-            "token_uri": "https://oauth2.googleapis.com/token",
-        }
-        # creds_dict = {
-        #     "type": acc_type,
-        #     "project_id": project_id,
-        #     "private_key": private_key,
-        #     "client_email": client_email,
-        #     "token_uri": token_uri,
-        # }
+        try:
+            response = secrets_client.get_secret_value(SecretId=secret_name)
+            secret_value = response['SecretString']
+            
+            # Try to parse as JSON, fallback to string
+            try:
+                secret_data = json.loads(secret_value)
+            except json.JSONDecodeError:
+                secret_data = secret_value
+            return secret_data
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                return {
+                    "statusCode": 404,
+                    "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
+                }
+
+
+
+    def _initialize_firestore(self):
+        creds_dict = self.get_secret(self.GCP_secret_name)
+        FIRESTORE_PROJECT_ID =creds_dict.get("project_id")
+        GCP_DATABASE_NAME ="worko-corp-db-dev"
+
         
         credentials = service_account.Credentials.from_service_account_info(creds_dict)
         db = firestore.Client(project=FIRESTORE_PROJECT_ID, credentials=credentials, database=GCP_DATABASE_NAME)
@@ -769,8 +774,10 @@ def lambda_handler(event, context):
     actionByCorporateUserId = event.get("actionByCorporateUserId","")
     actionByUserId = event.get("actionByUserId")
     # actionByUserId = event.get("agencyUserSubmissionId","")
+    env = os.environ.get("ENVIRONMENT")
+    GCP_secret_name = "GCP-firestore-secret-"+env
 
-    DBManager = FirestoreManager()
+    DBManager = FirestoreManager(GCP_secret_name)
     collection_name = "agencyUserSubmissions" 
     DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,"","")
 

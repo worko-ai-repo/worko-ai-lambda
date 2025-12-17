@@ -49,6 +49,10 @@ Resources:
                 Action:
                   - bedrock:InvokeModel
                 Resource: "*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
 
   PythonDependenciesLayer:
     Type: AWS::Serverless::LayerVersion
@@ -82,11 +86,7 @@ Resources:
           AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
           AZURE_OPENAI_API_KEY: "REDACTED"
           AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
-          acc_type: "service_account"
-          project_id: !Sub "worko-${Environment}"
-          private_key: "REDACTED\n"
-          client_email: "worko-gcp-firestore@worko-dev.iam.gserviceaccount.com"
-          token_uri: "https://oauth2.googleapis.com/token"
+
 Outputs:
   WorkoAILambdaFunctionArn:
     Description: Worko AI Lambda Function ARN
