@@ -655,9 +655,9 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
     return Rejection_object
 
 class FirestoreManager:
-    def __init__(self,GCP_secret_name,env):
+    def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
         self.GCP_secret_name = GCP_secret_name
-        self.env = env
+        self.GCP_DATABASE_NAME = GCP_DATABASE_NAME
         self.db = self._initialize_firestore()
 
     def get_secret(self,secret_name):
@@ -686,12 +686,12 @@ class FirestoreManager:
         creds_dict = self.get_secret(self.GCP_secret_name)
         FIRESTORE_PROJECT_ID =creds_dict.get("project_id")
 
-        GCP_DATABASE_NAME ="worko-corp-db-" +self.env 
+        # GCP_DATABASE_NAME ="worko-corp-db-" +self.env 
 
         
         credentials = service_account.Credentials.from_service_account_info(creds_dict)
-        db = firestore.Client(project=FIRESTORE_PROJECT_ID, credentials=credentials, database=GCP_DATABASE_NAME)
-        print(f"Firestore initialized successfully for project: {FIRESTORE_PROJECT_ID}, database: {GCP_DATABASE_NAME}")
+        db = firestore.Client(project=FIRESTORE_PROJECT_ID, credentials=credentials, database=self.GCP_DATABASE_NAME)
+        print(f"Firestore initialized successfully for project: {FIRESTORE_PROJECT_ID}, database: {self.GCP_DATABASE_NAME}")
         return db
 
     def update_firestore_document_with_scoring_data(self,collection_name: str, doc_id: str,update_data,isFindMatchingScoreInProgress):
@@ -778,8 +778,9 @@ def lambda_handler(event, context):
     # actionByUserId = event.get("agencyUserSubmissionId","")
     env = os.environ.get("ENVIRONMENT")
     GCP_secret_name = "GCP-firestore-secret-"+env
-
-    DBManager = FirestoreManager(GCP_secret_name)
+    GCP_DATABASE_NAME = "worko-corp-db-" +env 
+    
+    DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
     collection_name = "agencyUserSubmissions" 
     DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,"","")
 
