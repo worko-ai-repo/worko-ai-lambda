@@ -655,8 +655,9 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
     return Rejection_object
 
 class FirestoreManager:
-    def __init__(self,GCP_secret_name):
+    def __init__(self,GCP_secret_name,env):
         self.GCP_secret_name = GCP_secret_name
+        self.env = env
         self.db = self._initialize_firestore()
 
     def get_secret(self,secret_name):
@@ -684,7 +685,8 @@ class FirestoreManager:
     def _initialize_firestore(self):
         creds_dict = self.get_secret(self.GCP_secret_name)
         FIRESTORE_PROJECT_ID =creds_dict.get("project_id")
-        GCP_DATABASE_NAME ="worko-corp-db-dev"
+
+        GCP_DATABASE_NAME ="worko-corp-db-" +self.env 
 
         
         credentials = service_account.Credentials.from_service_account_info(creds_dict)
