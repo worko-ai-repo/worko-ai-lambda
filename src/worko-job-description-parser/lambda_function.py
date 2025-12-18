@@ -147,8 +147,8 @@ def clean_and_load(raw: str) -> dict:
         print("Cleaned JSON:", cleaned)
         return None
 
-def call_sonnet4(prompt,creds, max_json_try=3, want_json=True, system_prompt=None):  # ← Add system_prompt parameter
-    PROJECT_ID = "worko-dev"
+def call_sonnet4(prompt,creds, env,max_json_try=3, want_json=True, system_prompt=None):  # ← Add system_prompt parameter
+    PROJECT_ID = "worko-"+ env
     LOCATION="global"
     # SERVICE_ACCOUNT_FILE = r"C:\Users\Administrator\Desktop\worko_working\worko_code_chainged_files\vertex-sa.json"
 
@@ -269,7 +269,7 @@ def invoke_model_with_backoff_nova(prompt, max_retries=10, base_delay=2):
             else:
                 raise
 
-def invoke_model_nova(prompt):
+
     bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name = "ap-south-1")
     body = json.dumps({
         "inferenceConfig": {
@@ -376,6 +376,10 @@ def load_ai_json(response):
 
 def lambda_handler(event, context):
     print(event)
+    env = os.environ.get("ENVIRONMENT")
+    
+    GCP_secret_name = "GCP-firestore-secret-"+env
+    print(GCP_secret_name)
 
     job_desc = event.get('JOB_DESC', "")
     job_desc = re.sub(r'[\x00-\x1F\x7F]', '', job_desc)  # Remove control characters
@@ -539,10 +543,11 @@ def lambda_handler(event, context):
             )
 
     dynamic_prompt=f"Parse this JD:\n{job_desc}"
-    GCP_secret_name = "GCP-firestore-secret-dev"
+
+
     credentials = get_secret(GCP_secret_name)
 
-    response = call_sonnet4(prompt=dynamic_prompt,creds = credentials,max_json_try=3, want_json=True, system_prompt=prompt)
+    response = call_sonnet4(prompt=dynamic_prompt,creds = credentials,env=env,max_json_try=3, want_json=True, system_prompt=prompt)
     # response = clean_and_load(content)
     end_time = time.time()
     print(f"step 2 invoked ai and got response time took :- {end_time-start_time}")

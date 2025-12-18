@@ -1,4 +1,4 @@
-Name: DeployJobDescParserLambda-${ENV}
+Name: DeployJobDescParserLambda
 SchemaVersion: "1.0"
 
 Triggers:

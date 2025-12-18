@@ -81,11 +81,6 @@ Resources:
           S3_BUCKET_NAME: !Sub "worko-app-${Environment}"
           DYNAMO_TABLE_NAME: "worko"
           JOBS_DYNAMO_TABLE_NAME: "worko-job-app"
-          acc_type: "service_account"
-          project_id: !Sub "worko-${Environment}"
-          private_key: "REDACTED\n"
-          client_email: "worko-gcp-firestore@worko-dev.iam.gserviceaccount.com"
-          token_uri: "https://oauth2.googleapis.com/token"
 
 Outputs:
   JobDescParserLambdaFunctionArn:
