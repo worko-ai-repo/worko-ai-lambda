@@ -65,7 +65,7 @@ Resources:
       RetentionPolicy: Retain
     Metadata:
       BuildMethod: python3.10
-      BuildArchitecture: arm64
+      BuildArchitecture: x86_64
 
   AgencyTestFunction:
     Type: AWS::Serverless::Function
