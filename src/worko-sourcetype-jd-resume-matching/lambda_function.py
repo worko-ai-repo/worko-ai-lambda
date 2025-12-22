@@ -694,7 +694,7 @@ class FirestoreManager:
         print(f"Firestore initialized successfully for project: {FIRESTORE_PROJECT_ID}, database: {self.GCP_DATABASE_NAME}")
         return db
 
-    def update_firestore_document_with_scoring_data(self,collection_name: str, doc_id: str,update_data,isFindMatchingScoreInProgress):
+    def update_firestore_document_with_scoring_data(self,collection_name: str, doc_id: str,update_data,isFindMatchingScoreInProgress,jobMatched):
         current_datetime = datetime.now()
         # Convert it to an ISO 8601 formatted string
         iso_string = current_datetime.isoformat()
@@ -705,8 +705,15 @@ class FirestoreManager:
                 updatedByUserId = update_data.get("updatedByUserId","")
                 updatedByCorporateUserId = update_data.get("updatedByCorporateUserId","")
                 matchingScoreDetails = update_data.get("matchingScoreDetails","")
+
+                if jobMatched:
+                    doc_ref = self.db.collection(collection_name).document(doc_id)
+                    doc_ref.update(update_data)
+                    print(f"Updated Firestore document {doc_id} isFindMatchingScoreInProgress: False and update_data : {matchingScoreDetails}")
+                    return True
+
                 
-                if updatedByCorporateUserId: #if you receive actionByCorporateUserId in payload then  updatedByCorporateUserId 
+                elif updatedByCorporateUserId: #if you receive actionByCorporateUserId in payload then  updatedByCorporateUserId 
                     doc_ref = self.db.collection(collection_name).document(doc_id)
                     doc_ref.update({
                         "matchingScoreDetails" : matchingScoreDetails,
@@ -1635,37 +1642,71 @@ def lambda_handler(event, context):
         # update data in firstore
 
         if candidateJobMatchingId:
-                DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
-                collection_name = "candidateJobMatchings" 
+            DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+            collection_name = "candidateJobMatchings" 
+
+            if actionByCorporateUserId:
                 if Rejection_object:
-                    updated_data = { "matchingScoreDetails":{ "cvExtract":"",
+                    updated_data = { "isFindMatchingScoreInProgress":False,
+                                    "updatedByCorporateUserId": actionByCorporateUserId,
+                    "cvExtract":"",
                     "jdMatchErrorCode":200,
                     "jdMatchErrorDesc": "",
+                    
                     "matchingScore": int(overall_matching_score),
-                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "rejectionObject":Rejection_object,
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
                     "scoreDetailsForApplicant":scoreDetailsForApplicant,
                     "scoreDetails":scoreDetails,
                     "emailFeedback":emailFeedback,
-                    "rejectionObject":Rejection_object
-                    },
                     
+                    
+                    }
+                else:
+                    updated_data = { "isFindMatchingScoreInProgress":False,
+                    "cvExtract":"",
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback,
+                    "updatedByCorporateUserId": actionByCorporateUserId,
+                    }
+
+            elif actionByUserId:
+                if Rejection_object:
+                    updated_data = { "isFindMatchingScoreInProgress":False,
+                    "cvExtract":"",
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback,
+                    "rejectionObject":Rejection_object,
                     "updatedByUserId": actionByUserId
                     
                     }
                 else:
-                    updated_data = { "matchingScoreDetails":{"cvExtract":"",
+                    updated_data = { "isFindMatchingScoreInProgress":False,
+                    "cvExtract":"",
                     "jdMatchErrorCode":200,
                     "jdMatchErrorDesc": "",
                     "matchingScore": int(overall_matching_score),
-                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
                     "scoreDetailsForApplicant":scoreDetailsForApplicant,
                     "scoreDetails":scoreDetails,
-                    "emailFeedback":emailFeedback
-                    },
-                    
+                    "emailFeedback":emailFeedback,
                     "updatedByUserId": actionByUserId
                     }
-                DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,updated_data,False)
+                DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,updated_data,False,True)
 
         else:
             if actionByCorporateUserId:
@@ -1675,7 +1716,8 @@ def lambda_handler(event, context):
                     "jdMatchErrorCode":200,
                     "jdMatchErrorDesc": "",
                     "matchingScore": int(overall_matching_score),
-                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
                     "scoreDetailsForApplicant":scoreDetailsForApplicant,
                     "scoreDetails":scoreDetails,
                     "emailFeedback":emailFeedback,
@@ -1688,7 +1730,8 @@ def lambda_handler(event, context):
                     "jdMatchErrorCode":200,
                     "jdMatchErrorDesc": "",
                     "matchingScore": int(overall_matching_score),
-                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
                     "scoreDetailsForApplicant":scoreDetailsForApplicant,
                     "scoreDetails":scoreDetails,
                     "emailFeedback":emailFeedback},
@@ -1702,7 +1745,8 @@ def lambda_handler(event, context):
                     "jdMatchErrorCode":200,
                     "jdMatchErrorDesc": "",
                     "matchingScore": int(overall_matching_score),
-                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
                     "scoreDetailsForApplicant":scoreDetailsForApplicant,
                     "scoreDetails":scoreDetails,
                     "emailFeedback":emailFeedback,
@@ -1717,7 +1761,8 @@ def lambda_handler(event, context):
                     "jdMatchErrorCode":200,
                     "jdMatchErrorDesc": "",
                     "matchingScore": int(overall_matching_score),
-                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "rejectionFeedbackBySystem":rejection_feedback,
+                    "rejectionFeedbackBySystemForApplicant":rejectionFeedbackBySystemForApplicant,
                     "scoreDetailsForApplicant":scoreDetailsForApplicant,
                     "scoreDetails":scoreDetails,
                     "emailFeedback":emailFeedback
@@ -1727,7 +1772,7 @@ def lambda_handler(event, context):
                     }
                 # "updatedAt": iso_string,
             
-            DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,updated_data,False)
+            DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,updated_data,False,False)
 
         return {
             "statusCode": 200,
