@@ -791,12 +791,12 @@ def lambda_handler(event, context):
     if candidateJobMatchingId: #update flag in case of candidateJobMatchingId
         DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
         collection_name = "candidateJobMatchings" 
-        DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,"","")
+        DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,"","",False)
 
     else:
         DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
         collection_name = "agencyUserSubmissions" 
-        DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,"","")
+        DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,"","",False)
 
     # get the job description
     index_name = "GSI1"
