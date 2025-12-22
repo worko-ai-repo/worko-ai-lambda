@@ -767,6 +767,8 @@ def lambda_handler(event, context):
     cvAwsS3FileName= event.get("cvAwsS3FileName")
     jobs_id= event.get("jobId")
     partition_key_value= event.get("USER_PK","")
+    candidateJobMatchingId = event.get("candidateJobMatchingId","")
+
     
 
 
@@ -779,10 +781,15 @@ def lambda_handler(event, context):
     env = os.environ.get("ENVIRONMENT")
     GCP_secret_name = "GCP-firestore-secret-"+env
     GCP_DATABASE_NAME = "worko-corp-db-" +env 
-    
-    DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
-    collection_name = "agencyUserSubmissions" 
-    DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,"","")
+    if candidateJobMatchingId: #update flag in case of candidateJobMatchingId
+        DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+        collection_name = "candidateJobMatchings" 
+        DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,"","")
+
+    else:
+        DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+        collection_name = "agencyUserSubmissions" 
+        DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,"","")
 
     # get the job description
     index_name = "GSI1"
@@ -1584,75 +1591,6 @@ def lambda_handler(event, context):
                             f"- **Last check** In entire feedback there must not be contracdiction if finds any correct it."
                         )
 
-                        # prompt = (
-                        #     f"**Resume Content:**{processed_text}"
-                        #     f"**job Description:**{jdItem_extracted} \n"
-                        #     f"**mandatory_skills: {mandatory_skills_missing} analys these structured ananlysis report and understand which requiremnts are met and which are not."
-                        #     f"Analyze why this candidate scored low against job requirements in Mandatory Requirements. Return response in exact JSON format:\n"
-                        #     f"Output:"
-                        #     f"Provide recruiter feedback in JSON format with two keys: feedback_Recruiter, feedback_Candidate"
-                        #     f"Each feedback will have three keys: \"Note\", \"Strengths\", and \"Areas of Concern\"."
-                        #     f"Format Example:"
-                        #     f"{{\n"
-                        #     f"  \"feedback_Recruiter\": {{\n"
-                        #     f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
-                        #     f"    \"Strengths\": [\n"
-                        #     f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                        #     f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                        #     f"    ],\n"
-                        #     f"    \"AreasOfConcern\": [\n"
-                        #     f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                        #     f"    ]\n"
-                        #     f"  }},\n"
-                        #     f"  \"feedback_Candidate\": {{\n"
-                        #     f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
-                        #     f"    \"Strengths\": [\n"
-                        #     f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                        #     f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                        #     f"    ],\n"
-                        #     f"    \"AreasOfConcern\": [\n"
-                        #     f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                        #     f"    ]\n"
-                        #     f"  }}\n"
-                        #     f"}}\n"
-                        #     f"Requirements:\n"
-                        #     f"1. -For RecruiterNote never use speculative phrases like 'resume shows' or 'appears to have' — state facts directly with calling candidate name."
-                        #     f"    -For CandidateNote never use speculative phrases like 'your resume shows' or 'appears to have' — talk dierectly with candidate. state facts directly with calling candidate name or saying you don't have..."
-                        #     f"    -For CandidateNote evry missing  Mandatory Requirements must be included. and it should always start with you or name of the candidate."
-                        #     f"    -For CandidateNote Never say candidate always talk directly to candidate. it must start with you or name of the candidate."
-                        #     f"2. you are generating a rejection feedback so focuse more on what skills or Requirements candidate is not having and tell straightforward"
-                        #     f"- Never talk about total years of experience in area of concern."
-                        #     f"- Each Note detail should be one direct statement (15-25 words) starting with 'Candidate'\n"
-                        #     f"- Note should be meaningful just dont put 'critical deficiency', it should match with the message\n"
-                        #     f"- Heading should not start with 'name of candidate has no...' or 'name of candidate lacks...'never reference 'resume' or 'CV'\n"
-                        #     f"- In detail, always write 'Candidate has no...' or 'Candidate lacks...' - never reference 'resume' or 'CV'\n"
-                        #     f"- Focus on what the person doesn't have, not what their document doesn't show\n"
-                        #     f"- Examples: 'Candidate has no digital marketing experience' or 'Candidate lacks required Python skills'\n"
-                        #     f"- Highlight missing mandatory requirements that caused low score\n"
-                        #     f"3. Use natural, direct language that sounds human-written, not AI-generated\n"
-                        #     f"- Flag: Educational qualification gaps\n"
-                        #     f"- Flag: Experience is higher than the required experience for the job\n"
-                        #     f"- Flag: Critical technical skills missing\n"
-                        #     f"- Flag: Industry experience insufficient\n"
-                        #     f"- Flag: Required certifications absent\n"
-                        #     f"- Flag: Leadership/management experience lacking when required\n"
-                        #     f"- Flag: Career progression inconsistencies \n"
-                        #     f"4. there must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
-                        #     f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
-                        #     f"- SPECIAL MENTION: Extended unemployment periods (12+ months)\n"
-                        #     f"- SPECIAL MENTION: Pattern of short tenure roles (<1 year)\n"
-                        #     f"- LOCATION RULE: Only mention location concerns if candidate explicitly states inability to work from required location in resume. If location not mentioned, assume candidate is willing to work from any location.\n"
-                        #     f"- LANGUAGE RULE: Only mention language deficiency if candidate explicitly lacks required languages in resume. If languages not mentioned, assume candidate has required language skills.\n"
-                        #     f"- Tone should be objective, professional, and decision-focused for HR evaluation\n"
-                        #     f"- Last check : GO through entre feedback once again and if RecruiterNote and Strengths if they are contradicting with each other then correct it by taking right statment from Resume and jd.\n"
-                        #     f"5. Validate every line of feedback from Resume Content it should valid with respect to Resume Content"
-                        #     )
-                        
-                        # content = invoke_model_with_backoff_nova(prompt)
-                        # completion_text_rejection = extract_text_from_nova(content)
-                        # print_completion_text(completion_text_rejection)
-                        # rejection_feedback = completion_text_rejection
-                        # print("******mandatory_skills_missing Issue******:", overall_matching_score)
 
 
                         completion_text_rejection =  invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection when amndatory Not met")
@@ -1696,69 +1634,100 @@ def lambda_handler(event, context):
             Rejection_object  = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text)
         # update data in firstore
 
+        if candidateJobMatchingId:
+                DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+                collection_name = "candidateJobMatchings" 
+                if Rejection_object:
+                    updated_data = { "matchingScoreDetails":{ "cvExtract":"",
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback,
+                    "rejectionObject":Rejection_object
+                    },
+                    
+                    "updatedByUserId": actionByUserId
+                    
+                    }
+                else:
+                    updated_data = { "matchingScoreDetails":{"cvExtract":"",
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback
+                    },
+                    
+                    "updatedByUserId": actionByUserId
+                    }
+                DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,updated_data,False)
 
-        # rejectionFeedbackBySystem = rejection_feedback
-        if actionByCorporateUserId:
-            if Rejection_object:
-                updated_data = { "matchingScoreDetails": { "cvExtract":"",
-                
-                "jdMatchErrorCode":200,
-                "jdMatchErrorDesc": "",
-                "matchingScore": int(overall_matching_score),
-                "rejectionFeedbackBySystemForApplicant":rejection_feedback,
-                "scoreDetailsForApplicant":scoreDetailsForApplicant,
-                "scoreDetails":scoreDetails,
-                "emailFeedback":emailFeedback,
-                "rejectionObject":Rejection_object},
-                
-                "updatedByCorporateUserId": actionByCorporateUserId
-                }
-            else:
-                updated_data = { "matchingScoreDetails":{"cvExtract":"",
-                "jdMatchErrorCode":200,
-                "jdMatchErrorDesc": "",
-                "matchingScore": int(overall_matching_score),
-                "rejectionFeedbackBySystemForApplicant":rejection_feedback,
-                "scoreDetailsForApplicant":scoreDetailsForApplicant,
-                "scoreDetails":scoreDetails,
-                "emailFeedback":emailFeedback},
+        else:
+            if actionByCorporateUserId:
+                if Rejection_object:
+                    updated_data = { "matchingScoreDetails": { "cvExtract":"",
+                    
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback,
+                    "rejectionObject":Rejection_object},
+                    
+                    "updatedByCorporateUserId": actionByCorporateUserId
+                    }
+                else:
+                    updated_data = { "matchingScoreDetails":{"cvExtract":"",
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback},
 
-                "updatedByCorporateUserId": actionByCorporateUserId,
-                }
+                    "updatedByCorporateUserId": actionByCorporateUserId,
+                    }
 
-
-        elif actionByUserId:
-            if Rejection_object:
-                updated_data = { "matchingScoreDetails":{ "cvExtract":"",
-                "jdMatchErrorCode":200,
-                "jdMatchErrorDesc": "",
-                "matchingScore": int(overall_matching_score),
-                "rejectionFeedbackBySystemForApplicant":rejection_feedback,
-                "scoreDetailsForApplicant":scoreDetailsForApplicant,
-                "scoreDetails":scoreDetails,
-                "emailFeedback":emailFeedback,
-                "rejectionObject":Rejection_object
-                },
-                
-                "updatedByUserId": actionByUserId
-                
-                }
-            else:
-                updated_data = { "matchingScoreDetails":{"cvExtract":"",
-                "jdMatchErrorCode":200,
-                "jdMatchErrorDesc": "",
-                "matchingScore": int(overall_matching_score),
-                "rejectionFeedbackBySystemForApplicant":rejection_feedback,
-                "scoreDetailsForApplicant":scoreDetailsForApplicant,
-                "scoreDetails":scoreDetails,
-                "emailFeedback":emailFeedback
-                 },
-                
-                "updatedByUserId": actionByUserId
-                }
-            # "updatedAt": iso_string,
-        
-        DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,updated_data,False)
+            elif actionByUserId:
+                if Rejection_object:
+                    updated_data = { "matchingScoreDetails":{ "cvExtract":"",
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback,
+                    "rejectionObject":Rejection_object
+                    },
+                    
+                    "updatedByUserId": actionByUserId
+                    
+                    }
+                else:
+                    updated_data = { "matchingScoreDetails":{"cvExtract":"",
+                    "jdMatchErrorCode":200,
+                    "jdMatchErrorDesc": "",
+                    "matchingScore": int(overall_matching_score),
+                    "rejectionFeedbackBySystemForApplicant":rejection_feedback,
+                    "scoreDetailsForApplicant":scoreDetailsForApplicant,
+                    "scoreDetails":scoreDetails,
+                    "emailFeedback":emailFeedback
+                    },
+                    
+                    "updatedByUserId": actionByUserId
+                    }
+                # "updatedAt": iso_string,
+            
+            DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,updated_data,False)
 
         return {
             "statusCode": 200,
