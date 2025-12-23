@@ -1706,7 +1706,7 @@ def lambda_handler(event, context):
                     "emailFeedback":emailFeedback,
                     "updatedByUserId": actionByUserId
                     }
-                DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,updated_data,False,True)
+            DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,updated_data,False,True)
 
         else:
             if actionByCorporateUserId:
