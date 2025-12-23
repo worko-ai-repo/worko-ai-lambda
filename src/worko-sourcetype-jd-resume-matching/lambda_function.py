@@ -709,7 +709,7 @@ class FirestoreManager:
                 if jobMatched:
                     doc_ref = self.db.collection(collection_name).document(doc_id)
                     doc_ref.update(update_data)
-                    print(f"Updated Firestore document {doc_id} isFindMatchingScoreInProgress: False and update_data : {matchingScoreDetails}")
+                    print(f"Updated Firestore document {doc_id} isFindMatchingScoreInProgress: False and update_data : {update_data}")
                     return True
 
                 
