@@ -12,6 +12,7 @@ from typing import List, Tuple, Dict, Any, Optional, Union
 from boto3.dynamodb.conditions import Key, Attr
 import re
 from botocore.exceptions import ClientError
+from urllib.parse import unquote_plus
 # iac deploy 11
 dynamodb = boto3.resource('dynamodb')
 from google.cloud import firestore
@@ -104,10 +105,15 @@ def lambda_handler(event, context):
         # Parse S3 event
         s3_event = event['Records'][0]['s3']
         bucket_name = s3_event['bucket']['name']
-        object_key = s3_event['object']['key']
+        object_key = unquote_plus(s3_event['object']['key'])
+        
+        print(f"Processing S3 object: {bucket_name}/{object_key}")
         
         # Extract IDs from S3 path: agencies/{agencyUserId}/bulk-cvs/{agencyBulkJdId}/{filename}
         path_parts = object_key.split('/')
+        if len(path_parts) < 5:
+            raise ValueError(f"Invalid S3 path structure: {object_key}")
+            
         agency_user_id = path_parts[1]
         agency_bulk_jd_id = path_parts[3]
         filename = path_parts[4]
@@ -117,8 +123,19 @@ def lambda_handler(event, context):
         
         # Download PDF from S3
         s3_client = boto3.client('s3')
-        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
-        pdf_data = response['Body'].read()
+        try:
+            response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+            pdf_data = response['Body'].read()
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                print(f"S3 object not found: {bucket_name}/{object_key}")
+                # Try with original encoded key
+                original_key = s3_event['object']['key']
+                print(f"Trying original key: {bucket_name}/{original_key}")
+                response = s3_client.get_object(Bucket=bucket_name, Key=original_key)
+                pdf_data = response['Body'].read()
+            else:
+                raise
         
         # Extract text from PDF
         resume_text = extract_text_from_pdf(pdf_data)
