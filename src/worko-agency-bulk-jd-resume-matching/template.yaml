@@ -75,24 +75,8 @@ Resources:
         S3Event:
           Type: S3
           Properties:
-            Bucket: !Ref S3Bucket
+            Bucket: !Sub "worko-app-${Environment}"
             Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: agencies/
-                  - Name: suffix
-                    Value: .pdf
-
-  S3Bucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "worko-app-${Environment}"
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Function: !GetAtt AgencyBulkJdResumeMatchingFunction.Arn
             Filter:
               S3Key:
                 Rules:
