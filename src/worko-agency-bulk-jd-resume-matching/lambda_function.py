@@ -188,7 +188,7 @@ def lambda_handler(event, context):
         get_collection_name ="agencyBulkJds"
         job_description = DBManager.get_document_firstore(get_collection_name, agency_bulk_jd_id)
         #exclud agencyRegisteredEmail,companyId,id for cv-jd matching
-        print(f"job_description fetched from firestore: {job_description[:50]}...")
+        print(f"job_description fetched from firestore: {str(job_description)[:100]}...")
         jobTitle = job_description.get("jobTitle","")
         experienceRange = job_description.get("experienceRange","")
         technicalSkills = job_description.get("technicalSkills","")
