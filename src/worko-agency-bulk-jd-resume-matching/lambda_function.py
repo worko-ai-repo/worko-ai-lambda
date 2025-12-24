@@ -209,31 +209,31 @@ def lambda_handler(event, context):
             })
         }
     
-if __name__ == "__main__":
-    event = {
-        "Records": [
-            {
-            "eventVersion": "2.1",
-            "eventSource": "aws:s3",
-            "awsRegion": "ap-south-1",
-            "eventTime": "2024-01-15T10:30:00.000Z",
-            "eventName": "s3:ObjectCreated:Put",
-            "s3": {
-                "s3SchemaVersion": "1.0",
-                "configurationId": "lambda-trigger",
-                "bucket": {
-                "name": "worko-app-dev",
-                "arn": "arn:aws:s3:::worko-app-dev"
-                },
-                "object": {
-                "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/sarvesh.pdf",
-                "size": 245760,
-                "eTag": "d41d8cd98f00b204e9800998ecf8427e"
-                }
-            }
-            }
-        ]
+# if __name__ == "__main__":
+#     event = {
+#         "Records": [
+#             {
+#             "eventVersion": "2.1",
+#             "eventSource": "aws:s3",
+#             "awsRegion": "ap-south-1",
+#             "eventTime": "2024-01-15T10:30:00.000Z",
+#             "eventName": "s3:ObjectCreated:Put",
+#             "s3": {
+#                 "s3SchemaVersion": "1.0",
+#                 "configurationId": "lambda-trigger",
+#                 "bucket": {
+#                 "name": "worko-app-dev",
+#                 "arn": "arn:aws:s3:::worko-app-dev"
+#                 },
+#                 "object": {
+#                 "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/sarvesh.pdf",
+#                 "size": 245760,
+#                 "eTag": "d41d8cd98f00b204e9800998ecf8427e"
+#                 }
+#             }
+#             }
+#         ]
 
-    }
-    lambda_handler(event,None)
+#     }
+#     lambda_handler(event,None)
     
