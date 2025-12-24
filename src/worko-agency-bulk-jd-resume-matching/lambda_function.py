@@ -98,7 +98,8 @@ class FirestoreManager:
         doc_ref = self.db.collection(collection_name).document(doc_id)
         return doc_ref.get().to_dict()
 
-def lambda_handler(event):
+def lambda_handler(event, context):
+    print(f"got a event : -  {event}")             
     try:
         # Parse S3 event
         s3_event = event['Records'][0]['s3']
@@ -122,7 +123,7 @@ def lambda_handler(event):
         # Extract text from PDF
         resume_text = extract_text_from_pdf(pdf_data)
         
-        # print(f"Successfully processed resume: {resume_text}")
+        print(f"Successfully processed resume: {resume_text[:50]}..")
         env = "dev"
         GCP_secret_name = "GCP-firestore-secret-"+env
         GCP_DATABASE_NAME = "worko-corp-db-" +env 
@@ -170,7 +171,7 @@ def lambda_handler(event):
         get_collection_name ="agencyBulkJds"
         job_description = DBManager.get_document_firstore(get_collection_name, agency_bulk_jd_id)
         #exclud agencyRegisteredEmail,companyId,id for cv-jd matching
-
+        print(f"job_description fetched from firestore: {job_description[:50]}...")
         jobTitle = job_description.get("jobTitle","")
         experienceRange = job_description.get("experienceRange","")
         technicalSkills = job_description.get("technicalSkills","")
@@ -208,31 +209,31 @@ def lambda_handler(event):
             })
         }
     
-# if __name__ == "__main__":
-#     event = {
-#         "Records": [
-#             {
-#             "eventVersion": "2.1",
-#             "eventSource": "aws:s3",
-#             "awsRegion": "ap-south-1",
-#             "eventTime": "2024-01-15T10:30:00.000Z",
-#             "eventName": "s3:ObjectCreated:Put",
-#             "s3": {
-#                 "s3SchemaVersion": "1.0",
-#                 "configurationId": "lambda-trigger",
-#                 "bucket": {
-#                 "name": "worko-app-dev",
-#                 "arn": "arn:aws:s3:::worko-app-dev"
-#                 },
-#                 "object": {
-#                 "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/sarvesh.pdf",
-#                 "size": 245760,
-#                 "eTag": "d41d8cd98f00b204e9800998ecf8427e"
-#                 }
-#             }
-#             }
-#         ]
+if __name__ == "__main__":
+    event = {
+        "Records": [
+            {
+            "eventVersion": "2.1",
+            "eventSource": "aws:s3",
+            "awsRegion": "ap-south-1",
+            "eventTime": "2024-01-15T10:30:00.000Z",
+            "eventName": "s3:ObjectCreated:Put",
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "lambda-trigger",
+                "bucket": {
+                "name": "worko-app-dev",
+                "arn": "arn:aws:s3:::worko-app-dev"
+                },
+                "object": {
+                "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/sarvesh.pdf",
+                "size": 245760,
+                "eTag": "d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+            }
+        ]
 
-#     }
-#     lambda_handler(event)
+    }
+    lambda_handler(event,None)
     
