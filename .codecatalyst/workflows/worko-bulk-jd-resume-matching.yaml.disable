@@ -1,0 +1,92 @@
+Name: worko-bulk-jd-resume-matching
+SchemaVersion: "1.0"
+
+Triggers:
+  - Type: PUSH
+    Branches:
+      - main
+
+Actions:
+  Build_and_Deploy_WorkoBulkJdResumeMatching:
+    Identifier: aws/build@v1
+    Inputs:
+      Sources:
+        - WorkflowSource
+    Configuration:
+      Steps:
+        - Run: |
+            echo "Starting Worko Bulk JD Resume Matching Lambda deployment..."
+            
+            # Load environment configuration
+            ENV=$(cat env-config.json | jq -r '.ENVIRONMENT')
+            AWS_REGION=$(cat env-config.json | jq -r '.AWS_REGION')
+            S3_BUCKET=$(cat env-config.json | jq -r '.S3_BUCKET_MANAGED')
+            
+            echo "Environment: $ENV"
+            echo "Region: $AWS_REGION"
+            echo "S3 Bucket: $S3_BUCKET"
+            
+            # Check if bulk JD resume matching Lambda files have changed
+            LAMBDA_PATH="src/worko-bulk-jd-resume-matching"
+            
+            if git diff --name-only HEAD~1 HEAD | grep -q "^$LAMBDA_PATH/"; then
+              echo "Changes detected in $LAMBDA_PATH - proceeding with deployment"
+              
+              # Navigate to Lambda directory
+              cd $LAMBDA_PATH
+              
+              # Check for existing Lambda function
+              FUNCTION_NAME="worko-bulk-jd-resume-matching-$ENV"
+              STACK_NAME="worko-bulk-jd-resume-matching-$ENV-stack"
+              
+              echo "Checking for existing Lambda function: $FUNCTION_NAME"
+              
+              if aws lambda get-function --function-name $FUNCTION_NAME --region $AWS_REGION 2>/dev/null; then
+                echo "Lambda function exists - checking owning stack..."
+                
+                # Check if function is managed by CloudFormation
+                OWNING_STACK=$(aws cloudformation describe-stack-resources --physical-resource-id $FUNCTION_NAME --region $AWS_REGION --query 'StackResources[0].StackName' --output text 2>/dev/null || echo "None")
+                
+                if [ "$OWNING_STACK" != "None" ] && [ "$OWNING_STACK" != "$STACK_NAME" ]; then
+                  echo "Function managed by different stack: $OWNING_STACK - deleting stack"
+                  aws cloudformation delete-stack --stack-name $OWNING_STACK --region $AWS_REGION
+                  aws cloudformation wait stack-delete-complete --stack-name $OWNING_STACK --region $AWS_REGION
+                elif [ "$OWNING_STACK" == "None" ]; then
+                  echo "Function not managed by CloudFormation - deleting manually"
+                  aws lambda delete-function --function-name $FUNCTION_NAME --region $AWS_REGION
+                fi
+              fi
+              
+              # Check for failed stacks and clean them up
+              STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+              
+              if [[ "$STACK_STATUS" == *"ROLLBACK_FAILED"* ]] || [[ "$STACK_STATUS" == *"CREATE_FAILED"* ]]; then
+                echo "Stack in failed state: $STACK_STATUS - deleting"
+                aws cloudformation delete-stack --stack-name $STACK_NAME --region $AWS_REGION
+                aws cloudformation wait stack-delete-complete --stack-name $STACK_NAME --region $AWS_REGION
+              fi
+              
+              # Build and deploy
+              echo "Building Lambda with container..."
+              sam build --use-container
+              
+              echo "Deploying Lambda..."
+              sam deploy \
+                --stack-name $STACK_NAME \
+                --region $AWS_REGION \
+                --capabilities CAPABILITY_IAM \
+                --parameter-overrides Environment=$ENV \
+                --s3-bucket $S3_BUCKET \
+                --no-confirm-changeset \
+                --no-fail-on-empty-changeset
+              
+              echo "Deployment completed successfully!"
+              
+            else
+              echo "No changes detected in $LAMBDA_PATH - skipping deployment"
+            fi
+    Environment:
+      Name: worko-bulk-jd-resume-matching-env
+      Connections:
+        - Name: "123456789012"
+          Role: CodeCatalystWorkflowDevelopmentRole-worko-ai-lambda
