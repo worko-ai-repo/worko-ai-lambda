@@ -67,10 +67,7 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
-          AZURE_OPENAI_ENDPOINT: "https://aif-wrk-dev-sin-01.openai.azure.com"
-          AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
-          AZURE_OPENAI_API_KEY: "REDACTED"
-          AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
+
 
   LambdaInvokePermission:
     Type: AWS::Lambda::Permission
