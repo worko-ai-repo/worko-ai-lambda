@@ -14,8 +14,8 @@ from io import BytesIO
 import random
 import string
 from typing import Tuple, Dict, Any, Optional, Union
-
-import io                    
+from utils import *
+                   
 import base64 
 
 # Initialize the AWS service clients
@@ -25,6 +25,8 @@ s3_client = boto3.client('s3')
 bedrock_runtime = boto3.client('bedrock-runtime', region_name= region)
 sqs = boto3.client('sqs')
 
+
+  
 def extract_text_from_pdf(pdf_data):
     text = ""
     pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
@@ -2221,10 +2223,15 @@ def clean_json_response(response: str) -> str:
 def lambda_handler(event, context):
     print("event-----", event)
     table_name = os.environ.get('table_name')
+
+    env = os.environ.get("ENVIRONMENT")
+    GCP_secret_name = "GCP-firestore-secret-"+env
+    print(GCP_secret_name)
+
     table_name = "worko"
 
     queue_name = os.environ.get('queue_name')
-    
+    GCP_credentials = get_secret(GCP_secret_name)
     # Extracting the bucket name from the nested 'Records' key
     s3_bucket_name = event['Records'][0]['s3']['bucket']['name']
     

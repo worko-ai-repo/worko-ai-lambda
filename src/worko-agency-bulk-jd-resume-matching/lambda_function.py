@@ -346,6 +346,8 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
             f"- Output must be valid JSON only.\n"
             f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
             f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
+            f"- if Phone number is give the you must fill all three variables"
+            f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int)"
 
             f"*** Output Format (JSON only) ***\n"
             f"{{{{\n"
@@ -452,7 +454,6 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
     except Exception as e:
         print(f"Error processing CV: {str(e)}")
         return "Error processing CV", cv_parsed_template
-
 
 def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,OpenAIClient,update_doc_id):
 
@@ -1599,31 +1600,31 @@ def lambda_handler(event, context):
             })
         }
     
-if __name__ == "__main__":
-    event = {
-        "Records": [
-            {
-            "eventVersion": "2.1",
-            "eventSource": "aws:s3",
-            "awsRegion": "ap-south-1",
-            "eventTime": "2024-01-15T10:30:00.000Z",
-            "eventName": "s3:ObjectCreated:Put",
-            "s3": {
-                "s3SchemaVersion": "1.0",
-                "configurationId": "lambda-trigger",
-                "bucket": {
-                "name": "worko-app-dev",
-                "arn": "arn:aws:s3:::worko-app-dev"
-                },
-                "object": {
-                "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf",
-                "size": 245760,
-                "eTag": "d41d8cd98f00b204e9800998ecf8427e"
-                }
-            }
-            }
-        ]
+# if __name__ == "__main__":
+#     event = {
+#         "Records": [
+#             {
+#             "eventVersion": "2.1",
+#             "eventSource": "aws:s3",
+#             "awsRegion": "ap-south-1",
+#             "eventTime": "2024-01-15T10:30:00.000Z",
+#             "eventName": "s3:ObjectCreated:Put",
+#             "s3": {
+#                 "s3SchemaVersion": "1.0",
+#                 "configurationId": "lambda-trigger",
+#                 "bucket": {
+#                 "name": "worko-app-dev",
+#                 "arn": "arn:aws:s3:::worko-app-dev"
+#                 },
+#                 "object": {
+#                 "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf",
+#                 "size": 245760,
+#                 "eTag": "d41d8cd98f00b204e9800998ecf8427e"
+#                 }
+#             }
+#             }
+#         ]
 
-    }
-    lambda_handler(event,None)
+#     }
+#     lambda_handler(event,None)
     
