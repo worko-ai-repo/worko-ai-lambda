@@ -1455,7 +1455,7 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
 def lambda_handler(event, context):
     print(f"got a event : -  {event}") 
     global DBManager,update_doc_id
-    # env = "dev"   #change it make dynamically
+    # Get environment
     env=os.environ.get("ENVIRONMENT", "dev")
     secret_name ="AZURE-openai-secret-" +env
     AZURE_openai_secret = get_secret(secret_name) 
@@ -1477,8 +1477,8 @@ def lambda_handler(event, context):
         agency_bulk_jd_id = path_parts[3]
         filename = path_parts[4]
         
-        # Get environment
-        env = os.environ.get("ENVIRONMENT", "dev")
+        
+       
         
         # Download PDF from S3
         s3_client = boto3.client('s3')
@@ -1503,7 +1503,6 @@ def lambda_handler(event, context):
         OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
         cv_extract, cv_extracted_parsed = process_cv(processed_text,OpenAIClient)
         print(f"Successfully processed resume: {processed_text[:200]}..")
-        env = "dev"
         GCP_secret_name = "GCP-firestore-secret-"+env
         GCP_DATABASE_NAME = "worko-corp-db-" +env 
         
