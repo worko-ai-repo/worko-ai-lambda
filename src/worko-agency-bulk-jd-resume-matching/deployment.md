@@ -3,7 +3,7 @@ will not replace any lambda, completely new flow.
 
 there are 3 dependencies to make sure before and after deploying this lambda to make it run in prod
 
-1) make sure "worko-app-prod/agencies/" s3 bucket is created
+1) make sure "worko-agency-bulk-cvs-"+{env} s3 bucket is created
 
 2) need to create a secret variable in secret manager whose name will be "AZURE-openai-secret-"+{env}
 
@@ -11,7 +11,7 @@ there are 3 dependencies to make sure before and after deploying this lambda to 
 
 #add trigger from s3
 Source: S3
-Bucket: worko-app-{env}
+Bucket: "worko-agency-bulk-cvs-"+{env}
 Request type: put
 Prefix: agencies/
 Suffix: .pdf
