@@ -18,6 +18,27 @@ Suffix: .pdf
 Events: All object create events
 
 
+commands to run
+# step 1: SSO (Recommended)
+export AWS_PROFILE=your-profile-name
+aws configure sso
+
+# step 2
+sam build
+
+
+
+# step 3
+sam deploy \
+  --stack-name worko-agency-bulk-jd-resume-matching-prod-stack \ ##your lambda name with suffix stack
+  --region ap-south-1 \
+  --capabilities CAPABILITY_IAM \ 
+  --parameter-overrides Environment=prod \ ## put prod here
+  --s3-bucket aws-sam-cli-managed-default-samclisourcebucket-mpwvaft0yfqx \  ## put one s3 bucket name which willl be used by sam
+  --no-confirm-changeset
+```
+
+
 
 
 
