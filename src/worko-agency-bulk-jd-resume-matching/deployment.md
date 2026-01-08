@@ -5,7 +5,28 @@ there are 3 dependencies to make sure before and after deploying this lambda to 
 
 1) make sure "worko-agency-bulk-cvs-"+{env} s3 bucket is created
 
-2) need to create a secret variable in secret manager whose name will be "AZURE-openai-secret-"+{env}
+2) need to create a secret variable in secret manager whose name will be "AZURE-openai-secret-"+{env} and "GCP-firestore-secret-"+{env}, add them as key/value. its there in dev too you can copy from there also
+
+AZURE-openai-secret-prod
+{"AZURE_OPENAI_ENDPOINT":"https://aif-wrk-dev-sin-01.openai.azure.com","AZURE_OPENAI_DEPLOYMENT":"gpt-4o","AZURE_OPENAI_API_KEY":"REDACTED","AZURE_OPENAI_API_VERSION":"2025-01-01-preview"}
+
+
+GCP-firestore-secret-prod
+{
+  "type": "service_account",
+  "project_id": "worko-dev",
+  "private_key_id": "REDACTED",
+  "private_key": "REDACTED\n",
+  "client_email": "worko-gcp-firestore@worko-dev.iam.gserviceaccount.com",
+  "client_id": "REDACTED",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/worko-gcp-firestore%40worko-dev.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
+
+
 
 3) once lambda is deployed add the s3 triger manually in lambda function
 
