@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Worko Candidate Profile Parser Lambda
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 1024
+    Runtime: python3.10
+
+Resources:
+  CandProfileParserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:GetQueueUrl
+                Resource: "*"
+
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-cand-profile-parser-deps-${Environment}"
+      Description: Python dependencies for candidate profile parser lambda
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.10
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.10
+      BuildArchitecture: x86_64
+
+  CandProfileParserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "worko-cand-profile-parser-${Environment}"
+      CodeUri: ./
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt CandProfileParserRole.Arn
+      Layers:
+        - !Ref PythonDependenciesLayer
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  LambdaInvokePermissionCorporate:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CandProfileParserFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub "arn:aws:s3:::worko-corporate-cand-profile-${Environment}"
+
+  LambdaInvokePermissionAdmin:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CandProfileParserFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub "arn:aws:s3:::worko-admin-cand-profile-${Environment}"
+
+Outputs:
+  CandProfileParserFunctionArn:
+    Description: Candidate Profile Parser Lambda Function ARN
+    Value: !GetAtt CandProfileParserFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CandProfileParserFunctionArn"
