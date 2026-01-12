@@ -38,9 +38,10 @@
                   1. SQS Event name: `CORPORATE_CAND_PROFILE_BULK_UPLOAD`
                   2. body: 
                      ```json
-                     {
+					 {
+                       "event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
+
                         "companyId": "...",
-                        "candidateCvAwsS3FileName", // example 01JJE6VEV1JRQ424RMJNXYVEN3.pdf
                         "cvExtractedParsed": {
                            candidateName: string; //  "Rohith Appala";
                            candidateEmail: string; // "rohithappala777@gmail.com";
@@ -88,7 +89,6 @@
          1. Check duplicacy in `centralCandidateProfiles` collection in `worko-corp-db-dev` database, refer duplicacy logic:
             ```ts
             db.collection("centralCandidateProfiles")
-            .where("companyId", "==", companyId)
             .where(
                Filter.or(
                   Filter.where("candidateEmail", "==", "shaukat@gmail.com"),
@@ -114,6 +114,7 @@
                   2. body: 
                      ```json
                      {
+                         "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
                         // DO NOT SEND "companyId"
                         "cvExtractedParsed": {
                            candidateName: string; //  "Rohith Appala";
