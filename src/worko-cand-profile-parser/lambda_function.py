@@ -8,6 +8,7 @@ from decimal import Decimal
 import time
 from docx import Document
 import fitz
+from urllib.parse import unquote_plus
 from botocore.exceptions import ClientError
 import requests
 from google.cloud import firestore
@@ -267,6 +268,20 @@ class FirestoreManager:
 
 def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
+    # example_path1={'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 
+    #                             'awsRegion': 'ap-south-1', 'eventTime': '2026-01-12T06:21:54.363Z', 
+    #                             'eventName': 'ObjectCreated:Put', 
+    #                             'userIdentity': {'principalId': 'AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai'}, 
+    #                             'requestParameters': {'sourceIPAddress': '103.176.210.144'},
+    #                              'responseElements': {'x-amz-request-id': 'JQK4A937CPMH8C66', 'x-amz-id-2': 'M51w2m0Fm4VamXUJKKJtOB3jRLYkZgdCRWN7ZCcRyhf6ywE8xNuNBbJDdF+bHnjyJWtVGE2LdUVopT0E9hQhAynzmAuNsEavskmFz9JGg34='}, 
+    #                              's3': {'s3SchemaVersion': '1.0', 'configurationId': '2391fd04-1e04-41f3-9a68-3c5d8a728a02', 
+    #                             'bucket': {'name': 'worko-corporate-cand-profile-dev', 
+    #                                         'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 
+    #                                         'arn': 'arn:aws:s3:::worko-corporate-cand-profile-dev'}, 
+    #                                         'object': {
+    #                                             'key': 'companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/shaukat_cv.pdf', 'size': 391471, 'eTag': '94a1271ecae22b95ce462c9ec4e40c5a', 'sequencer': '006964930250E7F22D'
+    #                                             }
+    #                                         }}]}
     # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
     print("got event:",event)
     env = os.getenv('ENVIRONMENT', 'dev')
@@ -274,12 +289,15 @@ def lambda_handler(event, context):
     GCP_secret_name = "GCP-firestore-secret-"+env
     DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
     s3_client = boto3.client('s3')
-    object_key = event['Records'][0]['s3']['object']['key']
+    s3_event = event['Records'][0]['s3']
+    bucket_name = s3_event['bucket']['name']
+    object_key = unquote_plus(s3_event['object']['key'])
 
-    s3_bucket_name = object_key.split("/")[0] 
-    response = s3_client.get_object(Bucket=s3_bucket_name, Key=object_key)
+    response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
     data = response['Body'].read()
+    print("reume:", type(data))
     
+
     
     # # Extract text from the PDF or DOCX file
     # if object_key.lower().endswith('.pdf'):
