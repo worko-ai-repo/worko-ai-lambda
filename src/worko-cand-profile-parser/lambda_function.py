@@ -770,51 +770,51 @@ def lambda_handler(event, context):
             update_sqs_queue(sqs_send_data)
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
         
         
-    event = {
+#     event = {
     
-    "Records": [
-        {
-        "eventVersion": "2.1",
-        "eventSource": "aws:s3",
-        "awsRegion": "ap-south-1",
-        "eventTime": "2026-01-12T08:49:37.805Z",
-        "eventName": "ObjectCreated:Put",
-        "userIdentity": {
-            "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
-        },
-        "requestParameters": {
-            "sourceIPAddress": "103.176.210.144"
-        },
-        "responseElements": {
-            "x-amz-request-id": "F031QF2YBESZRM4Q",
-            "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
-        },
-        "s3": {
-            "s3SchemaVersion": "1.0",
-            "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
-            "bucket": {
-            "name": "worko-corporate-cand-profile-dev",
-            "ownerIdentity": {
-                "principalId": "A1V0APDMR493SG"
-            },
-            "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
-            },
-            "object": {
-            "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-            "size": 225212,
-            "eTag": "296eeb83abfe1d84d866db9a55621a78",
-            "sequencer": "006964B5A1B7FA55DF"
-            }
-        }
-        }
-    ]
-    }
+#     "Records": [
+#         {
+#         "eventVersion": "2.1",
+#         "eventSource": "aws:s3",
+#         "awsRegion": "ap-south-1",
+#         "eventTime": "2026-01-12T08:49:37.805Z",
+#         "eventName": "ObjectCreated:Put",
+#         "userIdentity": {
+#             "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
+#         },
+#         "requestParameters": {
+#             "sourceIPAddress": "103.176.210.144"
+#         },
+#         "responseElements": {
+#             "x-amz-request-id": "F031QF2YBESZRM4Q",
+#             "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
+#         },
+#         "s3": {
+#             "s3SchemaVersion": "1.0",
+#             "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
+#             "bucket": {
+#             "name": "worko-corporate-cand-profile-dev",
+#             "ownerIdentity": {
+#                 "principalId": "A1V0APDMR493SG"
+#             },
+#             "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
+#             },
+#             "object": {
+#             "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+#             "size": 225212,
+#             "eTag": "296eeb83abfe1d84d866db9a55621a78",
+#             "sequencer": "006964B5A1B7FA55DF"
+#             }
+#         }
+#         }
+#     ]
+#     }
 
 
-    lambda_handler(event, None)
+#     lambda_handler(event, None)
 
 
 
