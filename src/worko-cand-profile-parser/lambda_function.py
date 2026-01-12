@@ -8,6 +8,7 @@ from decimal import Decimal
 import time
 from docx import Document
 import fitz
+from io import BytesIO
 from urllib.parse import unquote_plus
 from botocore.exceptions import ClientError
 import requests
@@ -295,54 +296,57 @@ def lambda_handler(event, context):
 
     response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
     data = response['Body'].read()
-    print("reume:", type(data))
-    
 
     
-    # # Extract text from the PDF or DOCX file
-    # if object_key.lower().endswith('.pdf'):
-    #     processed_text = extract_text_from_pdf(data)
-    #     processed_text = clean_text(processed_text)
-    #     print("Fetched_cv_text",processed_text)
-    #     if not processed_text:
-    #         print('Image Based Resume Processing..')    ######
-    #         base64_images = extract_images_from_pdf(data)
-    #         processed_text = invoke_claude_with_image(base64_images)   
-    #         print('image Based cv process completed')  
+
+    
+    # Extract text from the PDF or DOCX file
+    if object_key.lower().endswith('.pdf'):
+        processed_text = extract_text_from_pdf(data)
+        processed_text = clean_text(processed_text)
+        print("Fetched_cv_text",processed_text)
+        if not processed_text:
+            print('Image Based Resume Processing..')    ######
+            base64_images = extract_images_from_pdf(data)
+            processed_text = invoke_claude_with_image(base64_images)   
+            print('image Based cv process completed')  
         
-    # elif object_key.lower().endswith('.docx'):
-    #     processed_text = extract_text_from_docx(data)
-    #     processed_text = clean_text(processed_text)
-    #     print("Fetched_cv_text",processed_text)
-    # else:
-    #     print(f"Unsupported file format: {object_key}")
+    elif object_key.lower().endswith('.docx'):
+        processed_text = extract_text_from_docx(data)
+        processed_text = clean_text(processed_text)
+        print("Fetched_cv_text",processed_text)
+    else:
+        print(f"Unsupported file format: {object_key}")
+    
 
 
 
-    # if "companies" in object_key: #example_path1:
-    # # query data and check it present or not
-    #     collection = "corporateCandidateProfiles"
-    #     company_id = "01JWAQF1G96E0SE9XHXSFGHNWW"
-    #     email = ""
-    #     phone_number =""
-    #     country_code = ""
-    #     data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
-    #     print("Data.......",data)
-    #     if not data:
-    #         update_sqs_queue(cvExtractedParsed)
-    #         #trigre sqs
-    # else:
+    if "companies" in object_key: #example_path1:
+    # query data and check it present or not
+        collection = "corporateCandidateProfiles"
+        company_id = object_key.split("/")[1]
+        email = ""
+        phone_number =""
+        country_code = ""
+        data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
+        print("Data.......",data)
+        if not data:
+            # update_sqs_queue(cvExtractedParsed)
+            print("trigring sqs as  do not find any dublicate record in collection corporateCandidateProfiles")
+            #trigre sqs
+    else:
 
         
-    #     collection = "centralCandidateProfiles"
-    #     company_id = None
-    #     email = ""
-    #     phone_number =""
-    #     country_code = ""
-    #     data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
-    #     if not data:
-    #         #triger sqs
-    #         update_sqs_queue(cvExtractedParsed)
+        collection = "centralCandidateProfiles"
+        company_id = None
+        email = ""
+        phone_number =""
+        country_code = ""
+        data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
+        if not data:
+            #triger sqs
+            print("trigring sqs as  do not find any dublicate record in collectoin centralCandidateProfiles")
+            # update_sqs_queue(cvExtractedParsed)
 
 
 
