@@ -29,7 +29,7 @@ sqs = boto3.client('sqs')
 
 def update_sqs_queue(message_body):
     try:
-        region = os.environ.get("AWS_REGION", "ap-south-1")
+        region = os.environ.get("SQS_REGION", "ap-south-1")
         eventQueueName = os.environ.get("EVENT_QUEUE_NAME", "worko-corp-app-event-queue")
         account_id = os.environ.get("ACCOUNT_ID", "211125353899")
 

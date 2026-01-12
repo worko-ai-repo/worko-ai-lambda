@@ -77,7 +77,7 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
-          AWS_REGION: ap-south-1
+          SQS_REGION: ap-south-1
           EVENT_QUEUE_NAME: worko-corp-app-event-queue
           ACCOUNT_ID: "211125353899"
 
