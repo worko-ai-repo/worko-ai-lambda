@@ -40,7 +40,7 @@
                      ```json
 					 {
                        "event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
-
+                        "candidateCvAwsS3FileName":"",
                         "companyId": "...",
                         "cvExtractedParsed": {
                            candidateName: string; //  "Rohith Appala";
@@ -115,6 +115,7 @@
                      ```json
                      {
                          "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
+                         "candidateCvAwsS3FileName":"",
                         // DO NOT SEND "companyId"
                         "cvExtractedParsed": {
                            candidateName: string; //  "Rohith Appala";

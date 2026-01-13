@@ -429,12 +429,12 @@ class FirestoreManager:
         
         # Query with company filter and OR condition
         if company_id:
-            print("query first type of path")
+            print("query corporate type of path")
             query = self.db.collection(collection) \
                 .where(filter=FieldFilter("companyId", "==", company_id)) \
                 .where(filter=or_filter)
         else:
-            print("query second type of path")
+            print("query admin type of path")
             query = self.db.collection(collection) \
                 .where(filter=or_filter)
         
@@ -734,12 +734,12 @@ def lambda_handler(event, context):
     country_code = cvExtractedParsed.get("candidateCountryCode","")
 
     print("cvExtractedParsed",cvExtractedParsed)
-
+    file_name = object_key.split("/")[-1]
     if "companies" in object_key: #example_path1:
     # query data and check it present or not
         collection = "corporateCandidateProfiles"
         company_id = object_key.split("/")[1]
-        file_name = object_key.split("/")[-1]
+        
         data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
         print("Data.......",data)
 
@@ -760,15 +760,25 @@ def lambda_handler(event, context):
         collection = "centralCandidateProfiles"
         company_id = None
         data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
-        if data is None:
+        
+        if data is not None:
+            print(f"Not trigring sqs as found dublicate record in collection centralCandidateProfiles : - {data}")
+
+        else:
             #triger sqs
             print(f"trigring sqs as  do not found any dublicate record in collectoin centralCandidateProfiles {cvExtractedParsed}")
             sqs_send_data = {
+                "candidateCvAwsS3FileName":file_name,
                 "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
+                "candidateCvAwsS3FileName":"",
                 "cvExtractedParsed":cvExtractedParsed
             }
             update_sqs_queue(sqs_send_data)
 
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Hello from Lambda!')
+    }
 
 # if __name__ == "__main__":
         
