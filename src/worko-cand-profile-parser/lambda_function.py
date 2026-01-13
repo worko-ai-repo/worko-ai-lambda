@@ -770,7 +770,6 @@ def lambda_handler(event, context):
             sqs_send_data = {
                 "candidateCvAwsS3FileName":file_name,
                 "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
-                "candidateCvAwsS3FileName":"",
                 "cvExtractedParsed":cvExtractedParsed
             }
             update_sqs_queue(sqs_send_data)
