@@ -26,12 +26,21 @@ bedrock = boto3.client(service_name='bedrock', region_name = region)
 bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name = region)
 sqs = boto3.client('sqs')
 
+def get_account_id():
+    # Create STS client
+    sts_client = boto3.client('sts')
+
+    # Call get-caller-identity
+    response = sts_client.get_caller_identity()
+
+    # Extract account ID
+    return response['Account']
 
 def update_sqs_queue(message_body):
     try:
         region = os.environ.get("SQS_REGION", "ap-south-1")
         eventQueueName = os.environ.get("EVENT_QUEUE_NAME", "worko-corp-app-event-queue")
-        account_id = os.environ.get("ACCOUNT_ID", "211125353899")
+        account_id = get_account_id()
 
         sqs_url = f"https://sqs.{region}.amazonaws.com/{account_id}/{eventQueueName}"
         print("event updating in sqs :-",message_body)
@@ -55,7 +64,6 @@ def update_sqs_queue(message_body):
             'body': json.dumps(f'Error sending message to SQS : - {e}')
         }
     
-
 def clean_text(text):
   
     # Step 1: Remove asterisks
@@ -343,7 +351,7 @@ class AzureOpenAIClient:
             except (KeyError, IndexError) as e:
                 print(f"Unexpected response structure: {result}")
                 raise ValueError("Invalid response format from Azure OpenAI") from e
-            
+         
 class FirestoreManager:
     def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
         self.GCP_secret_name = GCP_secret_name
@@ -686,7 +694,6 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
     except Exception as e:
         print(f"Error processing CV: {str(e)}")
         return "Error processing CV"
-
 
 def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"

@@ -79,7 +79,6 @@ Resources:
           ENVIRONMENT: !Ref Environment
           SQS_REGION: ap-south-1
           EVENT_QUEUE_NAME: worko-corp-app-event-queue
-          ACCOUNT_ID: "211125353899"
 
   LambdaInvokePermissionCorporate:
     Type: AWS::Lambda::Permission
