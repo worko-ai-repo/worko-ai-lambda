@@ -325,6 +325,15 @@ class AzureOpenAIClient:
                 )
                 response.raise_for_status()
                 result = response.json()
+                try :
+                    tokens = result["usage"]
+                    output_tokens= tokens["completion_tokens"]
+                    input_tokens= tokens["prompt_tokens"]
+                    total = tokens["total_tokens"]
+                    print(" Token usage details input_tokens :-",input_tokens,"output_tokens",output_tokens,"total",total)
+
+                except Exception as e :
+                    print("errore occured input output token not found :--",e)
                 
                 # Extract and clean content
                 content = result["choices"][0]["message"]["content"]
