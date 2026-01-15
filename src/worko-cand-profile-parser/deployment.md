@@ -15,7 +15,7 @@ EVENT_QUEUE_NAME: worko-corp-app-event-queue  # SQS queue name
 
 ```
 
-## 2. S3 Triggers (Manual Setup Required)
+## 2. S3 Triggers (2 Manual Setup Required)
 
 ### Trigger 1: Corporate Candidate Profiles
 - **Source**: S3
