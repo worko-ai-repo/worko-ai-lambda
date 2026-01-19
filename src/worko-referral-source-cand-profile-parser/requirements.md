@@ -5,6 +5,7 @@
       1. `worko-referral-source-cand-profile-parser-dev`
          Full s3 path: `worko-referral-email-dev/referral-sourcetype/0h47scor2sup779lmu5u6if6pkm8ncoio6808eg1`
 
+
 trigger sqs:- https://sqs.ap-south-1.amazonaws.com/211125353899/worko-corp-app-event-queue
 
 2. Logic
