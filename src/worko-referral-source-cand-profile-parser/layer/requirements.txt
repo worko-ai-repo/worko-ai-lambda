@@ -1,5 +1,5 @@
 boto3>=1.34.0
 google-cloud-firestore>=2.14.0
 google-auth>=2.27.0
-PyMuPDF>=1.23.0
+PyMuPDF==1.22.5
 requests>=2.31.0
