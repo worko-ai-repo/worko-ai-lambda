@@ -711,7 +711,7 @@ def lambda_handler(event, context):
     env=os.environ.get("ENVIRONMENT", "dev")
     secret_name ="AZURE-openai-secret-" +env
     AZURE_openai_secret = get_secret(secret_name) 
-    GCP_DATABASE_NAME = "worko-corp-db-dev"
+    GCP_DATABASE_NAME = "worko-corp-db-"+env
     GCP_secret_name = "GCP-firestore-secret-"+env
     DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
     s3_client = boto3.client('s3')
