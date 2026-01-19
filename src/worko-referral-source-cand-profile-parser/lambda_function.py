@@ -141,9 +141,9 @@ def lambda_handler(event, context):
     print(f"From: {from_header}")
     print(f"Delivered-To: {delivered_to}")
     print(f"All headers: {dict(email_obj.items())}")
-
+    attachments = get_attachments(email_obj)
     # case 1 if it have subject as Gmail Forwarding Confirmation then send email to verify
-    if "Gmail Forwarding Confirmation" in subject:
+    if len(attachments) ==0:
         print("Processing Gmail forwarding confirmation")
         To_email = get_email_id_from_subject(subject)
         verification_link = get_verification_link(email_obj)
@@ -151,10 +151,11 @@ def lambda_handler(event, context):
         
 
 
-    else:# case 2 if subject is somthing else then Process CV attachments
-        attachments = get_attachments(email_obj)
-        if not attachments:
-            return {'statusCode': 400, 'body': json.dumps('No attachments found')}
+    
+    
+    if not attachments:
+        return {'statusCode': 400, 'body': json.dumps('No attachments found')}
+    else:
 
         # Find PDF attachment
         pdf_attachment = None
