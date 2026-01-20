@@ -111,18 +111,24 @@ def lambda_handler(event, context):
     DBManager = FirestoreManager(GCP_secret_name, GCP_DATABASE_NAME)
     
     s3_client = boto3.client('s3')
-    
+    msg_id = event.get("Records")[0].get("ses").get("mail").get("messageId")
     # Get single S3 record
-    rec = event['Records'][0]
-    s3_event = rec['s3']
-    bucket_name = s3_event['bucket']['name']
-    object_key = unquote_plus(s3_event['object']['key'])
+    # rec = event['Records'][0]
+    # s3_event = rec['s3']
+    # bucket_name = s3_event['bucket']['name']
+    # object_key = unquote_plus(s3_event['object']['key'])
 
-    print(f"Processing S3 object: {bucket_name}/{object_key}")
+    # print(f"Processing S3 object: {bucket_name}/{object_key}")
 
+    bucket_name = "worko-referral-email-"+env
+    object_key=f"referral-sourcetype/{msg_id}"
     # Download email from S3
     response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
     raw_email_bytes = response['Body'].read()
+    
+    # Debug: Check if data is encrypted/corrupted
+    print(f"Raw email bytes length: {len(raw_email_bytes)}")
+    print(f"First 100 bytes: {raw_email_bytes[:100]}")
     
     if not raw_email_bytes:
         return {'statusCode': 400, 'body': json.dumps('Empty email content')}
@@ -147,7 +153,15 @@ def lambda_handler(event, context):
         print("Processing Gmail forwarding confirmation")
         To_email = get_email_id_from_subject(subject)
         verification_link = get_verification_link(email_obj)
-        send_ses_email(to_address=To_email,body_text=verification_link, subject="Verify Email")
+        
+        # Validate before sending email
+        if To_email and verification_link:
+            send_ses_email(to_address=To_email, body_text=verification_link, subject="Verify Email")
+            print(f"Verification email sent to {To_email}")
+            return {'statusCode': 200, 'body': json.dumps('Verification email sent')}
+        else:
+            print(f"Missing data - To_email: {To_email}, verification_link: {verification_link}")
+            return {'statusCode': 400, 'body': json.dumps('Invalid email format or missing verification link')}
         
 
 
@@ -225,14 +239,14 @@ def lambda_handler(event, context):
         print(f"Uploaded CV to S3: {s3_key}")
 
         # Send SQS message
-        sqs_send_data = {
-            "event": "CORPORATE_CAND_PROFILE_REFERRAL_SOURCE",
-            "companyId": company_id,
-            "candidateCvAwsS3FileName": f"{file_id}.pdf",
-            "cvExtractedParsed": cvExtractedParsed
-        }
+        # sqs_send_data = {
+        #     "event": "CORPORATE_CAND_PROFILE_REFERRAL_SOURCE",
+        #     "companyId": company_id,
+        #     "candidateCvAwsS3FileName": f"{file_id}.pdf",
+        #     "cvExtractedParsed": cvExtractedParsed
+        # }
         
-        update_sqs_queue(sqs_send_data)
+        # update_sqs_queue(sqs_send_data)
         print("SQS message sent successfully")
 
         return {
@@ -243,37 +257,119 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     # For local testing purposes
     test_event = {
-        'Records': [{
-            'eventVersion': '2.1',
-            'eventSource': 'aws:s3',
-            'awsRegion': 'ap-south-1',
-            'eventTime': '2026-01-16T11:10:24.783Z',
-            'eventName': 'ObjectCreated:Put',
-            'userIdentity': {
-                'principalId': 'AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai'
-            },
-            'requestParameters': {
-                'sourceIPAddress': '202.94.161.171'
-            },
-            'responseElements': {
-                'x-amz-request-id': 'AQ7F1K38HT9K8M0J',
-                'x-amz-id-2': 'DajJ+JmB2yrzJ0XOcjGIXgw4/T3w/dds9PLCkwXg3ZAxawPWKytGorJg1MrF1w8FM9FbQ1B1Dhd+jR2E2XWh5ZFEO8xH+I2/'
-            },
-            's3': {
-                's3SchemaVersion': '1.0',
-                'configurationId': 'fae01573-f817-4895-87c4-1537d6ba2f85',
-                'bucket': {
-                    'name': 'worko-referral-email-dev',
-                    'ownerIdentity': {'principalId': 'A1V0APDMR493SG'},
-                    'arn': ('arn:aws:s3:::worko-referral-email-dev')
+        "Records": [
+            {
+            "eventSource": "aws:ses",
+            "eventVersion": "1.0",
+            "ses": {
+                "mail": {
+                "timestamp": "2026-01-19T12:43:07.914Z",
+                "source": "forwarding-noreply@google.com",
+                "messageId": "vb2gbk6kdmptv9m9n25g8u7df2cjspvb61vunl81",
+                "destination": [
+                    "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
+                ],
+                "headersTruncated": False,
+                "headers": [
+                    {
+                    "name": "Return-Path",
+                    "value": "<forwarding-noreply@google.com>"
+                    },
+                    {
+                    "name": "Received",
+                    "value": "from mail-yx1-f53.google.com (mail-yx1-f53.google.com [74.125.224.53]) by inbound-smtp.ap-south-1.amazonaws.com with SMTP id vb2gbk6kdmptv9m9n25g8u7df2cjspvb61vunl81 for 01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work; Mon, 19 Jan 2026 12:43:07 +0000 (UTC)"
+                    },
+                    {
+                    "name": "X-SES-Spam-Verdict",
+                    "value": "PASS"
+                    },
+                    {
+                    "name": "X-SES-Virus-Verdict",
+                    "value": "PASS"
+                    },
+                    {
+                    "name": "Received-SPF",
+                    "value": "pass (spfCheck: domain of google.com designates 74.125.224.53 as permitted sender)"
+                    },
+                    {
+                    "name": "Authentication-Results",
+                    "value": "amazonses.com; spf=pass; dkim=pass; dmarc=pass"
+                    },
+                    {
+                    "name": "X-SES-RECEIPT",
+                    "value": "AEFBQUFBQUFBQUFGY05JR25DR1VDeDRrcS9iMlJRZUxtaHVUeHdlT2hITDcxUWhIMXVyYytBZnJ2V3gxSzNiaWxxUEdnWnV1eWtGM1NhV2NKRkpEWTM5SGRMc3hUNnJkWEtQR3V6WjFzdXVJS3VGeEtnNWhiWDNjem9QK3BpblR2UTBNUXd1RThTZk96QVIrYUY5ZkF4c1dnelZMclU1U3MwSkdnQ1Y0YjY0Q0M2Mk56cnd6VEhCdDdZMTZvWU5tMDNrVlo5cjNvMXAwS0ZORExvWTVyQkxUdTFCb3UrMDFkRmwvbndoaGZhNkhMTU1JT2xjWkR2MWREaER3dmNLcVc5RlBOOUJ3SFFwaVp4cUFkclVpNXRQTmVHOXBUQ2YrWUNXNEZpSlJPRTd6STFOVnVVOTdKWGc9PQ=="
+                    },
+                    {
+                    "name": "MIME-Version",
+                    "value": "1.0"
+                    },
+                    {
+                    "name": "Date",
+                    "value": "Mon, 19 Jan 2026 18:13:04 +0530"
+                    },
+                    {
+                    "name": "Message-ID",
+                    "value": "<CAA6HCTj1K1w5V+jJrPiUv8Do6CcztHZ5Hsdq5_kO7uYT0munqg@mail.gmail.com>"
+                    },
+                    {
+                    "name": "Subject",
+                    "value": "(Gmail Forwarding confirmation – Receive mail from shaukt1998@gmail.com"
+                    },
+                    {
+                    "name": "From",
+                    "value": "Gmail Team <forwarding-noreply@google.com>"
+                    },
+                    {
+                    "name": "To",
+                    "value": "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
+                    },
+                    {
+                    "name": "Content-Type",
+                    "value": "text/plain; charset=\"UTF-8\""
+                    }
+                ],
+                "commonHeaders": {
+                    "returnPath": "forwarding-noreply@google.com",
+                    "from": [
+                    "Gmail Team <forwarding-noreply@google.com>"
+                    ],
+                    "date": "Mon, 19 Jan 2026 18:13:04 +0530",
+                    "to": [
+                    "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
+                    ],
+                    "messageId": "<CAA6HCTj1K1w5V+jJrPiUv8Do6CcztHZ5Hsdq5_kO7uYT0munqg@mail.gmail.com>",
+                    "subject": "(Gmail Forwarding confirmation – Receive mail from shaukt1998@gmail.com"
+                }
                 },
-                'object': {
-                    "key": "referral-sourcetype/h5sr7qn1j2aa12ug5aabbam582ggce6hlef0kd01",
-                    "size": 6305,
-                    "eTag": "8571e0bb6c1a874285eb1d6b5e9e3806",
-                    "sequencer": "00696A1CA0BE95DB35"
+                "receipt": {
+                "timestamp": "2026-01-19T12:43:07.914Z",
+                "processingTimeMillis": 960,
+                "recipients": [
+                    "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
+                ],
+                "spamVerdict": {
+                    "status": "PASS"
+                },
+                "virusVerdict": {
+                    "status": "PASS"
+                },
+                "spfVerdict": {
+                    "status": "PASS"
+                },
+                "dkimVerdict": {
+                    "status": "PASS"
+                },
+                "dmarcVerdict": {
+                    "status": "PASS"
+                },
+                "action": {
+                    "type": "Lambda",
+                    "functionArn": "arn:aws:lambda:ap-south-1:211125353899:function:worko-referral-source-cand-profile-parser-dev",
+                    "invocationType": "Event"
+                }
                 }
             }
-        }]
-    }
+            }
+        ]
+        }
     lambda_handler(test_event, None)

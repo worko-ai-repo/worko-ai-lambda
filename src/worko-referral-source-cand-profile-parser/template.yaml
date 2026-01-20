@@ -40,6 +40,12 @@ Resources:
                 Resource: "*"
               - Effect: Allow
                 Action:
+                  - kms:Decrypt
+                  - kms:DescribeKey
+                  - kms:GenerateDataKey
+                Resource: "*"
+              - Effect: Allow
+                Action:
                   - secretsmanager:GetSecretValue
                 Resource: "*"
               - Effect: Allow
