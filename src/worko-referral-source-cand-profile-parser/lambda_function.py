@@ -43,20 +43,6 @@ def extract_email_from_text(text):
 def extract_urls(text):
     return re.findall(r"https?://[\w\-\.\/~%\?=&+#]+", text)
 
-def parse_company_id(to_header):
-    if not to_header:
-        return None
-    # Try multiple patterns
-    patterns = [
-        r"([A-Za-z0-9_\-]+)@referral\.worko\.work",  # COMPANYID@referral.worko.work
-        r"<([A-Za-z0-9_\-]+)@referral\.worko\.work>",  # <COMPANYID@referral.worko.work>
-        r"to:?\s*([A-Za-z0-9_\-]+)@referral\.worko\.work",  # To: COMPANYID@referral.worko.work
-    ]
-    for pattern in patterns:
-        m = re.search(pattern, to_header, re.IGNORECASE)
-        if m:
-            return m.group(1)
-    return None
 
 def get_attachments(email_obj):
     attachments = []
@@ -122,13 +108,9 @@ def lambda_handler(event, context):
 
     bucket_name = "worko-referral-email-"+env
     object_key=f"referral-sourcetype/{msg_id}"
-    # Download email from S3
+    
     response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
     raw_email_bytes = response['Body'].read()
-    
-    # Debug: Check if data is encrypted/corrupted
-    print(f"Raw email bytes length: {len(raw_email_bytes)}")
-    print(f"First 100 bytes: {raw_email_bytes[:100]}")
     
     if not raw_email_bytes:
         return {'statusCode': 400, 'body': json.dumps('Empty email content')}
@@ -141,11 +123,15 @@ def lambda_handler(event, context):
     to_header = str(email_obj.get("to") or "")
     from_header = str(email_obj.get("from") or "")
     delivered_to = str(email_obj.get("delivered-to") or "")
-    
+    x_forwarded_to = str(email_obj.get("x-forwarded-to") or "")
+    company_id = x_forwarded_to.split("@")[0]
+    print(f"Extracting company ID from headers...")
+    print(f"Company ID from headers: {company_id}")
     print(f"Subject: {subject}")
     print(f"To: {to_header}")
     print(f"From: {from_header}")
     print(f"Delivered-To: {delivered_to}")
+    print(f"X-Forwarded-To: {x_forwarded_to}")
     print(f"All headers: {dict(email_obj.items())}")
     attachments = get_attachments(email_obj)
     # case 1 if it have subject as Gmail Forwarding Confirmation then send email to verify
@@ -205,18 +191,9 @@ def lambda_handler(event, context):
         phone_number = cvExtractedParsed.get("candidateNumber")
         country_code = cvExtractedParsed.get("candidatePhoneCountryCode")
 
-        # Extract company ID from To/Delivered-To headers
-        print(f"Extracting company ID from headers...")
-        company_id = to_header.split("@")[0]  # Example extraction, replace with actual logic
-        print(f"Company ID from headers: {company_id}")
-        
-        if not company_id:
-            m = re.search(r"companies/([A-Za-z0-9_\-]+)/", object_key)
-            company_id = m.group(1) if m else None
-            print(f"Company ID from S3 path: {company_id}")
 
-        if not company_id:
-            return {'statusCode': 400, 'body': json.dumps('Company ID not found')}
+
+        # company_id = to_header.split("@")[0]  # old wrong logic Example extraction, replace with actual logic
 
         print(f"Company ID: {company_id}")
 
@@ -239,14 +216,14 @@ def lambda_handler(event, context):
         print(f"Uploaded CV to S3: {s3_key}")
 
         # Send SQS message
-        # sqs_send_data = {
-        #     "event": "CORPORATE_CAND_PROFILE_REFERRAL_SOURCE",
-        #     "companyId": company_id,
-        #     "candidateCvAwsS3FileName": f"{file_id}.pdf",
-        #     "cvExtractedParsed": cvExtractedParsed
-        # }
+        sqs_send_data = {
+            "event": "CORPORATE_CAND_PROFILE_REFERRAL_SOURCE",
+            "companyId": company_id,
+            "candidateCvAwsS3FileName": f"{file_id}.pdf",
+            "cvExtractedParsed": cvExtractedParsed
+        }
         
-        # update_sqs_queue(sqs_send_data)
+        update_sqs_queue(sqs_send_data)
         print("SQS message sent successfully")
 
         return {
@@ -265,7 +242,7 @@ if __name__ == "__main__":
                 "mail": {
                 "timestamp": "2026-01-19T12:43:07.914Z",
                 "source": "forwarding-noreply@google.com",
-                "messageId": "vb2gbk6kdmptv9m9n25g8u7df2cjspvb61vunl81",
+                "messageId": "jrtlq5db37hp9ifj50jqj465buv1itm8iktqv481", #"1r9r51shhsn072a7i9fmf56ipgmolk5uhlgf9ig1",
                 "destination": [
                     "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
                 ],

@@ -696,3 +696,5 @@ def get_secret(secret_name):
                 "statusCode": 404,
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
+
+

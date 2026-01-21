@@ -105,3 +105,9 @@ Outputs:
     Value: !GetAtt ReferralSourceCandProfileParserFunction.Arn
     Export:
       Name: !Sub "${AWS::StackName}-ReferralSourceCandProfileParserFunctionArn"
+  
+  ReferralSourceCandProfileParserRoleArn:
+    Description: Lambda Execution Role ARN (needed for KMS key policy)
+    Value: !GetAtt ReferralSourceCandProfileParserRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ReferralSourceCandProfileParserRoleArn"
