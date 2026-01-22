@@ -697,4 +697,13 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
+def extract_company_id_from_email(email_string):
+    """Extract company ID from email address like '01HZM7MDK1QZCCV7ZD41VGBAVD@referral.worko.work'"""
+    if not email_string:
+        return None
+    
+    # Find email pattern
+    match = re.search(r'([A-Z0-9]+)@referral\.worko\.work', email_string, re.IGNORECASE)
+    return match.group(1) if match else None
+
 

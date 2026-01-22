@@ -124,7 +124,26 @@ def lambda_handler(event, context):
     from_header = str(email_obj.get("from") or "")
     delivered_to = str(email_obj.get("delivered-to") or "")
     x_forwarded_to = str(email_obj.get("x-forwarded-to") or "")
-    company_id = x_forwarded_to.split("@")[0]
+
+
+    company_id = extract_company_id_from_email(x_forwarded_to)
+    if company_id:
+        print("Got company ID from X-Forwarded-To header (Gmail forwarded email):", company_id)
+
+    # Priority 2: To header (Direct emails)
+    if not company_id:
+        company_id = extract_company_id_from_email(to_header)
+        if company_id:
+            print("Got company ID from To header (Outlook/Direct email):", company_id)
+
+    # Priority 3: Delivered-To or envelope recipient
+    if not company_id:
+        company_id = extract_company_id_from_email(delivered_to)
+        if company_id:
+            print("Got company ID from Delivered-To header (Fallback):", company_id)
+
+
+
     print(f"Extracting company ID from headers...")
     print(f"Company ID from headers: {company_id}")
     print(f"Subject: {subject}")
@@ -242,7 +261,7 @@ if __name__ == "__main__":
                 "mail": {
                 "timestamp": "2026-01-19T12:43:07.914Z",
                 "source": "forwarding-noreply@google.com",
-                "messageId": "jrtlq5db37hp9ifj50jqj465buv1itm8iktqv481", #"1r9r51shhsn072a7i9fmf56ipgmolk5uhlgf9ig1",
+                "messageId": "497b1rhqg99etnutni9fgc1gaqrh0uldfe41o8g1", #"1r9r51shhsn072a7i9fmf56ipgmolk5uhlgf9ig1",
                 "destination": [
                     "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
                 ],
