@@ -123,9 +123,7 @@ class FirestoreManager:
                 .where(filter=FieldFilter("companyId", "==", company_id)) \
                 .where(filter=or_filter)
         else:
-            print("query admin type of path")
-            query = self.db.collection(collection) \
-                .where(filter=or_filter)
+            print("Errore : Did not recevied company id for querying in firestore, hence returning None which will say no dublicasy and send sqs")
         
         docs = query.get()
         if docs:

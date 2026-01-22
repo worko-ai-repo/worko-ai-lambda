@@ -168,12 +168,8 @@ def lambda_handler(event, context):
             print(f"Missing data - To_email: {To_email}, verification_link: {verification_link}")
             return {'statusCode': 400, 'body': json.dumps('Invalid email format or missing verification link')}
         
-
-
-    
-    
     if not attachments:
-        return {'statusCode': 400, 'body': json.dumps('No attachments found')}
+        return {'statusCode': 200, 'body': json.dumps('No attachments found')}
     else:
 
         # Find PDF attachment
@@ -218,37 +214,44 @@ def lambda_handler(event, context):
 
         # Check for duplicates
         collection = "corporateCandidateProfiles"
-        data = DBManager.get_candidate_profiles(collection, company_id, email, phone_number, country_code)
-        
-        if data is not None:
-            print(f"Duplicate found in {collection}: {data}")
-            return {'statusCode': 200, 'body': json.dumps('Duplicate candidate found')}
-        
-        print("No duplicate found")
+        if company_id:
+            data = DBManager.get_candidate_profiles(collection, company_id, email, phone_number, country_code)
+            
+            if data is not None:
+                print(f"Duplicate found in {collection}: {data}")
+                return {'statusCode': 200, 'body': json.dumps('Duplicate candidate found')}
+            
+            print("No duplicate found")
 
-        # Upload CV to S3
-        file_id = sort_key = str(uuid.uuid4())
-        cv_bucket = os.environ.get("CV_UPLOAD_BUCKET", "worko-corporate-referral-source-cv-dev")
-        s3_key = f"companies/{company_id}/referral-source-cvs/{file_id}.pdf"
-        
-        s3_client.put_object(Bucket=cv_bucket, Key=s3_key, Body=pdf_bytes)
-        print(f"Uploaded CV to S3: {s3_key}")
+            # Upload CV to S3
+            file_id = sort_key = str(uuid.uuid4())
+            cv_bucket = os.environ.get("CV_UPLOAD_BUCKET", "worko-corporate-referral-source-cv-dev")
+            s3_key = f"companies/{company_id}/referral-source-cvs/{file_id}.pdf"
+            
+            s3_client.put_object(Bucket=cv_bucket, Key=s3_key, Body=pdf_bytes)
+            print(f"Uploaded CV to S3: {s3_key}")
 
-        # Send SQS message
-        sqs_send_data = {
-            "event": "CORPORATE_CAND_PROFILE_REFERRAL_SOURCE",
-            "companyId": company_id,
-            "candidateCvAwsS3FileName": f"{file_id}.pdf",
-            "cvExtractedParsed": cvExtractedParsed
-        }
-        
-        update_sqs_queue(sqs_send_data)
-        print("SQS message sent successfully")
+            # Send SQS message
+            sqs_send_data = {
+                "event": "CORPORATE_CAND_PROFILE_REFERRAL_SOURCE",
+                "companyId": company_id,
+                "candidateCvAwsS3FileName": f"{file_id}.pdf",
+                "cvExtractedParsed": cvExtractedParsed
+            }
+            
+            update_sqs_queue(sqs_send_data)
+            print("SQS message sent successfully")
 
-        return {
-            'statusCode': 200,
-            'body': json.dumps('Processing complete')
-        }
+            return {
+                'statusCode': 200,
+                'body': json.dumps('Processing complete')
+            }
+        else:
+            return {
+                'statusCode': 500,
+                'body': json.dumps('No comapny id found in email headers')
+            }
+
 
 if __name__ == "__main__":
     # For local testing purposes
