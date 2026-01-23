@@ -86,7 +86,6 @@ Resources:
           ENVIRONMENT: !Ref Environment
           SQS_REGION: ap-south-1
           EVENT_QUEUE_NAME: worko-corp-app-event-queue
-          ACCOUNT_ID: "211125353899"
           CV_UPLOAD_BUCKET: !Sub "worko-corporate-referral-source-cv-${Environment}"
           SES_SOURCE_EMAIL: no-reply@worko.ai
           COMPANY_ID_PATTERN: "@referral\\.worko\\.work"

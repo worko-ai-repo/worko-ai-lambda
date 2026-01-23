@@ -313,6 +313,16 @@ class AzureOpenAIClient:
             except (KeyError, IndexError) as e:
                 print(f"Unexpected response structure: {result}")
                 raise ValueError("Invalid response format from Azure OpenAI") from e
+
+def get_account_id():
+    # Create STS client
+    sts_client = boto3.client('sts')
+
+    # Call get-caller-identity
+    response = sts_client.get_caller_identity()
+
+    # Extract account ID
+    return response['Account']
          
 def get_email_id_from_subject(subject):
     email = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', subject)
