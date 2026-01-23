@@ -142,6 +142,28 @@ def lambda_handler(event, context):
         if company_id:
             print("Got company ID from Delivered-To header (Fallback):", company_id)
 
+    # Priority 4: Check SES recipient from event (most reliable)
+    if not company_id:
+        try:
+            ses_recipients = event.get("Records")[0].get("ses").get("receipt").get("recipients", [])
+            for recipient in ses_recipients:
+                company_id = extract_company_id_from_email(recipient)
+                if company_id:
+                    print("Got company ID from SES recipient (Event data):", company_id)
+                    break
+        except:
+            pass
+
+    # Priority 5: Parse Received headers for envelope recipient
+    if not company_id:
+        received_headers = email_obj.get_all("received") or []
+        for received in received_headers:
+            if "for" in received and "referral.worko.work" in received:
+                company_id = extract_company_id_from_email(received)
+                if company_id:
+                    print("Got company ID from Received header (Envelope recipient):", company_id)
+                    break
+
 
 
     print(f"Extracting company ID from headers...")
@@ -264,7 +286,7 @@ if __name__ == "__main__":
                 "mail": {
                 "timestamp": "2026-01-19T12:43:07.914Z",
                 "source": "forwarding-noreply@google.com",
-                "messageId": "497b1rhqg99etnutni9fgc1gaqrh0uldfe41o8g1", #"1r9r51shhsn072a7i9fmf56ipgmolk5uhlgf9ig1",
+                "messageId": "ubklm2tk2kj3r6rk71l05nd36jan4556uppedm01", #"1r9r51shhsn072a7i9fmf56ipgmolk5uhlgf9ig1",
                 "destination": [
                     "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
                 ],

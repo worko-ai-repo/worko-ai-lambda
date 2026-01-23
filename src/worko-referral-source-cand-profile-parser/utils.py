@@ -32,7 +32,7 @@ from datetime import datetime
 
 source_email = os.environ.get("SES_SOURCE_EMAIL") 
 import fitz
-
+company_id_pattern = os.environ.get("company-id-pattern","@referral\.worko\.work")
 class FirestoreManager:
     def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
         self.GCP_secret_name = GCP_secret_name
@@ -118,7 +118,7 @@ class FirestoreManager:
         
         # Query with company filter and OR condition
         if company_id:
-            print("query corporate type of path")
+            print(f"query in firstore collection : {collection} and company id : {company_id} ,email : {email}, phone_number : {phone_number}, country_code : {country_code} ")
             query = self.db.collection(collection) \
                 .where(filter=FieldFilter("companyId", "==", company_id)) \
                 .where(filter=or_filter)
@@ -695,13 +695,15 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
-def extract_company_id_from_email(email_string):
+def extract_company_id_from_email(email_string,company_id_pattern=company_id_pattern):
     """Extract company ID from email address like '01HZM7MDK1QZCCV7ZD41VGBAVD@referral.worko.work'"""
     if not email_string:
         return None
     
     # Find email pattern
-    match = re.search(r'([A-Z0-9]+)@referral\.worko\.work', email_string, re.IGNORECASE)
+    match = re.search(r'([A-Z0-9]+)'+company_id_pattern, email_string, re.IGNORECASE)
     return match.group(1) if match else None
+
+
 
 
