@@ -10,12 +10,13 @@
 ## 1. Environment Variables of Lambda Function
 These are automatically set in `template.yaml`:
 ```yaml
+COMPANY_ID_PATTERN: prod-->@referral\\.worko\\.ai / dev-->"@referral\\.worko\\.work"  # Email pattern for company ID extraction
 ENVIRONMENT: dev/prod  # Deployment environment
 SQS_REGION: ap-south-1         # AWS region for SQS
 EVENT_QUEUE_NAME: worko-corp-app-event-queue  # SQS queue name
 CV_UPLOAD_BUCKET: worko-corporate-referral-source-cv-{env}  # S3 bucket for CVs
 SES_SOURCE_EMAIL: no-reply@worko.ai  # SES sender email
-COMPANY_ID_PATTERN: prod-->@referral.worko.ai / dev-->"@referral\\.worko\\.work"  # Email pattern for company ID extraction
+
 ```
 
 ## 2. AWS Secrets Manager
