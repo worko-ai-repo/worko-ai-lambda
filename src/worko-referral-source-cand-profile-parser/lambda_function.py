@@ -122,7 +122,7 @@ def lambda_handler(event, context):
         pdf_attachment = None
         for att in attachments:
             filename = (att.get("filename") or "").lower()
-            if att.get("content_type") == "application/pdf" #or filename.endswith(".pdf"):
+            if att.get("content_type") == "application/pdf": #or filename.endswith(".pdf"):
                 pdf_attachment = att
                 break
         
