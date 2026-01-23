@@ -122,7 +122,7 @@ def lambda_handler(event, context):
         pdf_attachment = None
         for att in attachments:
             filename = (att.get("filename") or "").lower()
-            if att.get("content_type") == "application/pdf": #or filename.endswith(".pdf"):
+            if att.get("content_type") == "application/pdf" or filename.endswith(".pdf"):
                 pdf_attachment = att
                 break
         
@@ -175,7 +175,7 @@ def lambda_handler(event, context):
             s3_key = f"companies/{company_id}/referral-source-cvs/{file_id}.pdf"
             print(f"Uploading CV to S3: {cv_bucket}/{s3_key}")
             
-            s3_client.put_object(Bucket=cv_bucket, Key=s3_key, Body=pdf_bytes)
+            s3_client.put_object(Bucket=cv_bucket, Key=s3_key, Body=pdf_bytes, ContentType='application/pdf')
             print(f"Uploaded CV to S3: {s3_key}")
 
             # Send SQS message
