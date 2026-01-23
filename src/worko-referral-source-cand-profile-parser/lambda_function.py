@@ -9,83 +9,6 @@ from email.parser import BytesParser
 from botocore.exceptions import ClientError
 from utils import *
 
-def get_secret(secret_name):
-    secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
-    try:
-        response = secrets_client.get_secret_value(SecretId=secret_name)
-        secret_value = response['SecretString']
-        try:
-            secret_data = json.loads(secret_value)
-        except json.JSONDecodeError:
-            secret_data = secret_value
-        return secret_data
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            print(f"Secret '{secret_name}' not found")
-            raise Exception(f"Secret '{secret_name}' not found")
-        raise
-
-def send_ses_email(to_address, subject, body_text):
-    ses = boto3.client('ses', region_name='ap-south-1')
-    source = os.environ.get("SES_SOURCE_EMAIL", "no-reply@worko.work")
-    return ses.send_email(
-        Source=source,
-        Destination={"ToAddresses": [to_address]},
-        Message={"Subject": {"Data": subject}, "Body": {"Text": {"Data": body_text}}}
-    )
-
-def extract_email_from_text(text):
-    if not text:
-        return None
-    m = re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text)
-    return m.group(0) if m else None
-
-def extract_urls(text):
-    return re.findall(r"https?://[\w\-\.\/~%\?=&+#]+", text)
-
-
-def get_attachments(email_obj):
-    attachments = []
-    for part in email_obj.walk():
-        content_disposition = part.get_content_disposition()
-        if content_disposition == "attachment":
-            filename = part.get_filename()
-            payload = part.get_payload(decode=True)
-            attachments.append({
-                "filename": filename,
-                "content_type": part.get_content_type(),
-                "data": payload,
-            })
-    return attachments
-
-def update_sqs_queue(message_body):
-    try:
-        region = os.environ.get("SQS_REGION", "ap-south-1")
-        eventQueueName = os.environ.get("EVENT_QUEUE_NAME", "worko-corp-app-event-queue")
-        # account_id = os.environ.get("ACCOUNT_ID", "211125353899")
-        account_id = get_account_id()
-
-        sqs = boto3.client('sqs', region_name=region)
-        sqs_url = f"https://sqs.{region}.amazonaws.com/{account_id}/{eventQueueName}"
-        print("Event updating in SQS:", message_body)
-
-        message_body_msg = json.dumps(message_body)
-        
-        response = sqs.send_message(
-            QueueUrl=sqs_url,
-            MessageBody=message_body_msg
-        )
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps('Message sent to SQS!')
-        }
-    except Exception as e:
-        print("Error sending message to SQS:", e)
-        return {
-            'statusCode': 500,
-            'body': json.dumps(f'Error sending message to SQS: {e}')
-        }
 
 def lambda_handler(event, context):
     print("Got event:", event)
@@ -199,7 +122,7 @@ def lambda_handler(event, context):
         pdf_attachment = None
         for att in attachments:
             filename = (att.get("filename") or "").lower()
-            if att.get("content_type") == "application/pdf" or filename.endswith(".pdf"):
+            if att.get("content_type") == "application/pdf" #or filename.endswith(".pdf"):
                 pdf_attachment = att
                 break
         
@@ -250,6 +173,7 @@ def lambda_handler(event, context):
             file_id = sort_key = str(uuid.uuid4())
             cv_bucket = os.environ.get("CV_UPLOAD_BUCKET", "worko-corporate-referral-source-cv-dev")
             s3_key = f"companies/{company_id}/referral-source-cvs/{file_id}.pdf"
+            print(f"Uploading CV to S3: {cv_bucket}/{s3_key}")
             
             s3_client.put_object(Bucket=cv_bucket, Key=s3_key, Body=pdf_bytes)
             print(f"Uploaded CV to S3: {s3_key}")
