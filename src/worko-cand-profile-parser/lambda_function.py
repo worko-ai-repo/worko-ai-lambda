@@ -546,213 +546,206 @@ def get_secret(secret_name):
   
 def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
     print("Processing cv for cvexractparesed")
-
-    processed_text = " ".join(processed_text.split())
-
-    """
-    Process CV text and extract structured information.
-    
-    Args:
-        processed_text: Raw text from CV
-        
-    Returns:
-        Tuple containing:
-        - Extracted CV text in template format
-        - Parsed CV information as structured JSON
-    """
-
-
-
-    if not processed_text:
-        return "Unfortunately, we are not able to read your resume", processed_text
-
     try:
+        processed_text = " ".join(processed_text.split())
 
+        """
+        Process CV text and extract structured information.
         
-        # Second extraction for parsed details
-        parsed_prompt = (
-            f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
+        Args:
+            processed_text: Raw text from CV
+            
+        Returns:
+            Tuple containing:
+            - Extracted CV text in template format
+            - Parsed CV information as structured JSON
+        """
 
-            f"Resume text:\n{processed_text}\n\n"
-
-            f"*** RULE: If you don't find any data in the resume ***\n"
-            f"- If the value is a number → use 0\n"
-            f"- If the value is a boolean → use false\n"
-            f"- If the value is a string → use an empty string \"\"\n"
-            f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
-
-            f"*** Mandatory data to find in the resume ***\n"
-            f"These fields MUST always be present in the output:\n"
-            f"1. candidateName\n"
-            f"2. candidateCurrentDesignation\n"
-            f"3. candidateCurrentCompany\n"
-            f"4. candidateTotalYOE\n"
-            f"5. candidateLocation\n\n"
-
-            f"*** Last Check ***\n"
-            f"- All numbers must be integers.\n"
-            f"- Ensure ALL mandatory fields are present.\n"
-            f"- Output must be valid JSON only.\n"
-            f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
-            f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
-            f"- if Phone number is give the you must fill all three variables"
-            f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int)"
-
-            f"*** Output Format (JSON only) ***\n"
-            f"{{{{\n"
-            f"  \"candidateName\": \"\",\n"
-            f"  \"candidateEmail\": \"\",\n"
-            f"  \"candidatePhoneNumber\": \"\",\n"
-            f"  \"candidateNumber\": 0,\n"
-            f"  \"candidatePhoneCountryCode\": 0,\n"
-            f"  \"candidateCurrentCompany\": \"\",\n"
-            f"  \"candidateCurrentDesignation\": \"\",\n"
-            f"  \"candidateExperience\": 0,\n"
-            f"  \"candidateTotalYOE\": 0,\n"
-            f"  \"candidateRelevantYOE\": 0,\n"
-            f"  \"candidateCurrentCTC\": 0,\n"
-            f"  \"candidateExpectedCTC\": 0,\n"
-            f"  \"candidateNoticePeriod\": 0,\n"
-            f"  \"candidateLocation\": \"\",\n"
-            f"  \"candidateReadyToRelocate\": false,\n"
-            f"  \"isNoticePeriodNegotiable\": false\n"
-            f"}}}}\n"
-        )
-
-        cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
-        current_timestamp = datetime.now().isoformat()
-        prompt = (
-            f"**Extract the following details from the resume extract:**\n"
-            f"- Core Skills (max 30 chars each)\n"
-            f"- Soft Skills (max 30 chars each)\n"
-            f"- Preferred departments (0–5, based on experience & skills)\n"
-            f"- Years of Experience (YOE)\n\n"
-
-            f"**Instructions**:\n"
-            f"- Use ONLY information explicitly written in the resume.\n"
-            f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
-            f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
-            f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
-            f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
-            f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
-            f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
-            f"- Add YOE for Core Skills if mentioned, else 0.\n"
-            f"- Calculate total YOE from roles or dates.\n\n"
-
-            f"**Mandatory Rules**:\n"
-            f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
-            f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
-            f"- Core Skills must NOT include:\n"
-            f"  • Job titles (Project Manager)\n"
-            f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
-            f"  • Interpersonal traits (Leadership, Mentoring)\n"
-            f"  • Tools/software (Excel, SAP, Salesforce)\n"
-            f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
-
-            f"**STRICT Example**:\n"
-            f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
-            f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
-            f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
-            f"technicalSkills: CRM tools\n\n"
-
-            f"**STRICT RULES**:\n"
-            f"- If more than 20 skills exist, pick the 20 most relevant.\n"
-            f"- Do NOT invent skills.\n"
-            f"- A skill MUST appear only once across all categories.\n"
-            f"- Never include responsibilities/duties as skills.\n"
-            f"- Skills must be concise names.\n"
-            f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
-            f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
-
-            f"Resume extract:\n\n{processed_text}\n\n"
-
-            f"Return JSON only:\n"
-            f"{{{{\n"
-            f"  \"coreSkills\": [\n"
-            f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-            f"  ],\n"
-            f"  \"technicalSkills\": [\n"
-            f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-            f"  ],\n"
-            f"  \"softSkills\": [\n"
-            f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
-            f"  ],\n"
-            f"  \"userPreferredDepartments\": [\n"
-            f"    \"List the department names based on resume designations and core skills\"\n"
-            f"  ],\n"
-            f"  \"userPreferredIndustries\": [\n"
-            f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
-            f"  ],\n"
-            f"  \"userPreferredlocations\": [\n"
-            f"    \"Extract if mentioned; else return empty list\"\n"
-            f"  ],\n"
-            f"  \"userPreferredRoles\": [\n"
-            f"    \"Extract roles/designations from resume\"\n"
-            f"  ]\n"
-            f"}}}}\n"
-        )
-
-        cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
-        merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
-        
-        return merged
-        
-    except requests.exceptions.HTTPError as e:
-        print(" Error occured : from open ai asuure.",e)
-        return "Error processing CV"
-    except Exception as e:
-        print(f"Error processing CV: {str(e)}")
-        return "Error processing CV"
-
-def lambda_handler(event, context):
-    # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
-    # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
-    print("got event:",event)
-    env=os.environ.get("ENVIRONMENT", "dev")
-    secret_name ="AZURE-openai-secret-" +env
-    AZURE_openai_secret = get_secret(secret_name) 
-    GCP_DATABASE_NAME = "worko-corp-db-"+env
-    GCP_secret_name = "GCP-firestore-secret-"+env
-    DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
-    s3_client = boto3.client('s3')
-    s3_event = event['Records'][0]['s3']
-    bucket_name = s3_event['bucket']['name']
-    object_key = unquote_plus(s3_event['object']['key'])
-
-    response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
-    data = response['Body'].read()
-
-    
-    # Extract text from the PDF or DOCX file
-    if object_key.lower().endswith('.pdf'):
-        processed_text = extract_text_from_pdf(data)
-        processed_text = clean_text(processed_text)
-        print("Fetched_cv_text",processed_text)
         if not processed_text:
-            print('Image Based Resume Processing..')    ######
-            base64_images = extract_images_from_pdf(data)
-            processed_text = invoke_claude_with_image(base64_images)   
-            print('image Based cv process completed')  
-        
-    elif object_key.lower().endswith('.docx'):
-        processed_text = extract_text_from_docx(data)
-        processed_text = clean_text(processed_text)
-        print("Fetched_cv_text",processed_text)
-    else:
-        print(f"Unsupported file format: {object_key}")
-    
+            return "Unfortunately, we are not able to read your resume", processed_text
 
-    print(AZURE_openai_secret)
-    OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
-    cvExtractedParsed = process_cv(processed_text,OpenAIClient)
+        try:
+
+            
+            # Second extraction for parsed details
+            parsed_prompt = (
+                f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
+
+                f"Resume text:\n{processed_text}\n\n"
+
+                f"*** RULE: If you don't find any data in the resume ***\n"
+                f"- If the value is a number → use 0\n"
+                f"- If the value is a boolean → use false\n"
+                f"- If the value is a string → use an empty string \"\"\n"
+                f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
+
+                f"*** Mandatory data to find in the resume ***\n"
+                f"These fields MUST always be present in the output:\n"
+                f"1. candidateName\n"
+                f"2. candidateCurrentDesignation\n"
+                f"3. candidateCurrentCompany\n"
+                f"4. candidateTotalYOE\n"
+                f"5. candidateLocation\n\n"
+
+                f"*** Last Check ***\n"
+                f"- All numbers must be integers.\n"
+                f"- Ensure ALL mandatory fields are present.\n"
+                f"- Output must be valid JSON only.\n"
+                f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
+                f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
+                f"- if Phone number is give the you must fill all three variables"
+                f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int)"
+
+                f"*** Output Format (JSON only) ***\n"
+                f"{{{{\n"
+                f"  \"candidateName\": \"\",\n"
+                f"  \"candidateEmail\": \"\",\n"
+                f"  \"candidatePhoneNumber\": \"\",\n"
+                f"  \"candidateNumber\": 0,\n"
+                f"  \"candidatePhoneCountryCode\": 0,\n"
+                f"  \"candidateCurrentCompany\": \"\",\n"
+                f"  \"candidateCurrentDesignation\": \"\",\n"
+                f"  \"candidateExperience\": 0,\n"
+                f"  \"candidateTotalYOE\": 0,\n"
+                f"  \"candidateRelevantYOE\": 0,\n"
+                f"  \"candidateCurrentCTC\": 0,\n"
+                f"  \"candidateExpectedCTC\": 0,\n"
+                f"  \"candidateNoticePeriod\": 0,\n"
+                f"  \"candidateLocation\": \"\",\n"
+                f"  \"candidateReadyToRelocate\": false,\n"
+                f"  \"isNoticePeriodNegotiable\": false\n"
+                f"}}}}\n"
+            )
+
+            cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
+            current_timestamp = datetime.now().isoformat()
+            prompt = (
+                f"**Extract the following details from the resume extract:**\n"
+                f"- Core Skills (max 30 chars each)\n"
+                f"- Soft Skills (max 30 chars each)\n"
+                f"- Preferred departments (0–5, based on experience & skills)\n"
+                f"- Years of Experience (YOE)\n\n"
+
+                f"**Instructions**:\n"
+                f"- Use ONLY information explicitly written in the resume.\n"
+                f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
+                f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
+                f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
+                f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
+                f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
+                f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
+                f"- Add YOE for Core Skills if mentioned, else 0.\n"
+                f"- Calculate total YOE from roles or dates.\n\n"
+
+                f"**Mandatory Rules**:\n"
+                f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
+                f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
+                f"- Core Skills must NOT include:\n"
+                f"  • Job titles (Project Manager)\n"
+                f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
+                f"  • Interpersonal traits (Leadership, Mentoring)\n"
+                f"  • Tools/software (Excel, SAP, Salesforce)\n"
+                f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
+
+                f"**STRICT Example**:\n"
+                f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
+                f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
+                f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
+                f"technicalSkills: CRM tools\n\n"
+
+                f"**STRICT RULES**:\n"
+                f"- If more than 20 skills exist, pick the 20 most relevant.\n"
+                f"- Do NOT invent skills.\n"
+                f"- A skill MUST appear only once across all categories.\n"
+                f"- Never include responsibilities/duties as skills.\n"
+                f"- Skills must be concise names.\n"
+                f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
+                f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
+
+                f"Resume extract:\n\n{processed_text}\n\n"
+
+                f"Return JSON only:\n"
+                f"{{{{\n"
+                f"  \"coreSkills\": [\n"
+                f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+                f"  ],\n"
+                f"  \"technicalSkills\": [\n"
+                f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+                f"  ],\n"
+                f"  \"softSkills\": [\n"
+                f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
+                f"  ],\n"
+                f"  \"userPreferredDepartments\": [\n"
+                f"    \"List the department names based on resume designations and core skills\"\n"
+                f"  ],\n"
+                f"  \"userPreferredIndustries\": [\n"
+                f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
+                f"  ],\n"
+                f"  \"userPreferredlocations\": [\n"
+                f"    \"Extract if mentioned; else return empty list\"\n"
+                f"  ],\n"
+                f"  \"userPreferredRoles\": [\n"
+                f"    \"Extract roles/designations from resume\"\n"
+                f"  ]\n"
+                f"}}}}\n"
+            )
+
+            cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
+            merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
+            
+            return merged
+            
+        except requests.exceptions.HTTPError as e:
+            print(" Error occured : from open ai asuure.",e)
+            return "Error processing CV"
+    except Exception as execution_error:
+        error_message = str(execution_error).lower()
+        # error_traceback = traceback.format_exc()# Check if this is a throttling error
+    if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
+        send_sqs(processed_text) #send sqs for throttled
+        return None 
+    else:
+        # For all other errors, just log and continue
+        print(f"Error processing CV: {execution_error}")
+        return None 
+
+def get_queue_url(queue_name):
+    sqs = boto3.client('sqs')
+    response = sqs.get_queue_url(QueueName=queue_name)
+    return response['QueueUrl']
+
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+def send_sqs(processed_text):
+    try:
+        queue_url = get_queue_url("worko-job-app-event-retry-queue")
+        sqs = boto3.client('sqs')
+        queue_url = get_queue_url('worko-job-app-event-retry-queue')
+
+        message_body = {"processed_text": processed_text,"from":"throtling errore"}
+
+        print(f"SQS message body for throttled steps: {json.dumps(message_body)}")
+        
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(message_body, default=decimal_default),
+            DelaySeconds=10  # Increase delay for throttled requests to allow rate limits to reset
+        )
+        
+        
+    except Exception as sqs_error:
+        print(f"Error sending throttled steps to SQS: {sqs_error}")
+
+def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
     email = cvExtractedParsed.get("candidateEmail","")
     phone_number = cvExtractedParsed.get("candidatePhoneNumber","") 
     country_code = cvExtractedParsed.get("candidateCountryCode","")
 
-    print("cvExtractedParsed",cvExtractedParsed)
-    file_name = object_key.split("/")[-1]
     if "companies" in object_key: #example_path1:
-    # query data and check it present or not
+        # query data and check it present or not
         collection = "corporateCandidateProfiles"
         company_id = object_key.split("/")[1]
         
@@ -790,10 +783,81 @@ def lambda_handler(event, context):
             }
             update_sqs_queue(sqs_send_data)
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Lambda successful..')
-    }
+def lambda_handler(event, context):
+    # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
+    # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
+    print("got event:",event)
+    env=os.environ.get("ENVIRONMENT", "dev")
+    secret_name ="AZURE-openai-secret-" +env
+    AZURE_openai_secret = get_secret(secret_name) 
+    OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
+    GCP_DATABASE_NAME = "worko-corp-db-"+env
+    GCP_secret_name = "GCP-firestore-secret-"+env
+    DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+    s3_client = boto3.client('s3')
+    s3_event = event['Records'][0]['s3']
+    bucket_name = s3_event['bucket']['name']
+    object_key = unquote_plus(s3_event['object']['key'])
+    file_name = object_key.split("/")[-1]
+   
+
+
+    if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
+        is_sqs_trigger = True
+        print("This Event is triggered by SQS...")
+        message_body = json.loads(event['Records'][0]['body'])
+        processed_text = message_body.get("processed_text","")
+        if processed_text:
+            cvExtractedParsed = process_cv(processed_text,OpenAIClient)
+            send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Lambda successful for sqs event')
+        }
+
+    else:
+        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+        data = response['Body'].read()
+
+        
+        # Extract text from the PDF or DOCX file
+        if object_key.lower().endswith('.pdf'):
+            processed_text = extract_text_from_pdf(data)
+            processed_text = clean_text(processed_text)
+            print("Fetched_cv_text",processed_text)
+            if not processed_text:
+                print('Image Based Resume Processing..')    ######
+                base64_images = extract_images_from_pdf(data)
+                processed_text = invoke_claude_with_image(base64_images)   
+                print('image Based cv process completed')  
+            
+        elif object_key.lower().endswith('.docx'):
+            processed_text = extract_text_from_docx(data)
+            processed_text = clean_text(processed_text)
+            print("Fetched_cv_text",processed_text)
+        else:
+            print(f"Unsupported file format: {object_key}")
+        
+
+        print(AZURE_openai_secret)
+        
+        cvExtractedParsed = process_cv(processed_text,OpenAIClient)
+
+
+        print("cvExtractedParsed",cvExtractedParsed)
+        
+        try:
+            if cvExtractedParsed:
+                send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
+        except Exception as e:
+            print(f"Error sending final CV to SQS: {e}" )
+
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Lambda successful for s3 event')
+        }
 
 # if __name__ == "__main__":
         

@@ -16,6 +16,7 @@ from google.oauth2 import service_account
 from datetime import datetime, timezone
 
 from utils import *
+sqs = boto3.client('sqs')
 
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
@@ -259,6 +260,40 @@ class FirestoreManager:
         doc_ref = self.db.collection(collection_name).document(doc_id)
         return doc_ref.get().to_dict()
     
+def get_account_id():
+    # Create STS client
+    sts_client = boto3.client('sts')
+
+    # Call get-caller-identity
+    response = sts_client.get_caller_identity()
+
+    # Extract account ID
+    return response['Account']
+
+def update_sqs_queue(queue_url,agencyBulkJdResumeId):
+
+    # Determine the event based on type
+        
+
+        event = "AGENCY_BULK_JD_RESUME_POST_MATCHING_SCORE"
+        message_body ={
+            "event": event,
+            "agencyBulkJdResumeId": agencyBulkJdResumeId,
+        }
+
+
+        message_body_msg = json.dumps(message_body)
+        
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=message_body_msg
+            )
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Message sent to SQS!')
+        }
+
 def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
     print("Processing cv for cvexractparesed")
 
@@ -455,8 +490,11 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
         print(f"Error processing CV: {str(e)}")
         return "Error processing CV", cv_parsed_template
 
-def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,OpenAIClient,update_doc_id):
-
+def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,OpenAIClient,update_doc_id,agencyBulkJdResumeId):
+    region ="ap-south-1"
+    account_id = get_account_id()
+    queue_name = 'worko-corp-app-event-queue'
+    queue_url = f"https://sqs.{region}.amazonaws.com/{account_id}/{queue_name}"
     # Determine if job is non-technical
     print("*****************************Job Description******************************************")
     # print("jd:-", job_desc)
@@ -1442,7 +1480,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
         update_collection_name = "agencyBulkJdResumes"
         print("updating firestore document after scoring with data :--",update_data)
         DBManager.update_firestore_document_with_scoring_data(update_collection_name, update_doc_id, update_data,processingStatus)
-        
+        # send sqs after score calculation
+        update_sqs_queue(queue_url,agencyBulkJdResumeId)
     except Exception as e:
         print(f"An error occurred: {e}")
         # update_cv_extract_in_dynamodb(table_name, partition_key_value, sort_key_prefix, str(e) , 251, -1)
@@ -1459,12 +1498,20 @@ def lambda_handler(event, context):
     env=os.environ.get("ENVIRONMENT", "dev")
     secret_name ="AZURE-openai-secret-" +env
     AZURE_openai_secret = get_secret(secret_name) 
-        
+
+    #set variables for sqs
+    region ="ap-south-1"
+    account_id = get_account_id()
+    queue_name = 'worko-corp-app-event-queue'
+    queue_url = f"https://sqs.{region}.amazonaws.com/{account_id}/{queue_name}"
+
     try:
         # Parse S3 event
         s3_event = event['Records'][0]['s3']
         bucket_name = s3_event['bucket']['name']
         object_key = unquote_plus(s3_event['object']['key'])
+        original_key = s3_event['object']['key']
+        agencyBulkJdResumeId = original_key.split("/")[-1]
         
         print(f"Processing S3 object: {bucket_name}/{object_key}")
         
@@ -1476,9 +1523,7 @@ def lambda_handler(event, context):
         agency_user_id = path_parts[1]
         agency_bulk_jd_id = path_parts[3]
         filename = path_parts[4]
-        
-        
-       
+  
         
         # Download PDF from S3
         s3_client = boto3.client('s3')
@@ -1489,7 +1534,7 @@ def lambda_handler(event, context):
             if e.response['Error']['Code'] == 'NoSuchKey':
                 print(f"S3 object not found: {bucket_name}/{object_key}")
                 # Try with original encoded key
-                original_key = s3_event['object']['key']
+                
                 print(f"Trying original key: {bucket_name}/{original_key}")
                 response = s3_client.get_object(Bucket=bucket_name, Key=original_key)
                 pdf_data = response['Body'].read()
@@ -1507,8 +1552,6 @@ def lambda_handler(event, context):
         GCP_DATABASE_NAME = "worko-corp-db-" +env 
         
         DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
-
-
 
         update_data = {
             "updatedAt": datetime.now().isoformat(),
@@ -1580,7 +1623,7 @@ def lambda_handler(event, context):
         print("updating firestore document before scoring with IN-PROGRESS status and cv cv_extracted_parsed :--",cv_extracted_parsed)
         DBManager.update_firestore_document_with_scoring_data(update_collection_name, update_doc_id, cv_extracted_parsed,processingStatus)
 
-        score = jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,OpenAIClient,update_doc_id)
+        score = jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,OpenAIClient,update_doc_id,agencyBulkJdResumeId)
         return {
             "statusCode": 200,
             "body": json.dumps({
@@ -1591,7 +1634,11 @@ def lambda_handler(event, context):
         }
         
     except Exception as e:
-        print(f"Error processing resume: {str(e)}")
+        print(f"Error processing resume-jd-matching triggring failure sqs: {str(e)}")
+        
+        # # Define the SQS queue URL
+
+        update_sqs_queue(queue_url,agencyBulkJdResumeId)
         return {
             "statusCode": 500,
             "body": json.dumps({
@@ -1599,31 +1646,31 @@ def lambda_handler(event, context):
             })
         }
     
-# if __name__ == "__main__":
-#     event = {
-#         "Records": [
-#             {
-#             "eventVersion": "2.1",
-#             "eventSource": "aws:s3",
-#             "awsRegion": "ap-south-1",
-#             "eventTime": "2024-01-15T10:30:00.000Z",
-#             "eventName": "s3:ObjectCreated:Put",
-#             "s3": {
-#                 "s3SchemaVersion": "1.0",
-#                 "configurationId": "lambda-trigger",
-#                 "bucket": {
-#                 "name": "worko-app-dev",
-#                 "arn": "arn:aws:s3:::worko-app-dev"
-#                 },
-#                 "object": {
-#                 "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf",
-#                 "size": 245760,
-#                 "eTag": "d41d8cd98f00b204e9800998ecf8427e"
-#                 }
-#             }
-#             }
-#         ]
+if __name__ == "__main__":
+    event = {
+        "Records": [
+            {
+            "eventVersion": "2.1",
+            "eventSource": "aws:s3",
+            "awsRegion": "ap-south-1",
+            "eventTime": "2024-01-15T10:30:00.000Z",
+            "eventName": "s3:ObjectCreated:Put",
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "lambda-trigger",
+                "bucket": {
+                "name": "worko-app-dev",
+                "arn": "arn:aws:s3:::worko-app-dev"
+                },
+                "object": {
+                "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf",
+                "size": 245760,
+                "eTag": "d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+            }
+        ]
 
-#     }
-#     lambda_handler(event,None)
+    }
+    lambda_handler(event,None)
     
