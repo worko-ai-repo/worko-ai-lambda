@@ -784,7 +784,7 @@ def lambda_handler(event, context):
     print("got event:",event)
     env=os.environ.get("ENVIRONMENT", "dev")
     secret_name ="AZURE-openai-secret-" +env
-    retry_queue_name = "worko-cand-profile-parser-retry-queue"+env
+    retry_queue_name = "worko-cand-profile-parser-retry-queue-"+env
     AZURE_openai_secret = get_secret(secret_name) 
     OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
     GCP_DATABASE_NAME = "worko-corp-db-"+env
