@@ -715,24 +715,34 @@ def decimal_default(obj):
 
 def send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key):
     try:
+        from datetime import datetime, timedelta
         queue_url = get_queue_url(retry_queue_name)
-        # queue_url = get_queue_url("worko-job-app-event-retry-queue")
         sqs = boto3.client('sqs')
         
-
         message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
-
+        delay_seconds = 30
+        
+        current_time = datetime.now()
+        visible_time = current_time + timedelta(seconds=delay_seconds)
+        
+        print(f"[SQS SEND] Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"[SQS SEND] Message will be visible at: {visible_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
         print(f"SQS message body for throttled steps: {json.dumps(str(message_body)[:100])}")
         
         response = sqs.send_message(
             QueueUrl=queue_url,
             MessageBody=json.dumps(message_body, default=decimal_default),
-            DelaySeconds=30  # Increase delay for throttled requests to allow rate limits to reset
+            DelaySeconds=delay_seconds
         )
+        
+        print(f"[SQS SEND] MessageId: {response.get('MessageId', 'N/A')}")
         
         
     except Exception as sqs_error:
         print(f"Error sending send_sqs_for_throttling_error step to SQS: {sqs_error}")
+        print(f"Queue URL attempted: {queue_url}")
+        print(f"Message body: {message_body}")
 
 def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
     email = cvExtractedParsed.get("candidateEmail","")
@@ -781,6 +791,8 @@ def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
 def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
     # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
+    print("=== LAMBDA INVOKED ===")
+    print(f"Event source: {event.get('Records', [{}])[0].get('eventSource', 'UNKNOWN') if event.get('Records') else 'NO_RECORDS'}")
     print("got event:",event)
     env=os.environ.get("ENVIRONMENT", "dev")
     secret_name ="AZURE-openai-secret-" +env
@@ -809,6 +821,7 @@ def lambda_handler(event, context):
         }
 
     else:
+        print("This Event is triggered by S3...")
         s3_client = boto3.client('s3')
         s3_event = event['Records'][0]['s3']
         bucket_name = s3_event['bucket']['name']
