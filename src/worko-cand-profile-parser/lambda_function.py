@@ -727,7 +727,7 @@ def send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key):
         response = sqs.send_message(
             QueueUrl=queue_url,
             MessageBody=json.dumps(message_body, default=decimal_default),
-            DelaySeconds=60  # Increase delay for throttled requests to allow rate limits to reset
+            DelaySeconds=30  # Increase delay for throttled requests to allow rate limits to reset
         )
         
         
@@ -795,8 +795,7 @@ def lambda_handler(event, context):
     if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
         is_sqs_trigger = True
         print("This Event is triggered by SQS...")
-        # message_body = json.loads(event['Records'][0]['body'])
-        message_body = event['Records'][0]['body']
+        message_body = json.loads(event['Records'][0]['body'])
         processed_text = message_body.get("processed_text","")
         object_key = message_body.get("object_key","")
         file_name = object_key.split("/")[-1]
