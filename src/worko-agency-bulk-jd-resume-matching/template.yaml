@@ -41,6 +41,11 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:GetQueueUrl
+                Resource: "*"
 
   PythonDependenciesLayer:
     Type: AWS::Serverless::LayerVersion
