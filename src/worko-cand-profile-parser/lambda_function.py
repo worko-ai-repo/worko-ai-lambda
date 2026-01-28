@@ -813,7 +813,8 @@ def lambda_handler(event, context):
         file_name = object_key.split("/")[-1]
         if processed_text:
             cvExtractedParsed = process_cv(retry_queue_name,processed_text,OpenAIClient,object_key)
-            send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
+            if cvExtractedParsed:
+                send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
 
         return {
             'statusCode': 200,
