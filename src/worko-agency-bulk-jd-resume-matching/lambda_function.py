@@ -1511,7 +1511,7 @@ def lambda_handler(event, context):
         bucket_name = s3_event['bucket']['name']
         object_key = unquote_plus(s3_event['object']['key'])
         original_key = s3_event['object']['key']
-        agencyBulkJdResumeId = original_key.split("/")[-1]
+        agencyBulkJdResumeId = original_key.split("/")[-1].split(".")[0]
         
         print(f"Processing S3 object: {bucket_name}/{object_key}")
         

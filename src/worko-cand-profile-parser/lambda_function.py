@@ -810,7 +810,7 @@ def lambda_handler(event, context):
         message_body = json.loads(event['Records'][0]['body'])
         processed_text = message_body.get("processed_text","")
         object_key = message_body.get("object_key","")
-        file_name = object_key.split("/")[-1]
+        file_name = object_key.split("/")[-1].split(".")[0]
         if processed_text:
             cvExtractedParsed = process_cv(retry_queue_name,processed_text,OpenAIClient,object_key)
             if cvExtractedParsed:
