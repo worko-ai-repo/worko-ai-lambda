@@ -50,6 +50,9 @@ Resources:
                 Action:
                   - sqs:SendMessage
                   - sqs:GetQueueUrl
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
                 Resource: "*"
 
   PythonDependenciesLayer:
@@ -65,6 +68,16 @@ Resources:
       BuildMethod: python3.10
       BuildArchitecture: x86_64
 
+  CandProfileParserRetryQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "worko-cand-profile-parser-retry-queue-${Environment}"
+      VisibilityTimeout: 900
+      MessageRetentionPeriod: 345600
+      DelaySeconds: 0
+      MaximumMessageSize: 262144
+      ReceiveMessageWaitTimeSeconds: 0
+
   CandProfileParserFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -79,6 +92,12 @@ Resources:
           ENVIRONMENT: !Ref Environment
           SQS_REGION: ap-south-1
           EVENT_QUEUE_NAME: worko-corp-app-event-queue
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt CandProfileParserRetryQueue.Arn
+            BatchSize: 1
 
   LambdaInvokePermissionCorporate:
     Type: AWS::Lambda::Permission
@@ -104,3 +123,15 @@ Outputs:
     Value: !GetAtt CandProfileParserFunction.Arn
     Export:
       Name: !Sub "${AWS::StackName}-CandProfileParserFunctionArn"
+  
+  CandProfileParserRetryQueueArn:
+    Description: Retry Queue ARN
+    Value: !GetAtt CandProfileParserRetryQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-RetryQueueArn"
+  
+  CandProfileParserRetryQueueUrl:
+    Description: Retry Queue URL
+    Value: !Ref CandProfileParserRetryQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-RetryQueueUrl"

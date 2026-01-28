@@ -12,6 +12,7 @@ from io import BytesIO
 from urllib.parse import unquote_plus
 from botocore.exceptions import ClientError
 import requests
+import random
 from typing import Tuple, Dict, Any, Optional, Union
 from google.cloud import firestore
 from google.oauth2 import service_account
@@ -242,7 +243,7 @@ class AzureOpenAIClient:
             
             except requests.exceptions.HTTPError as e:
                 # Check for rate limiting (429) or server errors (5xx)
-                if e.response.status_code in [429, 500, 502, 503, 504]:
+                if e.response.status_code in [500, 502, 503, 504]:
                     if attempt < max_retries - 1:
                         delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
                         print(
@@ -501,7 +502,7 @@ def invoke_model_OpenAI(system_content, prompt, want_json=True, max_try_for_json
                 content = content.strip().removeprefix("```json").removesuffix("```").strip()
                 return json.loads(content)
 
-            except Exception as e:
+            except json.JSONDecodeError as e:
                 remaining = max_try_for_json - attempt - 1
                 print(f"JSON parse failed. Retries left: {remaining}")
                 print("Error:", e)
@@ -514,15 +515,8 @@ def invoke_model_with_backoff_OpenAI(prompt,Task="Not Specifield" ,max_retries=1
     system_content = "You are a helpful assistant."
     
     for attempt in range(max_retries):
-        try:
-            return invoke_model_OpenAI(system_content, prompt,want_json)
-        except Exception as e:
-            if "ThrottlingException" in str(e) and attempt < max_retries - 1:
-                delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
-                print(f"Throttling occurred. Retrying in {delay:.2f} seconds...")
-                time.sleep(delay)
-            else:
-                raise
+
+        return invoke_model_OpenAI(system_content, prompt,want_json)
 
 def get_secret(secret_name):
     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
@@ -543,8 +537,8 @@ def get_secret(secret_name):
                 "statusCode": 404,
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
-  
-def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
+
+def process_cv(retry_queue_name, processed_text, OpenAIClient, object_key) -> Tuple[str, Dict[str, str]]:
     print("Processing cv for cvexractparesed")
     try:
         processed_text = " ".join(processed_text.split())
@@ -564,150 +558,150 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
         if not processed_text:
             return "Unfortunately, we are not able to read your resume", processed_text
 
-        try:
+        
 
             
-            # Second extraction for parsed details
-            parsed_prompt = (
-                f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
+        # Second extraction for parsed details
+        parsed_prompt = (
+            f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
 
-                f"Resume text:\n{processed_text}\n\n"
+            f"Resume text:\n{processed_text}\n\n"
 
-                f"*** RULE: If you don't find any data in the resume ***\n"
-                f"- If the value is a number → use 0\n"
-                f"- If the value is a boolean → use false\n"
-                f"- If the value is a string → use an empty string \"\"\n"
-                f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
+            f"*** RULE: If you don't find any data in the resume ***\n"
+            f"- If the value is a number → use 0\n"
+            f"- If the value is a boolean → use false\n"
+            f"- If the value is a string → use an empty string \"\"\n"
+            f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
 
-                f"*** Mandatory data to find in the resume ***\n"
-                f"These fields MUST always be present in the output:\n"
-                f"1. candidateName\n"
-                f"2. candidateCurrentDesignation\n"
-                f"3. candidateCurrentCompany\n"
-                f"4. candidateTotalYOE\n"
-                f"5. candidateLocation\n\n"
+            f"*** Mandatory data to find in the resume ***\n"
+            f"These fields MUST always be present in the output:\n"
+            f"1. candidateName\n"
+            f"2. candidateCurrentDesignation\n"
+            f"3. candidateCurrentCompany\n"
+            f"4. candidateTotalYOE\n"
+            f"5. candidateLocation\n\n"
 
-                f"*** Last Check ***\n"
-                f"- All numbers must be integers.\n"
-                f"- Ensure ALL mandatory fields are present.\n"
-                f"- Output must be valid JSON only.\n"
-                f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
-                f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
-                f"- if Phone number is give the you must fill all three variables"
-                f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int)"
+            f"*** Last Check ***\n"
+            f"- All numbers must be integers.\n"
+            f"- Ensure ALL mandatory fields are present.\n"
+            f"- Output must be valid JSON only.\n"
+            f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
+            f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
+            f"- if Phone number is give the you must fill all three variables"
+            f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int)"
 
-                f"*** Output Format (JSON only) ***\n"
-                f"{{{{\n"
-                f"  \"candidateName\": \"\",\n"
-                f"  \"candidateEmail\": \"\",\n"
-                f"  \"candidatePhoneNumber\": \"\",\n"
-                f"  \"candidateNumber\": 0,\n"
-                f"  \"candidatePhoneCountryCode\": 0,\n"
-                f"  \"candidateCurrentCompany\": \"\",\n"
-                f"  \"candidateCurrentDesignation\": \"\",\n"
-                f"  \"candidateExperience\": 0,\n"
-                f"  \"candidateTotalYOE\": 0,\n"
-                f"  \"candidateRelevantYOE\": 0,\n"
-                f"  \"candidateCurrentCTC\": 0,\n"
-                f"  \"candidateExpectedCTC\": 0,\n"
-                f"  \"candidateNoticePeriod\": 0,\n"
-                f"  \"candidateLocation\": \"\",\n"
-                f"  \"candidateReadyToRelocate\": false,\n"
-                f"  \"isNoticePeriodNegotiable\": false\n"
-                f"}}}}\n"
-            )
+            f"*** Output Format (JSON only) ***\n"
+            f"{{{{\n"
+            f"  \"candidateName\": \"\",\n"
+            f"  \"candidateEmail\": \"\",\n"
+            f"  \"candidatePhoneNumber\": \"\",\n"
+            f"  \"candidateNumber\": 0,\n"
+            f"  \"candidatePhoneCountryCode\": 0,\n"
+            f"  \"candidateCurrentCompany\": \"\",\n"
+            f"  \"candidateCurrentDesignation\": \"\",\n"
+            f"  \"candidateExperience\": 0,\n"
+            f"  \"candidateTotalYOE\": 0,\n"
+            f"  \"candidateRelevantYOE\": 0,\n"
+            f"  \"candidateCurrentCTC\": 0,\n"
+            f"  \"candidateExpectedCTC\": 0,\n"
+            f"  \"candidateNoticePeriod\": 0,\n"
+            f"  \"candidateLocation\": \"\",\n"
+            f"  \"candidateReadyToRelocate\": false,\n"
+            f"  \"isNoticePeriodNegotiable\": false\n"
+            f"}}}}\n"
+        )
 
-            cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
-            current_timestamp = datetime.now().isoformat()
-            prompt = (
-                f"**Extract the following details from the resume extract:**\n"
-                f"- Core Skills (max 30 chars each)\n"
-                f"- Soft Skills (max 30 chars each)\n"
-                f"- Preferred departments (0–5, based on experience & skills)\n"
-                f"- Years of Experience (YOE)\n\n"
+        cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
+        current_timestamp = datetime.now().isoformat()
+        prompt = (
+            f"**Extract the following details from the resume extract:**\n"
+            f"- Core Skills (max 30 chars each)\n"
+            f"- Soft Skills (max 30 chars each)\n"
+            f"- Preferred departments (0–5, based on experience & skills)\n"
+            f"- Years of Experience (YOE)\n\n"
 
-                f"**Instructions**:\n"
-                f"- Use ONLY information explicitly written in the resume.\n"
-                f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
-                f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
-                f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
-                f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
-                f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
-                f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
-                f"- Add YOE for Core Skills if mentioned, else 0.\n"
-                f"- Calculate total YOE from roles or dates.\n\n"
+            f"**Instructions**:\n"
+            f"- Use ONLY information explicitly written in the resume.\n"
+            f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
+            f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
+            f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
+            f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
+            f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
+            f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
+            f"- Add YOE for Core Skills if mentioned, else 0.\n"
+            f"- Calculate total YOE from roles or dates.\n\n"
 
-                f"**Mandatory Rules**:\n"
-                f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
-                f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
-                f"- Core Skills must NOT include:\n"
-                f"  • Job titles (Project Manager)\n"
-                f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
-                f"  • Interpersonal traits (Leadership, Mentoring)\n"
-                f"  • Tools/software (Excel, SAP, Salesforce)\n"
-                f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
+            f"**Mandatory Rules**:\n"
+            f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
+            f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
+            f"- Core Skills must NOT include:\n"
+            f"  • Job titles (Project Manager)\n"
+            f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
+            f"  • Interpersonal traits (Leadership, Mentoring)\n"
+            f"  • Tools/software (Excel, SAP, Salesforce)\n"
+            f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
 
-                f"**STRICT Example**:\n"
-                f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
-                f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
-                f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
-                f"technicalSkills: CRM tools\n\n"
+            f"**STRICT Example**:\n"
+            f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
+            f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
+            f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
+            f"technicalSkills: CRM tools\n\n"
 
-                f"**STRICT RULES**:\n"
-                f"- If more than 20 skills exist, pick the 20 most relevant.\n"
-                f"- Do NOT invent skills.\n"
-                f"- A skill MUST appear only once across all categories.\n"
-                f"- Never include responsibilities/duties as skills.\n"
-                f"- Skills must be concise names.\n"
-                f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
-                f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
+            f"**STRICT RULES**:\n"
+            f"- If more than 20 skills exist, pick the 20 most relevant.\n"
+            f"- Do NOT invent skills.\n"
+            f"- A skill MUST appear only once across all categories.\n"
+            f"- Never include responsibilities/duties as skills.\n"
+            f"- Skills must be concise names.\n"
+            f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
+            f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
 
-                f"Resume extract:\n\n{processed_text}\n\n"
+            f"Resume extract:\n\n{processed_text}\n\n"
 
-                f"Return JSON only:\n"
-                f"{{{{\n"
-                f"  \"coreSkills\": [\n"
-                f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-                f"  ],\n"
-                f"  \"technicalSkills\": [\n"
-                f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-                f"  ],\n"
-                f"  \"softSkills\": [\n"
-                f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
-                f"  ],\n"
-                f"  \"userPreferredDepartments\": [\n"
-                f"    \"List the department names based on resume designations and core skills\"\n"
-                f"  ],\n"
-                f"  \"userPreferredIndustries\": [\n"
-                f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
-                f"  ],\n"
-                f"  \"userPreferredlocations\": [\n"
-                f"    \"Extract if mentioned; else return empty list\"\n"
-                f"  ],\n"
-                f"  \"userPreferredRoles\": [\n"
-                f"    \"Extract roles/designations from resume\"\n"
-                f"  ]\n"
-                f"}}}}\n"
-            )
+            f"Return JSON only:\n"
+            f"{{{{\n"
+            f"  \"coreSkills\": [\n"
+            f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+            f"  ],\n"
+            f"  \"technicalSkills\": [\n"
+            f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+            f"  ],\n"
+            f"  \"softSkills\": [\n"
+            f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
+            f"  ],\n"
+            f"  \"userPreferredDepartments\": [\n"
+            f"    \"List the department names based on resume designations and core skills\"\n"
+            f"  ],\n"
+            f"  \"userPreferredIndustries\": [\n"
+            f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
+            f"  ],\n"
+            f"  \"userPreferredlocations\": [\n"
+            f"    \"Extract if mentioned; else return empty list\"\n"
+            f"  ],\n"
+            f"  \"userPreferredRoles\": [\n"
+            f"    \"Extract roles/designations from resume\"\n"
+            f"  ]\n"
+            f"}}}}\n"
+        )
 
-            cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
-            merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
-            
-            return merged
-            
-        except requests.exceptions.HTTPError as e:
-            print(" Error occured : from open ai asuure.",e)
-            return "Error processing CV"
+        cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
+        merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
+        
+        return merged
+        
+
     except Exception as execution_error:
         error_message = str(execution_error).lower()
         # error_traceback = traceback.format_exc()# Check if this is a throttling error
-    if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
-        send_sqs(processed_text) #send sqs for throttled
-        return None 
-    else:
-        # For all other errors, just log and continue
-        print(f"Error processing CV: {execution_error}")
-        return None 
+        if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
+            print("Errore of {execution_error} now sending sqs for startuing again in next 60 seconds")
+
+            send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key) #send sqs for throttled error
+            return None 
+        else:
+            # For all other errors, just log and continue
+            print(f"Error processing CV: {execution_error}")
+            return None 
 
 def get_queue_url(queue_name):
     sqs = boto3.client('sqs')
@@ -719,25 +713,26 @@ def decimal_default(obj):
         return float(obj)
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
-def send_sqs(processed_text):
+def send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key):
     try:
-        queue_url = get_queue_url("worko-job-app-event-retry-queue")
+        queue_url = get_queue_url(retry_queue_name)
+        # queue_url = get_queue_url("worko-job-app-event-retry-queue")
         sqs = boto3.client('sqs')
-        queue_url = get_queue_url('worko-job-app-event-retry-queue')
+        
 
-        message_body = {"processed_text": processed_text,"from":"throtling errore"}
+        message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
 
-        print(f"SQS message body for throttled steps: {json.dumps(message_body)}")
+        print(f"SQS message body for throttled steps: {json.dumps(str(message_body)[:100])}")
         
         response = sqs.send_message(
             QueueUrl=queue_url,
             MessageBody=json.dumps(message_body, default=decimal_default),
-            DelaySeconds=10  # Increase delay for throttled requests to allow rate limits to reset
+            DelaySeconds=60  # Increase delay for throttled requests to allow rate limits to reset
         )
         
         
     except Exception as sqs_error:
-        print(f"Error sending throttled steps to SQS: {sqs_error}")
+        print(f"Error sending send_sqs_for_throttling_error step to SQS: {sqs_error}")
 
 def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
     email = cvExtractedParsed.get("candidateEmail","")
@@ -789,26 +784,24 @@ def lambda_handler(event, context):
     print("got event:",event)
     env=os.environ.get("ENVIRONMENT", "dev")
     secret_name ="AZURE-openai-secret-" +env
+    retry_queue_name = "worko-cand-profile-parser-retry-queue"+env
     AZURE_openai_secret = get_secret(secret_name) 
     OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
     GCP_DATABASE_NAME = "worko-corp-db-"+env
     GCP_secret_name = "GCP-firestore-secret-"+env
     DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
-    s3_client = boto3.client('s3')
-    s3_event = event['Records'][0]['s3']
-    bucket_name = s3_event['bucket']['name']
-    object_key = unquote_plus(s3_event['object']['key'])
-    file_name = object_key.split("/")[-1]
-   
 
 
     if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
         is_sqs_trigger = True
         print("This Event is triggered by SQS...")
-        message_body = json.loads(event['Records'][0]['body'])
+        # message_body = json.loads(event['Records'][0]['body'])
+        message_body = event['Records'][0]['body']
         processed_text = message_body.get("processed_text","")
+        object_key = message_body.get("object_key","")
+        file_name = object_key.split("/")[-1]
         if processed_text:
-            cvExtractedParsed = process_cv(processed_text,OpenAIClient)
+            cvExtractedParsed = process_cv(retry_queue_name,processed_text,OpenAIClient,object_key)
             send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
 
         return {
@@ -817,6 +810,11 @@ def lambda_handler(event, context):
         }
 
     else:
+        s3_client = boto3.client('s3')
+        s3_event = event['Records'][0]['s3']
+        bucket_name = s3_event['bucket']['name']
+        object_key = unquote_plus(s3_event['object']['key'])
+        file_name = object_key.split("/")[-1]
         response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
         data = response['Body'].read()
 
@@ -842,7 +840,7 @@ def lambda_handler(event, context):
 
         print(AZURE_openai_secret)
         
-        cvExtractedParsed = process_cv(processed_text,OpenAIClient)
+        cvExtractedParsed = process_cv(processed_text,OpenAIClient,object_key)
 
 
         print("cvExtractedParsed",cvExtractedParsed)
@@ -859,51 +857,131 @@ def lambda_handler(event, context):
             'body': json.dumps('Lambda successful for s3 event')
         }
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
         
         
-#     event = {
+    # event = {
     
-#     "Records": [
-#         {
-#         "eventVersion": "2.1",
-#         "eventSource": "aws:s3",
-#         "awsRegion": "ap-south-1",
-#         "eventTime": "2026-01-12T08:49:37.805Z",
-#         "eventName": "ObjectCreated:Put",
-#         "userIdentity": {
-#             "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
-#         },
-#         "requestParameters": {
-#             "sourceIPAddress": "103.176.210.144"
-#         },
-#         "responseElements": {
-#             "x-amz-request-id": "F031QF2YBESZRM4Q",
-#             "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
-#         },
-#         "s3": {
-#             "s3SchemaVersion": "1.0",
-#             "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
-#             "bucket": {
-#             "name": "worko-corporate-cand-profile-dev",
-#             "ownerIdentity": {
-#                 "principalId": "A1V0APDMR493SG"
-#             },
-#             "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
-#             },
-#             "object": {
-#             "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-#             "size": 225212,
-#             "eTag": "296eeb83abfe1d84d866db9a55621a78",
-#             "sequencer": "006964B5A1B7FA55DF"
-#             }
-#         }
-#         }
-#     ]
-#     }
+    # "Records": [
+    #     {
+    #     "eventVersion": "2.1",
+    #     "eventSource": "aws:s3",
+    #     "awsRegion": "ap-south-1",
+    #     "eventTime": "2026-01-12T08:49:37.805Z",
+    #     "eventName": "ObjectCreated:Put",
+    #     "userIdentity": {
+    #         "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
+    #     },
+    #     "requestParameters": {
+    #         "sourceIPAddress": "103.176.210.144"
+    #     },
+    #     "responseElements": {
+    #         "x-amz-request-id": "F031QF2YBESZRM4Q",
+    #         "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
+    #     },
+    #     "s3": {
+    #         "s3SchemaVersion": "1.0",
+    #         "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
+    #         "bucket": {
+    #         "name": "worko-corporate-cand-profile-dev",
+    #         "ownerIdentity": {
+    #             "principalId": "A1V0APDMR493SG"
+    #         },
+    #         "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
+    #         },
+    #         "object": {
+    #         "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+    #         "size": 225212,
+    #         "eTag": "296eeb83abfe1d84d866db9a55621a78",
+    #         "sequencer": "006964B5A1B7FA55DF"
+    #         }
+    #     }
+    #     }
+    # ]
+    # }
 
-
-#     lambda_handler(event, None)
+    event= {'Records':[{"eventSource":"aws:sqs","body":{"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+                                                        "processed_text":"""SHAUKAT SHAIKH
+        7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
+        github.com/Shaukat-Shaikh
+        Summary
+        linkedin.com/in/ShaukatShaikh71/
+        Data Science profess
+        ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
+        Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
+        LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
+        in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
+        complex business problems.
+        Work Experience
+        Al Engineer Intern, Worko.ai, Bangalore. Remote
+        •
+        Improved an Al-driven resume-job matching system using LLMs by 30% adding 
+        more structured logic and inserting feedback received from recruiter.
+        •
+        Implemented rag based job listing for job board using Aws Lambda Vector Store 
+        Opensearch.
+        •
+        Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
+        specific data to enhance semantic matching and candidate scoring.
+        Collaborated with fullstack team to build Ai driven a video interview product.
+        •
+        GenAl Trainer, Kalp Academy Remote
+        •
+        Delivering training programs on Generative AI, LLMs, and practical AI applications 
+        to aspiring professionals and developers.
+        •
+        Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
+        chain-of-thought prompting for optimal LLM performance.
+        •
+        Conducting hands-on sessions on LangChain framework for building production
+        grade LLM applications, agents, and memory systems.
+        •
+        Training on RAG pipelines, vector databases, embedding models, and semantic 
+        search optimization.
+        •
+        Developing course materials, assignments, and real-world projects for practical 
+        implementation.
+        •
+        Mentoring on GenAI deployment best practices, model selection, cost 
+        optimization, and ethical AI considerations.
+        Data science Engineer, Renew Instruments Wadala, Mumbai
+        •
+        Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
+        quantitative finance techniques to enhance predictive analytics and risk 
+        modelling.
+        •
+        Applied financial modelling expertise to equity options and futures, contributing 
+        to data-driven decision-making.
+        •
+        Utilized MS Office tools to document findings, create reports, and communicate 
+        financial insights effectively.
+        06/2025 – Present
+        11/2025 – Present
+        04/2024 – 03/2025
+        Technical Skills
+        Analytics
+        Programming Language
+        Python. Database Language: SQL MLOPS: CICD, 
+        GitHub Action. DockerHub
+        Al
+        GenAl, LangChain, LangGraph,
+        PROFESSIONAL COURSES
+        Numpy and Pandas Tools: Power BI, Advance Fixcel 
+        Cloud: AWS
+        Machin Learning
+        Data Pre-processing, Regression, Naive Bayes, 
+        Decision Trees, Support Vector Machines, K-Nearest 
+        Neighbors, Clustering, Principal Component 
+        Analysis, Boosting, Pytorch, Deep Learning (ANN, 
+        NLP, CNN)
+        MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
+        EDUCATION
+        2022 – 2023
+        MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
+        MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
+        2019 – 2022
+        2018 – 2019"""}}]}
+    lambda_handler(event, None)
 
 
 
