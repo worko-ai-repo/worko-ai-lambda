@@ -3,6 +3,7 @@ import ast
 import boto3
 import re
 import os
+import base64
 from datetime import datetime
 from decimal import Decimal
 import time
@@ -720,7 +721,7 @@ def send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key):
         sqs = boto3.client('sqs')
         
         message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
-        delay_seconds = 30
+        delay_seconds = 60
         
         current_time = datetime.now()
         visible_time = current_time + timedelta(seconds=delay_seconds)
