@@ -72,7 +72,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub "worko-cand-profile-parser-retry-queue-${Environment}"
-      VisibilityTimeout: 180
+      VisibilityTimeout: 60
       MessageRetentionPeriod: 345600
       DelaySeconds: 0
       MaximumMessageSize: 262144
