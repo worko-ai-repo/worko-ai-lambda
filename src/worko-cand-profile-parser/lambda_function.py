@@ -792,8 +792,6 @@ def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
 def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
     # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
-    print("=== LAMBDA INVOKED ===")
-    print(f"Event source: {event.get('Records', [{}])[0].get('eventSource', 'UNKNOWN') if event.get('Records') else 'NO_RECORDS'}")
     print("got event:",event)
     env=os.environ.get("ENVIRONMENT", "dev")
     secret_name ="AZURE-openai-secret-" +env
