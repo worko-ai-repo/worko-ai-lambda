@@ -17,7 +17,7 @@ EVENT_QUEUE_NAME: worko-corp-app-event-queue  # SQS queue name
 CV_UPLOAD_BUCKET: worko-corporate-referral-source-cv-{env}  # S3 bucket for CVs
 SES_SOURCE_EMAIL: no-reply@worko.ai  # SES sender email
 
-## 2. Manual S3 Trigger
+## 1. Environment Variables of Lambda Function
 ```
 ### Manual S3 Trigger Configuration Required
 **IMPORTANT**: After deployment, manually add S3 trigger to Lambda:
