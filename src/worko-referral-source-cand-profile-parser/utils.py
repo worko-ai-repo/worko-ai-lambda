@@ -32,8 +32,8 @@ from datetime import datetime
 
 source_email = os.environ.get("SES_SOURCE_EMAIL") 
 import fitz
-# company_id_pattern = os.environ.get("COMPANY_ID_PATTERN","@referral\.worko\.work")
-company_id_pattern = os.environ.get("COMPANY_ID_PATTERN")
+company_id_pattern = os.environ.get("COMPANY_ID_PATTERN","@referral\.worko\.work")
+# company_id_pattern = os.environ.get("COMPANY_ID_PATTERN")
 class FirestoreManager:
     def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
         self.GCP_secret_name = GCP_secret_name

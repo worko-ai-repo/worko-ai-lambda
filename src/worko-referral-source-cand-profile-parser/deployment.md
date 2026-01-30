@@ -11,15 +11,28 @@
 These are automatically set in `template.yaml`:
 ```yaml
 COMPANY_ID_PATTERN: prod-->@referral\\.worko\\.ai / dev-->"@referral\\.worko\\.work"  # Email pattern for company ID extraction
-ENVIRONMENT: dev/prod  # Deployment environment
+ENVIRONMENT: prod/ dev# Deployment environment
 SQS_REGION: ap-south-1         # AWS region for SQS
 EVENT_QUEUE_NAME: worko-corp-app-event-queue  # SQS queue name
 CV_UPLOAD_BUCKET: worko-corporate-referral-source-cv-{env}  # S3 bucket for CVs
 SES_SOURCE_EMAIL: no-reply@worko.ai  # SES sender email
 
+## 2. Manual S3 Trigger
 ```
+### Manual S3 Trigger Configuration Required
+**IMPORTANT**: After deployment, manually add S3 trigger to Lambda:
+1. Go to AWS Lambda Console → `worko-referral-source-cand-profile-parser-{env}`
+2. Click "Add trigger" → Select "S3"
+3. Configure:
+   - **Bucket**: `worko-referral-email-{env}`
+   - **Event type**: All object create events (s3:ObjectCreated:*)
+   - **Prefix**: (leave empty)
+   - **Suffix**: (leave empty)
+4. Click "Add"
 
-## 2. AWS Secrets Manager
+**Note**: This trigger cannot be added via SAM/CloudFormation due to circular dependency issues with SES rule set.
+
+## 3. AWS Secrets Manager
 Create or check if present, following two secrets in AWS Secrets Manager:
 
 ### AZURE-openai-secret-{env}
@@ -51,20 +64,22 @@ Create or check if present, following two secrets in AWS Secrets Manager:
 
 ---
 
-## 3. S3 Buckets
+## 4. S3 Buckets
 Ensure these S3 buckets exist:
 - `worko-referral-email-{env}` - For storing incoming emails from SES
 - `worko-corporate-referral-source-cv-{env}` - For storing extracted CV PDFs
 
+
+
 ---
 
-## 4. Firestore Collections
+## 5. Firestore Collections
 Ensure this collection exists in `worko-corp-db-{env}`:
 - `corporateCandidateProfiles` - For referral source candidates
 
 ---
 
-## 5. IAM Permissions (All Defined in template.yaml)
+## 6. IAM Permissions (All Defined in template.yaml)
 ### IAM Permissions Required
 - **S3**: GetObject, ListBucket, PutObject
 - **Secrets Manager**: GetSecretValue
