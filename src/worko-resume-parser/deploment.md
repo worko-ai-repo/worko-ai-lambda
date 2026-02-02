@@ -1,3 +1,6 @@
+
+create AZURE-openai-secret-multimodel-{env} in secrect varaibles
+
 ### Build
 1) Navigate to lambda directory and build:
 ```bash

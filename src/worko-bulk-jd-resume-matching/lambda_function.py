@@ -87,7 +87,7 @@ def convert_numbers_to_decimal(obj):
     else:
         return obj
 
-def process_cv(processed_text: str) -> Tuple[str, Dict[str, str]]:
+def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
     print("Processing cv for cvexractparesed")
 
     processed_text = " ".join(processed_text.split())
@@ -199,6 +199,15 @@ def process_cv(processed_text: str) -> Tuple[str, Dict[str, str]]:
             f"*** Output Format (JSON only) ***\n"
             f"{{{{\n"
             f"  \"candidateName\": \"\",\n"
+            f"  \"about\":\"extract about me or summary or profile or objective from resume\",\n"
+            f"  \"education\": [\n"
+            f"    {{\n"
+            f"      \"collage\": \"[INSTITUTION_NAME or COLLEGE_NAME]\",\n"
+            f"      \"degree\": \"[DEGREE_NAME]\",\n"
+            f"      \"startedYear\": \"[STARTED_YEAR]\",\n"
+            f"      \"passingYear\": \"[GRADUATION_YEAR]\"\n"
+            f"    }}\n"
+            f"  ],\n"
             f"  \"candidateEmail\": \"\",\n"
             f"  \"candidatePhoneNumber\": \"\",\n"
             f"  \"candidateNumber\": 0,\n"
@@ -217,7 +226,9 @@ def process_cv(processed_text: str) -> Tuple[str, Dict[str, str]]:
             f"}}}}\n"
         )
 
-        cv_extracted_parsed = invoke_model_with_backoff_OpenAI(parsed_prompt,Task= "get cvExtractparsed" )
+
+        # cv_extracted_parsed = invoke_model_with_backoff_OpenAI(parsed_prompt,Task= "get cvExtractparsed" )
+        cv_extracted_parsed = gpt_models[0].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed " )
         current_timestamp = datetime.now().isoformat()
         prompt = (
             f"**Extract the following details from the resume extract:**\n"
@@ -290,7 +301,8 @@ def process_cv(processed_text: str) -> Tuple[str, Dict[str, str]]:
             f"}}}}\n"
         )
 
-        cv_extracted_parsed2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
+        # cv_extracted_parsed2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
+        cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Resume parsing for skills and pref " )
         merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
         
         return cv_extract, merged
@@ -1029,7 +1041,7 @@ def process_response(response_text):
         except:
             return {"error": "Complete failure in processing"}
 
-def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_desc, processed_text, cv_extract, cv_extracted_parsed):
+def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models):
 
     # Determine if job is non-technical
     print("*****************************Job Description******************************************")
@@ -1318,7 +1330,7 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                                     "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
                                     "3. If this sum is 18 points or less, use the exact sum as the final score"
                                     "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
+                                    "stricly Present results in JSON format only:"
                                     "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
                                     "VALIDATION RULES:"
                                     "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
@@ -1752,7 +1764,7 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                                     "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
                                     "3. If this sum is 18 points or less, use the exact sum as the final score"
                                     "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
+                                    "striclty Present results in JSON format only:"
                                     "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
                                     "VALIDATION RULES:"
                                     "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
@@ -1797,7 +1809,8 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                 #************************End Old Models***********************************
                 
                 # Adding code for Open AI processing
-                content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 1 for score calculations" ,want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
+                # content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 1 for score calculations" ,want_json=False)
 
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
@@ -1829,7 +1842,8 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                 #************************End Old Models***********************************
                 
                 # Adding code for Open AI processing
-                content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 2 for score calculations", want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
+                # content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 2 for score calculations", want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -1863,7 +1877,8 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                 # print("Original Prompt",prompt)
                 # updated_prompt = f"Analyze this candidate. {college_status}\n {prompt}"
                 # print("Original Prompt",updated_prompt)
-                ccontent = invoke_model_with_backoff_OpenAI(prompt,Task= "step 3 for score calculations", want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
+                # ccontent = invoke_model_with_backoff_OpenAI(prompt,Task= "step 3 for score calculations", want_json=False)
                 
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
@@ -1894,7 +1909,8 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                 #************************End Old Models***********************************
 
                 # Adding code for Open AI processing
-                content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 4 for score calculations", want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
+                # content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 4 for score calculations", want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -1979,8 +1995,9 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                 f" Never use speculative phrases like 'resume shows' or 'appears to have' — state facts directly with calling candidate name.\n"
             )
 
-
-            content = invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
+            
+            # content = invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
+            content =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:"  )
             completion_text_rejection = json.dumps(content)
 
             # content = invoke_model_with_backoff_nova(prompt)
@@ -2058,7 +2075,8 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
 	
                     )
 
-            content = invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback for >70")
+            # content = invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback for >70")
+            content =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
             completion_text_approval = json.dumps(content)
             
             # content = invoke_model_with_backoff_nova(prompt)
@@ -2224,7 +2242,7 @@ def lambda_handler(event, context):
     print("event-----", event)
     table_name = os.environ.get('table_name')
 
-    env = os.environ.get("ENVIRONMENT")
+    env = os.environ.get("ENVIRONMENT","dev")
     GCP_secret_name = "GCP-firestore-secret-"+env
     print(GCP_secret_name)
 
@@ -2276,7 +2294,11 @@ def lambda_handler(event, context):
     else:
         print(f"Unsupported file format: {object_key}")
 
-    cv_extract, cv_extracted_parsed = process_cv(processed_text)
+    azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+    azure_openai_secret = get_secret(azure_openai_secret_name)
+    gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+    gpt_models = [gpt4]
+    cv_extract, cv_extracted_parsed = process_cv(processed_text,gpt_models)
     print(f"CV Extract:\n{cv_extract}")
     print(f"\nParsed Extract:\n{json.dumps(cv_extracted_parsed, indent=2)}")
 
@@ -2307,7 +2329,7 @@ def lambda_handler(event, context):
 
     update_ref_response_in_dynamodb(table_name, cv_partition_key_value, cv_sort_key_prefix_value, cv_extract, cv_extracted_parsed, scoreDetails, matchingScore, rejection_feedback, emailFeedback, processing_status)
 
-    score = jd_resume_matching(table_name, cv_partition_key_value, cv_sort_key_prefix_value, job_desc, processed_text, cv_extract, cv_extracted_parsed)
+    score = jd_resume_matching(table_name, cv_partition_key_value, cv_sort_key_prefix_value, job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models)
             
     print("Score----",score)
 
@@ -2317,3 +2339,48 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200,
         'body': json.dumps({'message': 'All CV extracts processed and updated successfully'})}
+
+
+if __name__ == "__main__":
+    event = {
+    
+    "Records": [
+        {
+        "eventVersion": "2.1",
+        "eventSource": "aws:s3",
+        "awsRegion": "ap-south-1",
+        "eventTime": "2026-02-02T06:29:44.990Z",
+        "eventName": "ObjectCreated:Put",
+        "userIdentity": {
+            "principalId": "AWS:AROATCKANHWVTI7M7W26H:worko-api-dev-app"
+        },
+        "requestParameters": {
+            "sourceIPAddress": "202.94.161.181"
+        },
+        "responseElements": {
+            "x-amz-request-id": "2AEA5J52FRCR4D7Z",
+            "x-amz-id-2": "k+8d91OhvVNYGON95mDc6TO3AZpKdKBzd5DKd58VghtdGXL45VqTOFC4LLey7GhkWHuiTQQEpltoRHjRV+OGXVjztLfn9SJ0"
+        },
+        "s3": {
+            "s3SchemaVersion": "1.0",
+            "configurationId": "7d404d16-3835-42a5-aa87-119edd0a72f4",
+            "bucket": {
+            "name": "worko-corporate-dev",
+            "ownerIdentity": {
+                "principalId": "A1V0APDMR493SG"
+            },
+            "arn": "arn:aws:s3:::worko-corporate-dev"
+            },
+            "object": {
+            "key": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KGEGNY9EZBR31KKYZJHAT2HC/01KGEGNYHMNAE7K6XZVQCQNXC5.pdf",
+            "size": 217003,
+            "eTag": "d0bb5e5b306caa14d2a5175919969d51",
+            "sequencer": "0069804458EF01349B"
+            }
+        }
+        }
+    ]
+    }
+
+
+    lambda_handler(event, None)

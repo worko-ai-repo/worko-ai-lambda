@@ -1,4 +1,5 @@
 added Azure secrect- 
+0) create AZURE-openai-secret-multimodel-{env} (new)
 1) needs to create "AZURE-openai-secret-{env}" (using from secret manager instead of making it env variables)
 2) extra permission to get it from secrect manager
 3) removed Azure keys from env variables
