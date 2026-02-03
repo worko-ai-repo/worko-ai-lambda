@@ -68,6 +68,12 @@ Resources:
       BuildMethod: python3.11
       BuildArchitecture: x86_64
 
+  CandProfileParserDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "worko-cand-profile-parser-dlq-${Environment}"
+      MessageRetentionPeriod: 1209600  # 14 days
+
   CandProfileParserRetryQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -77,6 +83,9 @@ Resources:
       DelaySeconds: 0
       MaximumMessageSize: 262144
       ReceiveMessageWaitTimeSeconds: 0
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt CandProfileParserDLQ.Arn
+        maxReceiveCount: 3  # After 3 failed attempts, move to DLQ
 
   CandProfileParserFunction:
     Type: AWS::Serverless::Function
@@ -138,3 +147,9 @@ Outputs:
     Value: !Ref CandProfileParserRetryQueue
     Export:
       Name: !Sub "${AWS::StackName}-RetryQueueUrl"
+  
+  CandProfileParserDLQUrl:
+    Description: Dead Letter Queue URL
+    Value: !Ref CandProfileParserDLQ
+    Export:
+      Name: !Sub "${AWS::StackName}-DLQUrl"
