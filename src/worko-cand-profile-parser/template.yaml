@@ -63,7 +63,7 @@ Resources:
       ContentUri: layer/
       CompatibleRuntimes:
         - python3.11
-      RetentionPolicy: Retain
+      RetentionPolicy: Delete
     Metadata:
       BuildMethod: python3.11
       BuildArchitecture: x86_64
