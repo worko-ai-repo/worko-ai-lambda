@@ -4,34 +4,45 @@ import json
 from typing import Tuple, Dict, Any, Optional, Union
 import boto3
 
+def get_queue_url(queue_name):
+    sqs = boto3.client('sqs')
+    response = sqs.get_queue_url(QueueName=queue_name)
+    return response['QueueUrl']
+
+
+
+
+
+retry_queue_name = "worko-cand-profile-parser-retry-queue-dev"
+print(get_queue_url(retry_queue_name))
 # azure_openai_secret = {"AZURE_OPENAI_API_KEY" :"REDACTED",
 #                         "AZURE_OPENAI_API_VERSION" : "2024-12-01-preview",
 #                         "AZURE_OPENAI_DEPLOYMENT" : "gpt-4.1-mini",
 #                         "AZURE_OPENAI_ENDPOINT":"https://aif-wrk-dev-sin-01.openai.azure.com"}
 
-def get_secret(secret_name):
-    secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
+# def get_secret(secret_name):
+#     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
 
-    try:
-        response = secrets_client.get_secret_value(SecretId=secret_name)
-        secret_value = response['SecretString']
+#     try:
+#         response = secrets_client.get_secret_value(SecretId=secret_name)
+#         secret_value = response['SecretString']
         
-        # Try to parse as JSON, fallback to string
-        try:
-            secret_data = json.loads(secret_value)
-        except json.JSONDecodeError:
-            secret_data = secret_value
-        return secret_data
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            return {
-                "statusCode": 404,
-                "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
-            }
+#         # Try to parse as JSON, fallback to string
+#         try:
+#             secret_data = json.loads(secret_value)
+#         except json.JSONDecodeError:
+#             secret_data = secret_value
+#         return secret_data
+#     except ClientError as e:
+#         if e.response['Error']['Code'] == 'ResourceNotFoundException':
+#             return {
+#                 "statusCode": 404,
+#                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
+#             }
 
-secret_name = "AZURE-openai-secret-multimodel-dev"
-azure_openai_secret =get_secret(secret_name)
-print(azure_openai_secret)
+# secret_name = "AZURE-openai-secret-multimodel-dev"
+# azure_openai_secret =get_secret(secret_name)
+# print(azure_openai_secret)
 
 
 # class AzureOpenAIClient:
