@@ -831,11 +831,24 @@ def lambda_handler(event, context):
     if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
         is_sqs_trigger = True
         print("This Event is triggered by SQS...")
-        message_body = json.loads(event['Records'][0]['body'])
+        
+        record = event['Records'][0]
+        receive_count = int(record['attributes'].get('ApproximateReceiveCount', 1))
+        print(f"Message receive count: {receive_count}")
+        
+        message_body = json.loads(record['body'])
         processed_text = message_body.get("processed_text","")
         object_key = message_body.get("object_key","")
         file_name = object_key.split("/")[-1].split(".")[0]
-        if processed_text:
+        
+        if receive_count >= 3:
+            print(f"Message received {receive_count} times, sending to DLQ")
+            dlq_name = f"worko-cand-profile-parser-dlq-{env}"
+            dlq_url = get_queue_url(dlq_name)
+            sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(message_body))
+            return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
+        
+        elif processed_text:
             cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key)
             if cvExtractedParsed:
                 send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
