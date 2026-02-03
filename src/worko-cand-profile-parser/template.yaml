@@ -11,7 +11,7 @@ Parameters:
 Globals:
   Function:
     Timeout: 40
-    MemorySize: 1024
+    MemorySize: 3008
     Runtime: python3.11
 
 Resources:
@@ -63,7 +63,7 @@ Resources:
       ContentUri: layer/
       CompatibleRuntimes:
         - python3.11
-      RetentionPolicy: Retain
+      RetentionPolicy: Delete
     Metadata:
       BuildMethod: python3.11
       BuildArchitecture: x86_64
@@ -72,7 +72,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub "worko-cand-profile-parser-retry-queue-${Environment}"
-      VisibilityTimeout: 900
+      VisibilityTimeout: 300
       MessageRetentionPeriod: 345600
       DelaySeconds: 0
       MaximumMessageSize: 262144
@@ -98,6 +98,9 @@ Resources:
           Properties:
             Queue: !GetAtt CandProfileParserRetryQueue.Arn
             BatchSize: 1
+            MaximumBatchingWindowInSeconds: 0
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   LambdaInvokePermissionCorporate:
     Type: AWS::Lambda::Permission

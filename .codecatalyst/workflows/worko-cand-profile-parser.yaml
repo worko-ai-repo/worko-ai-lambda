@@ -52,39 +52,6 @@ Actions:
               LAMBDA_EXISTS=false
             fi
             
-            # Cleanup old layer versions to free up storage
-            echo "Cleaning up old layer versions..."
-            LAYER_NAME="worko-cand-profile-parser-deps-${ENV}"
-            
-            # Get all layer versions
-            LAYER_VERSIONS=$(aws lambda list-layer-versions --layer-name $LAYER_NAME --region $AWS_REGION --query 'LayerVersions[*].Version' --output text 2>/dev/null || echo "")
-            
-            if [ -n "$LAYER_VERSIONS" ]; then
-              # Convert to array and sort
-              VERSIONS_ARRAY=($LAYER_VERSIONS)
-              VERSIONS_COUNT=${#VERSIONS_ARRAY[@]}
-              
-              echo "Found $VERSIONS_COUNT layer versions"
-              
-              # Keep only the latest 2 versions, delete the rest
-              if [ $VERSIONS_COUNT -gt 2 ]; then
-                # Sort versions in descending order
-                SORTED_VERSIONS=($(echo "${VERSIONS_ARRAY[@]}" | tr ' ' '\n' | sort -rn))
-                
-                # Delete all except the latest 2
-                for ((i=2; i<$VERSIONS_COUNT; i++)); do
-                  VERSION=${SORTED_VERSIONS[$i]}
-                  echo "Deleting layer version $VERSION..."
-                  aws lambda delete-layer-version --layer-name $LAYER_NAME --version-number $VERSION --region $AWS_REGION || true
-                done
-                echo "Cleanup completed"
-              else
-                echo "Only $VERSIONS_COUNT versions found, no cleanup needed"
-              fi
-            else
-              echo "No existing layer versions found"
-            fi
-            
             cd src/worko-cand-profile-parser
             
             echo "Building SAM application..."
