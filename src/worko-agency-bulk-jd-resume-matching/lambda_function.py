@@ -16,7 +16,7 @@ dynamodb = boto3.resource('dynamodb')
 from utils import *
 
 
-def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,OpenAIClient,update_doc_id,agencyBulkJdResumeId):
+def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId):
     region ="ap-south-1"
     account_id = get_account_id()
     queue_name = 'worko-corp-app-event-queue'
@@ -34,8 +34,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
         f"- Respond with only one word: 'Technical' or 'Non-Technical'"
         )
           
-    content = OpenAIClient.invoke_model_with_backoff(prompt, Task= "Check Tech or Non-Tech JD", want_json=False)
-
+    # content = OpenAIClient.invoke_model_with_backoff(prompt, Task= "Check Tech or Non-Tech JD", want_json=False)
+    content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Check Tech or Non-Tech JD" ,want_json=False)
     print("Checking the Tech or non-tech jd",content)
     
     # Initialize the variable to store the Technical or Non Technical
@@ -72,7 +72,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                         f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
                     )
 
-            completion_text = OpenAIClient.invoke_model_with_backoff(prompt, Task= "Check JD experience level",want_json=False)
+            # completion_text = OpenAIClient.invoke_model_with_backoff(prompt, Task= "Check JD experience level",want_json=False)
+            completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Check JD experience level" ,want_json=False)
             print("I am in Non-Tech",content )
             print_completion_text(completion_text)
                       
@@ -395,7 +396,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                         f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
                     )
 
-            completion_text = OpenAIClient.invoke_model_with_backoff(prompt,Task="check exp level of tech guy",want_json=False)
+            # completion_text = OpenAIClient.invoke_model_with_backoff(prompt,Task="check exp level of tech guy",want_json=False)
+            completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "check exp level of tech guy" ,want_json=False)
             print_completion_text(completion_text)
             
             if "superior" in completion_text:
@@ -764,7 +766,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
             # Use different model invocation functions for each step
             if i == 0:
                 # Adding code for Open AI processing
-                content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
+                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
 
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
@@ -781,7 +784,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
             elif i == 1:
             
                 # Adding code for Open AI processing
-                content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 2 for score calculations" ,want_json=False)
+                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -794,7 +798,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                     temp_score = 36
 
             elif i == 2:
-                content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 3 for score calculations" ,want_json=False)
+                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
                 
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
@@ -810,7 +815,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
             elif i == 3:
             
                 # Adding code for Open AI processing
-                content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 4 for score calculations" ,want_json=False)
+                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -823,7 +829,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                     temp_score = 18
             else:
                 # Fallback to original function if there are more steps than defined functions
-                content = OpenAIClient.invoke_model_with_backoff(prompt,want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,want_json=False)
+                # content = OpenAIClient.invoke_model_with_backoff(prompt,want_json=False)
                 print("Somthing went wrong)")
             print("temp_score", temp_score)
             # If temp_score is coming from the JSON as a list
@@ -892,8 +899,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                 f" Never use speculative phrases like 'resume shows' or 'appears to have' — state facts directly with calling candidate name.\n"
             )
 
-
-            content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
+            content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:")
+            # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
             completion_text_rejection = json.dumps(content)
 
             print("***************************************  1 <70 *********************************************")
@@ -905,8 +912,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                 prompt = (f"{final_completion_text}, {completion_text_rejection}\n"
                          f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                          f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
-
-                emailFeedback = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Email feedback for 1 <= overall_matching_score < 70:",want_json=False)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Email feedback for 1 <= overall_matching_score < 70:",want_json=False)
+                # emailFeedback = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Email feedback for 1 <= overall_matching_score < 70:",want_json=False)
                 print("feedback_for_email:-",emailFeedback)
 
         # Generate positive feedback for  if score >=70
@@ -969,8 +976,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                         f"19. Output format must be **valid JSON only**, no text outside JSON."   
 	
                     )
-
-            content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
+            content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
+            # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
             completion_text_approval = json.dumps(content)
 
             print("***************************************   >70 *********************************************")
@@ -981,7 +988,8 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
                      f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                      f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
 
-            emailFeedback = OpenAIClient.invoke_model_with_backoff(prompt, Task="Email Feedback",want_json=False)
+            emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt, Task="Email Feedback",want_json=False)
+            # emailFeedback = OpenAIClient.invoke_model_with_backoff(prompt, Task="Email Feedback",want_json=False)
             print("feedback_for_email:-",emailFeedback)
             
         elif overall_matching_score == 0:
@@ -1017,15 +1025,13 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
         {"Overall Matching Score": overall_matching_score}
     }
 
-
-
 def lambda_handler(event, context):
     print(f"got a event : -  {event}") 
     global DBManager,update_doc_id
     # Get environment
     env=os.environ.get("ENVIRONMENT", "dev")
-    secret_name ="AZURE-openai-secret-" +env
-    AZURE_openai_secret = get_secret(secret_name) 
+    # secret_name ="AZURE-openai-secret-" +env
+    # AZURE_openai_secret = get_secret(secret_name) 
 
     #set variables for sqs
     region ="ap-south-1"
@@ -1072,9 +1078,14 @@ def lambda_handler(event, context):
         # Extract text from PDF
         resume_text = extract_text_from_pdf(pdf_data)
         processed_text = clean_text(resume_text)
-        print(AZURE_openai_secret)
-        OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
-        cv_extract, cv_extracted_parsed = process_cv(processed_text,OpenAIClient)
+        # print(AZURE_openai_secret)
+        # OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
+
+        azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+        azure_openai_secret = get_secret(azure_openai_secret_name)
+        gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+        gpt_models = [gpt4]
+        cv_extract, cv_extracted_parsed = process_cv(processed_text,gpt_models)
         print(f"Successfully processed resume: {processed_text[:200]}..")
         GCP_secret_name = "GCP-firestore-secret-"+env
         GCP_DATABASE_NAME = "worko-corp-db-" +env 
@@ -1151,7 +1162,7 @@ def lambda_handler(event, context):
         print("updating firestore document before scoring with IN-PROGRESS status and cv cv_extracted_parsed :--",cv_extracted_parsed)
         DBManager.update_firestore_document_with_scoring_data(update_collection_name, update_doc_id, cv_extracted_parsed,processingStatus)
 
-        score = jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,OpenAIClient,update_doc_id,agencyBulkJdResumeId)
+        score = jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId)
         return {
             "statusCode": 200,
             "body": json.dumps({

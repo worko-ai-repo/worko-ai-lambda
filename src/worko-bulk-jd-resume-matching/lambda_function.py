@@ -461,6 +461,36 @@ def invoke_model_with_backoff_nova_lite(prompt, max_retries=10, base_delay=2):
             else:
                 raise
 
+def invoke_model_nova_lite(prompt):
+    body = json.dumps({
+        "inferenceConfig": {
+            "max_new_tokens": 2048
+        },
+        "messages": [
+            {
+                "role": "user", 
+                "content": [
+                    {
+                        "text": prompt  # Wrap the prompt in a text dictionary
+                    }
+                ]
+            }
+        ]
+    })
+    
+    modelId= "amazon.nova-lite-v1:0"
+    print("modelId ------", modelId)
+
+    response = bedrock_runtime.invoke_model(
+        body=body,
+        modelId=modelId,
+        contentType='application/json',
+        accept='application/json'
+    )   
+    response_body = json.loads(response['body'].read())    
+    return response_body
+
+    
 def invoke_model_with_backoff_mistral(prompt, model_id, max_retries=10, base_delay=2):
     print("model_id:-",model_id)
     for attempt in range(max_retries):
@@ -569,34 +599,7 @@ def invoke_model_nova(prompt):
     response_body = json.loads(response['body'].read())    
     return response_body
 
-def invoke_model_nova_lite(prompt):
-    body = json.dumps({
-        "inferenceConfig": {
-            "max_new_tokens": 2048
-        },
-        "messages": [
-            {
-                "role": "user", 
-                "content": [
-                    {
-                        "text": prompt  # Wrap the prompt in a text dictionary
-                    }
-                ]
-            }
-        ]
-    })
-    
-    modelId= "amazon.nova-lite-v1:0"
-    print("modelId ------", modelId)
 
-    response = bedrock_runtime.invoke_model(
-        body=body,
-        modelId=modelId,
-        contentType='application/json',
-        accept='application/json'
-    )   
-    response_body = json.loads(response['body'].read())    
-    return response_body
 
 def invoke_model_deepseek(prompt):
     try:

@@ -14,6 +14,8 @@ import random
 import time
 
 sqs = boto3.client('sqs')
+region = "ap-south-1"
+bedrock_runtime = boto3.client('bedrock-runtime', region_name= region)
 
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
@@ -22,7 +24,8 @@ class AzureOpenAIClient:
     DEFAULT_API_VERSION = "2024-05-01-preview"
     REQUEST_TIMEOUT = 30  # seconds
     
-    def __init__(self, azure_openai_secret: Dict[str, str]):
+    def __init__(self, azure_openai_secret: Dict[str, str],model="gpt-4o"):
+        
         """Initialize Azure OpenAI client.
         
         Args:
@@ -32,16 +35,26 @@ class AzureOpenAIClient:
                 - api_key
                 - AZURE_OPENAI_API_VERSION (optional)
         """
+        self.model = model
         if not isinstance(azure_openai_secret, dict):
             raise TypeError("azure_openai_secret must be a dictionary")
         
         self.endpoint = azure_openai_secret.get("AZURE_OPENAI_ENDPOINT", "")
-        self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT", "")
-        self.api_version = azure_openai_secret.get(
-            "AZURE_OPENAI_API_VERSION", 
-            self.DEFAULT_API_VERSION
-        )
         self.api_key = azure_openai_secret.get("AZURE_OPENAI_API_KEY", "")
+        if model=="gpt-4o":
+            self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4o", "")
+            self.api_version = azure_openai_secret.get(
+                "AZURE_OPENAI_API_VERSION_gpt-4o", 
+                self.DEFAULT_API_VERSION
+            )
+        elif model=="gpt-4.1-mini":
+            self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini", "")
+            self.api_version = azure_openai_secret.get(
+                "AZURE_OPENAI_API_VERSION_gpt-4.1-mini", 
+                self.DEFAULT_API_VERSION
+            )
+
+        
         
         # Validate required fields
         if not all([self.endpoint, self.deployment_name, self.api_key]):
@@ -71,6 +84,7 @@ class AzureOpenAIClient:
         Returns:
             Model response as string or parsed JSON dict
         """
+        print("using model :-", self.model)
         for attempt in range(max_retries):
             print("Task to Ai is :- ",Task)
             try:
@@ -78,7 +92,7 @@ class AzureOpenAIClient:
             
             except requests.exceptions.HTTPError as e:
                 # Check for rate limiting (429) or server errors (5xx)
-                if e.response.status_code in [429, 500, 502, 503, 504]:
+                if e.response.status_code in [500, 502, 503, 504]:
                     if attempt < max_retries - 1:
                         delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
                         print(
@@ -161,6 +175,15 @@ class AzureOpenAIClient:
                 )
                 response.raise_for_status()
                 result = response.json()
+                try :
+                    tokens = result["usage"]
+                    output_tokens= tokens["completion_tokens"]
+                    input_tokens= tokens["prompt_tokens"]
+                    total = tokens["total_tokens"]
+                    print(" Token usage details input_tokens :-",input_tokens,"output_tokens",output_tokens,"total",total)
+
+                except Exception as e :
+                    print("errore occured input output token not found :--",e)
                 
                 # Extract and clean content
                 content = result["choices"][0]["message"]["content"]
@@ -186,7 +209,10 @@ class AzureOpenAIClient:
             
             except (KeyError, IndexError) as e:
                 print(f"Unexpected response structure: {result}")
-                raise ValueError("Invalid response format from Azure OpenAI") from e      
+                raise ValueError("Invalid response format from Azure OpenAI") from e
+
+
+
 class FirestoreManager:
     def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
         self.GCP_secret_name = GCP_secret_name
@@ -256,8 +282,6 @@ class FirestoreManager:
         doc_ref = self.db.collection(collection_name).document(doc_id)
         return doc_ref.get().to_dict()
     
-
-
 def get_account_id():
     # Create STS client
     sts_client = boto3.client('sts')
@@ -292,7 +316,7 @@ def update_sqs_queue(queue_url,agencyBulkJdResumeId):
             'body': json.dumps('Message sent to SQS!')
         }
 
-def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
+def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
     print("Processing cv for cvexractparesed")
 
     processed_text = " ".join(processed_text.split())
@@ -336,6 +360,25 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
         "candidatePhoneNumber": "",
         "candidateLocation": ""
     }
+     
+    # cv_parsed_template ={
+    # "candidateName": "Rohith Appala",
+    # "candidateEmail": "rohithappala777@gmail.com",
+    # "candidatePhoneNumber": "+919666308100",
+    # "candidateNumber": 9666308100,
+    # "candidatePhoneCountryCode": 91,
+    # "candidateCurrentCompany": "Worko.ai-India",
+    # "candidateCurrentDesignation": "NodeJs Backend Developer",
+    # "candidateExperience": 3,
+    # "candidateTotalYOE": 3,
+    # "candidateRelevantYOE": 4,
+    # "candidateCurrentCTC": 10,
+    # "candidateExpectedCTC": 9,
+    # "candidateNoticePeriod": 60,
+    # "candidateLocation": "Hyderabad, Telangana",
+    # "candidateReadyToRelocate": False,
+    # "isNoticePeriodNegotiable": False
+    # }
 
     if not processed_text:
         return "Unfortunately, we are not able to read your resume", cv_parsed_template
@@ -345,12 +388,12 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
         cv_prompt = (f"Extract professional CV/resume information from the following text. "
                     f"This is for legitimate recruitment purposes.\n\n"
                     f"CV TEXT: {processed_text}\n\n"
-                    f"EXTRACTION TEMPLATE:\n{cv_extract_template}")
+                    f"EXTRACTION TEMPLATE:\n{cv_extract_template} giv output in json formate only")
 
-        cv_extract = OpenAIClient.invoke_model_with_backoff(cv_prompt, Task= "get cvExtract in str",want_json=False)
+        cv_extract = gpt_models[0].invoke_model_with_backoff(cv_prompt,Task= "get cvExtractparsed " )
         # cv_extract = extract_text_from_nova(cv_content)
         
-        cv_extract = clean_text(cv_extract)
+        # cv_extract = clean_text(cv_extract)
         print("cv_extract-------",cv_extract)
         
         # Second extraction for parsed details
@@ -385,6 +428,15 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
             f"*** Output Format (JSON only) ***\n"
             f"{{{{\n"
             f"  \"candidateName\": \"\",\n"
+            f"  \"about\":\"extract about me or summary or profile or objective from resume\",\n"
+            f"  \"education\": [\n"
+            f"    {{\n"
+            f"      \"collage\": \"[INSTITUTION_NAME or COLLEGE_NAME]\",\n"
+            f"      \"degree\": \"[DEGREE_NAME]\",\n"
+            f"      \"startedYear\": \"[STARTED_YEAR]\",\n"
+            f"      \"passingYear\": \"[GRADUATION_YEAR]\"\n"
+            f"    }}\n"
+            f"  ],\n"
             f"  \"candidateEmail\": \"\",\n"
             f"  \"candidatePhoneNumber\": \"\",\n"
             f"  \"candidateNumber\": 0,\n"
@@ -403,7 +455,9 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
             f"}}}}\n"
         )
 
-        cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed" )
+
+        # cv_extracted_parsed = invoke_model_with_backoff_OpenAI(parsed_prompt,Task= "get cvExtractparsed" )
+        cv_extracted_parsed = gpt_models[0].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed " )
         current_timestamp = datetime.now().isoformat()
         prompt = (
             f"**Extract the following details from the resume extract:**\n"
@@ -476,7 +530,8 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
             f"}}}}\n"
         )
 
-        cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "Agency Resume parsing for skills and pref")
+        # cv_extracted_parsed2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
+        cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Resume parsing for skills and pref " )
         merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
         
         return cv_extract, merged
@@ -487,6 +542,7 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
     except Exception as e:
         print(f"Error processing CV: {str(e)}")
         return "Error processing CV", cv_parsed_template
+
 
 def get_secret(secret_name):
     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
@@ -624,3 +680,45 @@ def ensure_decimal(value: Union[float, int, str, Decimal, None]) -> Optional[Dec
     if isinstance(value, Decimal):
         return value
     return Decimal(str(value))
+
+
+def invoke_model_with_backoff_nova_lite(prompt, max_retries=10, base_delay=2):
+    for attempt in range(max_retries):
+        try:
+            return invoke_model_nova_lite(prompt)
+        except Exception as e:
+            if "ThrottlingException" in str(e) and attempt < max_retries - 1:
+                delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
+                print(f"Throttling occurred. Retrying in {delay:.2f} seconds...")
+                time.sleep(delay)
+            else:
+                raise
+
+def invoke_model_nova_lite(prompt):
+    body = json.dumps({
+        "inferenceConfig": {
+            "max_new_tokens": 2048
+        },
+        "messages": [
+            {
+                "role": "user", 
+                "content": [
+                    {
+                        "text": prompt  # Wrap the prompt in a text dictionary
+                    }
+                ]
+            }
+        ]
+    })
+    
+    modelId= "amazon.nova-lite-v1:0"
+    print("modelId ------", modelId)
+
+    response = bedrock_runtime.invoke_model(
+        body=body,
+        modelId=modelId,
+        contentType='application/json',
+        accept='application/json'
+    )   
+    response_body = json.loads(response['body'].read())    
+    return response_body

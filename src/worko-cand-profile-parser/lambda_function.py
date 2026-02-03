@@ -54,7 +54,7 @@ def update_sqs_queue(message_body):
             QueueUrl=sqs_url,
             MessageBody=message_body_msg
             )
-        
+        print("Do dubliact found, sqs (parsed cv) sent to backend")
         return {
             'statusCode': 200,
             'body': json.dumps('Message sent to SQS!')
@@ -188,7 +188,8 @@ class AzureOpenAIClient:
     DEFAULT_API_VERSION = "2024-05-01-preview"
     REQUEST_TIMEOUT = 30  # seconds
     
-    def __init__(self, azure_openai_secret: Dict[str, str]):
+    def __init__(self, azure_openai_secret: Dict[str, str],model="gpt-4o"):
+        
         """Initialize Azure OpenAI client.
         
         Args:
@@ -198,16 +199,26 @@ class AzureOpenAIClient:
                 - api_key
                 - AZURE_OPENAI_API_VERSION (optional)
         """
+        self.model = model
         if not isinstance(azure_openai_secret, dict):
             raise TypeError("azure_openai_secret must be a dictionary")
         
         self.endpoint = azure_openai_secret.get("AZURE_OPENAI_ENDPOINT", "")
-        self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT", "")
-        self.api_version = azure_openai_secret.get(
-            "AZURE_OPENAI_API_VERSION", 
-            self.DEFAULT_API_VERSION
-        )
         self.api_key = azure_openai_secret.get("AZURE_OPENAI_API_KEY", "")
+        if model=="gpt-4o":
+            self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4o", "")
+            self.api_version = azure_openai_secret.get(
+                "AZURE_OPENAI_API_VERSION_gpt-4o", 
+                self.DEFAULT_API_VERSION
+            )
+        elif model=="gpt-4.1-mini":
+            self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini", "")
+            self.api_version = azure_openai_secret.get(
+                "AZURE_OPENAI_API_VERSION_gpt-4.1-mini", 
+                self.DEFAULT_API_VERSION
+            )
+
+        
         
         # Validate required fields
         if not all([self.endpoint, self.deployment_name, self.api_key]):
@@ -237,6 +248,7 @@ class AzureOpenAIClient:
         Returns:
             Model response as string or parsed JSON dict
         """
+        print("using model :-", self.model)
         for attempt in range(max_retries):
             print("Task to Ai is :- ",Task)
             try:
@@ -362,7 +374,9 @@ class AzureOpenAIClient:
             except (KeyError, IndexError) as e:
                 print(f"Unexpected response structure: {result}")
                 raise ValueError("Invalid response format from Azure OpenAI") from e
-         
+
+
+
 class FirestoreManager:
     def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
         self.GCP_secret_name = GCP_secret_name
@@ -539,7 +553,7 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
-def process_cv(retry_queue_name, processed_text, OpenAIClient, object_key) -> Tuple[str, Dict[str, str]]:
+def process_cv(retry_queue_name, processed_text, gpt_models, object_key) -> Tuple[str, Dict[str, str]]:
     print("Processing cv for cvexractparesed")
     try:
         processed_text = " ".join(processed_text.split())
@@ -594,6 +608,15 @@ def process_cv(retry_queue_name, processed_text, OpenAIClient, object_key) -> Tu
             f"*** Output Format (JSON only) ***\n"
             f"{{{{\n"
             f"  \"candidateName\": \"\",\n"
+            f"  \"about\":\"extract about me or summary or profile or objective from resume\",\n"
+            f"  \"education\": [\n"
+            f"    {{\n"
+            f"      \"collage\": \"[INSTITUTION_NAME or COLLEGE_NAME]\",\n"
+            f"      \"degree\": \"[DEGREE_NAME]\",\n"
+            f"      \"startedYear\": \"[STARTED_YEAR]\",\n"
+            f"      \"passingYear\": \"[GRADUATION_YEAR]\"\n"
+            f"    }}\n"
+            f"  ],\n"
             f"  \"candidateEmail\": \"\",\n"
             f"  \"candidatePhoneNumber\": \"\",\n"
             f"  \"candidateNumber\": 0,\n"
@@ -611,8 +634,8 @@ def process_cv(retry_queue_name, processed_text, OpenAIClient, object_key) -> Tu
             f"  \"isNoticePeriodNegotiable\": false\n"
             f"}}}}\n"
         )
-
-        cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
+        cv_extracted_parsed = gpt_models[0].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 ")
+        # cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
         current_timestamp = datetime.now().isoformat()
         prompt = (
             f"**Extract the following details from the resume extract:**\n"
@@ -684,8 +707,8 @@ def process_cv(retry_queue_name, processed_text, OpenAIClient, object_key) -> Tu
             f"  ]\n"
             f"}}}}\n"
         )
-
-        cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
+        cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
+        # cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
         merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
         
         return merged
@@ -794,10 +817,12 @@ def lambda_handler(event, context):
     # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
     print("got event:",event)
     env=os.environ.get("ENVIRONMENT", "dev")
-    secret_name ="AZURE-openai-secret-" +env
+    azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+    azure_openai_secret = get_secret(azure_openai_secret_name)
+    gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+    gpt_models = [gpt4]
     retry_queue_name = "worko-cand-profile-parser-retry-queue-"+env
-    AZURE_openai_secret = get_secret(secret_name) 
-    OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
+    
     GCP_DATABASE_NAME = "worko-corp-db-"+env
     GCP_secret_name = "GCP-firestore-secret-"+env
     DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
@@ -811,7 +836,7 @@ def lambda_handler(event, context):
         object_key = message_body.get("object_key","")
         file_name = object_key.split("/")[-1].split(".")[0]
         if processed_text:
-            cvExtractedParsed = process_cv(retry_queue_name,processed_text,OpenAIClient,object_key)
+            cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key)
             if cvExtractedParsed:
                 send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
 
@@ -850,15 +875,13 @@ def lambda_handler(event, context):
             print(f"Unsupported file format: {object_key}")
         
 
-        print(AZURE_openai_secret)
         
-        cvExtractedParsed = process_cv(retry_queue_name,processed_text,OpenAIClient,object_key)
-
-
-        print("cvExtractedParsed",cvExtractedParsed)
         
+        cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key)
+
         try:
             if cvExtractedParsed:
+                print("cvExtractedParsed",cvExtractedParsed)
                 send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
         except Exception as e:
             print(f"Error sending final CV to SQS: {e}" )
@@ -869,48 +892,48 @@ def lambda_handler(event, context):
             'body': json.dumps('Lambda successful for s3 event')
         }
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
         
         
-    # event = {
+    event = {
     
-    # "Records": [
-    #     {
-    #     "eventVersion": "2.1",
-    #     "eventSource": "aws:s3",
-    #     "awsRegion": "ap-south-1",
-    #     "eventTime": "2026-01-12T08:49:37.805Z",
-    #     "eventName": "ObjectCreated:Put",
-    #     "userIdentity": {
-    #         "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
-    #     },
-    #     "requestParameters": {
-    #         "sourceIPAddress": "103.176.210.144"
-    #     },
-    #     "responseElements": {
-    #         "x-amz-request-id": "F031QF2YBESZRM4Q",
-    #         "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
-    #     },
-    #     "s3": {
-    #         "s3SchemaVersion": "1.0",
-    #         "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
-    #         "bucket": {
-    #         "name": "worko-corporate-cand-profile-dev",
-    #         "ownerIdentity": {
-    #             "principalId": "A1V0APDMR493SG"
-    #         },
-    #         "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
-    #         },
-    #         "object": {
-    #         "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-    #         "size": 225212,
-    #         "eTag": "296eeb83abfe1d84d866db9a55621a78",
-    #         "sequencer": "006964B5A1B7FA55DF"
-    #         }
-    #     }
-    #     }
-    # ]
-    # }
+    "Records": [
+        {
+        "eventVersion": "2.1",
+        "eventSource": "aws:s3",
+        "awsRegion": "ap-south-1",
+        "eventTime": "2026-01-12T08:49:37.805Z",
+        "eventName": "ObjectCreated:Put",
+        "userIdentity": {
+            "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
+        },
+        "requestParameters": {
+            "sourceIPAddress": "103.176.210.144"
+        },
+        "responseElements": {
+            "x-amz-request-id": "F031QF2YBESZRM4Q",
+            "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
+        },
+        "s3": {
+            "s3SchemaVersion": "1.0",
+            "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
+            "bucket": {
+            "name": "worko-corporate-cand-profile-dev",
+            "ownerIdentity": {
+                "principalId": "A1V0APDMR493SG"
+            },
+            "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
+            },
+            "object": {
+            "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+            "size": 225212,
+            "eTag": "296eeb83abfe1d84d866db9a55621a78",
+            "sequencer": "006964B5A1B7FA55DF"
+            }
+        }
+        }
+    ]
+    }
 
     # event= {'Records':[{"eventSource":"aws:sqs","body":{"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
     #                                                     "processed_text":"""SHAUKAT SHAIKH
@@ -993,7 +1016,7 @@ def lambda_handler(event, context):
     #     MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
     #     2019 – 2022
     #     2018 – 2019"""}}]}
-    # lambda_handler(event, None)
+    lambda_handler(event, None)
 
 
 
