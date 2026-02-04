@@ -78,7 +78,8 @@ Actions:
                 --parameter-overrides Environment=$ENV \
                 --s3-bucket $S3_BUCKET \
                 --no-confirm-changeset \
-                --no-fail-on-empty-changeset
+                --no-fail-on-empty-changeset \
+                --force-upload
               
               echo "Deployment completed successfully!"
               
