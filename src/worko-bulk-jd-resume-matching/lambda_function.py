@@ -2344,46 +2344,46 @@ def lambda_handler(event, context):
         'body': json.dumps({'message': 'All CV extracts processed and updated successfully'})}
 
 
-if __name__ == "__main__":
-    event = {
+# if __name__ == "__main__":
+#     event = {
     
-    "Records": [
-        {
-        "eventVersion": "2.1",
-        "eventSource": "aws:s3",
-        "awsRegion": "ap-south-1",
-        "eventTime": "2026-02-02T06:29:44.990Z",
-        "eventName": "ObjectCreated:Put",
-        "userIdentity": {
-            "principalId": "AWS:AROATCKANHWVTI7M7W26H:worko-api-dev-app"
-        },
-        "requestParameters": {
-            "sourceIPAddress": "202.94.161.181"
-        },
-        "responseElements": {
-            "x-amz-request-id": "2AEA5J52FRCR4D7Z",
-            "x-amz-id-2": "k+8d91OhvVNYGON95mDc6TO3AZpKdKBzd5DKd58VghtdGXL45VqTOFC4LLey7GhkWHuiTQQEpltoRHjRV+OGXVjztLfn9SJ0"
-        },
-        "s3": {
-            "s3SchemaVersion": "1.0",
-            "configurationId": "7d404d16-3835-42a5-aa87-119edd0a72f4",
-            "bucket": {
-            "name": "worko-corporate-dev",
-            "ownerIdentity": {
-                "principalId": "A1V0APDMR493SG"
-            },
-            "arn": "arn:aws:s3:::worko-corporate-dev"
-            },
-            "object": {
-            "key": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KGEGNY9EZBR31KKYZJHAT2HC/01KGEGNYHMNAE7K6XZVQCQNXC5.pdf",
-            "size": 217003,
-            "eTag": "d0bb5e5b306caa14d2a5175919969d51",
-            "sequencer": "0069804458EF01349B"
-            }
-        }
-        }
-    ]
-    }
+#     "Records": [
+#         {
+#         "eventVersion": "2.1",
+#         "eventSource": "aws:s3",
+#         "awsRegion": "ap-south-1",
+#         "eventTime": "2026-02-02T06:29:44.990Z",
+#         "eventName": "ObjectCreated:Put",
+#         "userIdentity": {
+#             "principalId": "AWS:AROATCKANHWVTI7M7W26H:worko-api-dev-app"
+#         },
+#         "requestParameters": {
+#             "sourceIPAddress": "202.94.161.181"
+#         },
+#         "responseElements": {
+#             "x-amz-request-id": "2AEA5J52FRCR4D7Z",
+#             "x-amz-id-2": "k+8d91OhvVNYGON95mDc6TO3AZpKdKBzd5DKd58VghtdGXL45VqTOFC4LLey7GhkWHuiTQQEpltoRHjRV+OGXVjztLfn9SJ0"
+#         },
+#         "s3": {
+#             "s3SchemaVersion": "1.0",
+#             "configurationId": "7d404d16-3835-42a5-aa87-119edd0a72f4",
+#             "bucket": {
+#             "name": "worko-corporate-dev",
+#             "ownerIdentity": {
+#                 "principalId": "A1V0APDMR493SG"
+#             },
+#             "arn": "arn:aws:s3:::worko-corporate-dev"
+#             },
+#             "object": {
+#             "key": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KGEGNY9EZBR31KKYZJHAT2HC/01KGEGNYHMNAE7K6XZVQCQNXC5.pdf",
+#             "size": 217003,
+#             "eTag": "d0bb5e5b306caa14d2a5175919969d51",
+#             "sequencer": "0069804458EF01349B"
+#             }
+#         }
+#         }
+#     ]
+#     }
 
 
-    lambda_handler(event, None)
+#     lambda_handler(event, None)

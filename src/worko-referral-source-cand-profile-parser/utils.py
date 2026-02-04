@@ -132,14 +132,16 @@ class FirestoreManager:
         else:
             return None
 
+
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
     
     DEFAULT_TEMPERATURE = 0.3
     DEFAULT_API_VERSION = "2024-05-01-preview"
-    REQUEST_TIMEOUT = 30  # seconds
+    # REQUEST_TIMEOUT = 20  # seconds
     
-    def __init__(self, azure_openai_secret: Dict[str, str]):
+    def __init__(self, azure_openai_secret: Dict[str, str],model="gpt-4o"):
+        
         """Initialize Azure OpenAI client.
         
         Args:
@@ -149,16 +151,26 @@ class AzureOpenAIClient:
                 - api_key
                 - AZURE_OPENAI_API_VERSION (optional)
         """
+        self.model = model
         if not isinstance(azure_openai_secret, dict):
             raise TypeError("azure_openai_secret must be a dictionary")
         
         self.endpoint = azure_openai_secret.get("AZURE_OPENAI_ENDPOINT", "")
-        self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT", "")
-        self.api_version = azure_openai_secret.get(
-            "AZURE_OPENAI_API_VERSION", 
-            self.DEFAULT_API_VERSION
-        )
         self.api_key = azure_openai_secret.get("AZURE_OPENAI_API_KEY", "")
+        if model=="gpt-4o":
+            self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4o", "")
+            self.api_version = azure_openai_secret.get(
+                "AZURE_OPENAI_API_VERSION_gpt-4o", 
+                self.DEFAULT_API_VERSION
+            )
+        elif model=="gpt-4.1-mini":
+            self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini", "")
+            self.api_version = azure_openai_secret.get(
+                "AZURE_OPENAI_API_VERSION_gpt-4.1-mini", 
+                self.DEFAULT_API_VERSION
+            )
+
+        
         
         # Validate required fields
         if not all([self.endpoint, self.deployment_name, self.api_key]):
@@ -188,6 +200,7 @@ class AzureOpenAIClient:
         Returns:
             Model response as string or parsed JSON dict
         """
+        print("using model :-", self.model)
         for attempt in range(max_retries):
             print("Task to Ai is :- ",Task)
             try:
@@ -195,7 +208,7 @@ class AzureOpenAIClient:
             
             except requests.exceptions.HTTPError as e:
                 # Check for rate limiting (429) or server errors (5xx)
-                if e.response.status_code in [429, 500, 502, 503, 504]:
+                if e.response.status_code in [500, 502, 503, 504]:
                     if attempt < max_retries - 1:
                         delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
                         print(
@@ -260,8 +273,8 @@ class AzureOpenAIClient:
             response = requests.post(
                 url=url, 
                 headers=headers, 
-                json=data,
-                timeout=self.REQUEST_TIMEOUT
+                json=data
+                
             )
             response.raise_for_status()
             result = response.json()
@@ -273,8 +286,8 @@ class AzureOpenAIClient:
                 response = requests.post(
                     url=url, 
                     headers=headers, 
-                    json=data,
-                    timeout=self.REQUEST_TIMEOUT
+                    json=data
+                    
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -313,7 +326,7 @@ class AzureOpenAIClient:
             except (KeyError, IndexError) as e:
                 print(f"Unexpected response structure: {result}")
                 raise ValueError("Invalid response format from Azure OpenAI") from e
-
+       
 def get_account_id():
     # Create STS client
     sts_client = boto3.client('sts')
@@ -510,7 +523,7 @@ def build_sqs_payload(company_id: str, s3_file_name: str, parsed: dict) -> dict:
     """
     return {"companyId": company_id, "candidateCvAwsS3FileName": s3_file_name, "cvExtractedParsed": parsed}
 
-def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
+def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
     print("Processing cv for cvexractparesed")
 
     processed_text = " ".join(processed_text.split())
@@ -594,7 +607,8 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
             f"}}}}\n"
         )
 
-        cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
+        cv_extracted_parsed = gpt_models[0].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 ")
+        # cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
         current_timestamp = datetime.now().isoformat()
         prompt = (
             f"**Extract the following details from the resume extract:**\n"
@@ -666,8 +680,8 @@ def process_cv(processed_text: str,OpenAIClient) -> Tuple[str, Dict[str, str]]:
             f"  ]\n"
             f"}}}}\n"
         )
-
-        cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
+        cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
+        # cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
         merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
         
         return merged
