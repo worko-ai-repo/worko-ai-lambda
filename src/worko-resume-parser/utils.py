@@ -1556,7 +1556,7 @@ class AzureOpenAIClient:
     
     DEFAULT_TEMPERATURE = 0.3
     DEFAULT_API_VERSION = "2024-05-01-preview"
-    REQUEST_TIMEOUT = 30  # seconds
+    # REQUEST_TIMEOUT = 30  # seconds
     
     def __init__(self, azure_openai_secret: Dict[str, str],model="gpt-4o"):
         
@@ -1691,8 +1691,8 @@ class AzureOpenAIClient:
             response = requests.post(
                 url=url, 
                 headers=headers, 
-                json=data,
-                timeout=self.REQUEST_TIMEOUT
+                json=data
+            
             )
             response.raise_for_status()
             result = response.json()
@@ -1704,8 +1704,7 @@ class AzureOpenAIClient:
                 response = requests.post(
                     url=url, 
                     headers=headers, 
-                    json=data,
-                    timeout=self.REQUEST_TIMEOUT
+                    json=data
                 )
                 response.raise_for_status()
                 result = response.json()
