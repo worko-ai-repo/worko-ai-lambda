@@ -18,7 +18,7 @@ Resources:
   WorkoBulkJdResumeMatchingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub 'worko-bulk-jd-resume-matching-${Environment}'
+      FunctionName: 'worko-bulk-jd-resume-matching'
       CodeUri: .
       Handler: lambda_function.lambda_handler
       Layers:
