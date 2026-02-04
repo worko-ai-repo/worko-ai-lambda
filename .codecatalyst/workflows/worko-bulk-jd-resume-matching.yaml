@@ -86,7 +86,7 @@ Actions:
               echo "No changes detected in $LAMBDA_PATH - skipping deployment"
             fi
     Environment:
-      Name: worko-bulk-jd-resume-matching-env
+      Name: dev
       Connections:
         - Name: "123456789012"
           Role: CodeCatalystWorkflowDevelopmentRole-worko-ai-lambda
