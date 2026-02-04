@@ -13,8 +13,8 @@ Conditions:
 
 Globals:
   Function:
-    Timeout: 900
-    MemorySize: 1024
+    Timeout: 300
+    MemorySize: 512
     Runtime: python3.10
 
 Resources:
