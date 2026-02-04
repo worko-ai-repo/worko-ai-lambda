@@ -8,7 +8,7 @@ import google.auth.transport.requests
 # from google.genai import types #
 import requests
 from typing import Tuple, Dict, Any, Optional, Union
-import random
+import random ####
 
 def get_secret(secret_name):
     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
