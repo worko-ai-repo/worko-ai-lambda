@@ -18,7 +18,7 @@ Resources:
   WorkoBulkJdResumeMatchingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: 'worko-bulk-jd-resume-matching'
+      FunctionName: !Sub 'worko-bulk-jd-resume-matching-${Environment}'
       CodeUri: .
       Handler: lambda_function.lambda_handler
       Layers:
@@ -35,7 +35,9 @@ Resources:
               Action:
                 - s3:GetObject
                 - s3:PutObject
-              Resource: !Sub 'arn:aws:s3:::worko-app-${Environment}/*'
+              Resource:
+                - !Sub 'arn:aws:s3:::worko-app-${Environment}/*'
+                - !Sub 'arn:aws:s3:::worko-corporate-${Environment}/*'
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
