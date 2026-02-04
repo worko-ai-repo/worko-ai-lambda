@@ -17,7 +17,7 @@ from typing import Tuple, Dict, Any, Optional, Union
 from utils import *
                    
 import base64 
-
+# iac deploymen 1
 # Initialize the AWS service clients
 region = 'us-east-1'
 dynamodb = boto3.resource('dynamodb')
