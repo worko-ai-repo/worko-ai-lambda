@@ -827,20 +827,30 @@ def lambda_handler(event, context):
 
 
     if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
+        record = event['Records'][0]
+        message_body = json.loads(record['body'])
+        repeated_count = message_body.get("repeated_count","")
+        if not repeated_count :
+            message_body["repeated_count"] = 1
+        else:
+            message_body["repeated_count"] = int(repeated_count) + 1
+
+
+
         is_sqs_trigger = True
         print("This Event is triggered by SQS...")
         
-        record = event['Records'][0]
+        
         receive_count = int(record['attributes'].get('ApproximateReceiveCount', 1))
         print(f"Message receive count: {receive_count}")
         
-        message_body = json.loads(record['body'])
+        
         processed_text = message_body.get("processed_text","")
         object_key = message_body.get("object_key","")
         file_name = object_key.split("/")[-1].split(".")[0]
         
-        if receive_count >= 3:
-            print(f"Message received {receive_count} times, sending to DLQ")
+        if message_body["repeated_count"] >= 3:
+            print(f"Message received {message_body['repeated_count']} times, sending to DLQ")
             dlq_name = f"worko-cand-profile-parser-dlq-{env}"
             dlq_url = get_queue_url(dlq_name)
             sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(message_body))
@@ -906,45 +916,45 @@ def lambda_handler(event, context):
 # if __name__ == "__main__":
         
         
-#     event = {
+    event = {
     
-#     "Records": [
-#         {
-#         "eventVersion": "2.1",
-#         "eventSource": "aws:s3",
-#         "awsRegion": "ap-south-1",
-#         "eventTime": "2026-01-12T08:49:37.805Z",
-#         "eventName": "ObjectCreated:Put",
-#         "userIdentity": {
-#             "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
-#         },
-#         "requestParameters": {
-#             "sourceIPAddress": "103.176.210.144"
-#         },
-#         "responseElements": {
-#             "x-amz-request-id": "F031QF2YBESZRM4Q",
-#             "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
-#         },
-#         "s3": {
-#             "s3SchemaVersion": "1.0",
-#             "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
-#             "bucket": {
-#             "name": "worko-corporate-cand-profile-dev",
-#             "ownerIdentity": {
-#                 "principalId": "A1V0APDMR493SG"
-#             },
-#             "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
-#             },
-#             "object": {
-#             "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-#             "size": 225212,
-#             "eTag": "296eeb83abfe1d84d866db9a55621a78",
-#             "sequencer": "006964B5A1B7FA55DF"
-#             }
-#         }
-#         }
-#     ]
-#     }
+    "Records": [
+        {
+        "eventVersion": "2.1",
+        "eventSource": "aws:s3",
+        "awsRegion": "ap-south-1",
+        "eventTime": "2026-01-12T08:49:37.805Z",
+        "eventName": "ObjectCreated:Put",
+        "userIdentity": {
+            "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
+        },
+        "requestParameters": {
+            "sourceIPAddress": "103.176.210.144"
+        },
+        "responseElements": {
+            "x-amz-request-id": "F031QF2YBESZRM4Q",
+            "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
+        },
+        "s3": {
+            "s3SchemaVersion": "1.0",
+            "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
+            "bucket": {
+            "name": "worko-corporate-cand-profile-dev",
+            "ownerIdentity": {
+                "principalId": "A1V0APDMR493SG"
+            },
+            "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
+            },
+            "object": {
+            "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+            "size": 225212,
+            "eTag": "296eeb83abfe1d84d866db9a55621a78",
+            "sequencer": "006964B5A1B7FA55DF"
+            }
+        }
+        }
+    ]
+    }
 
     # event= {'Records':[{"eventSource":"aws:sqs","body":{"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
     #                                                     "processed_text":"""SHAUKAT SHAIKH
