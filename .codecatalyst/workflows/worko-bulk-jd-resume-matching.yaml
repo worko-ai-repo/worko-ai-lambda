@@ -87,6 +87,5 @@ Actions:
             fi
     Environment:
       Name: dev
-      Connections:
-        - Name: "123456789012"
-          Role: CodeCatalystWorkflowDevelopmentRole-worko-ai-lambda
+    Compute:
+      Type: EC2
