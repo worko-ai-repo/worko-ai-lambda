@@ -4,8 +4,8 @@ import time
 from botocore.exceptions import ClientError
 from google.oauth2 import service_account
 import google.auth.transport.requests
-from google import genai
-from google.genai import types
+# from google import genai
+# from google.genai import types
 import requests
 from typing import Tuple, Dict, Any, Optional, Union
 import random 
