@@ -27,6 +27,34 @@ dynamodb = boto3.resource('dynamodb')
 s3_client = boto3.client('s3')
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
 
+def process_parsed_cv_json(cv_obj):
+    try:
+        if not isinstance(cv_obj, dict):
+            return cv_obj
+        
+        # Process education array separately
+        education = cv_obj.get("education", [])
+        if isinstance(education, list):
+            education = [
+                {k: v for k, v in item.items() if v not in (None, "", [], {}, "null", "NULL")}
+                for item in education
+                if isinstance(item, dict)
+            ]
+        
+        # Remove null/empty values from top level
+        cv_obj = {k: v for k, v in cv_obj.items() if v not in (None, "", [], {}, "null", "NULL")}
+        
+        # Add back cleaned education if it has items
+        if education:
+            cv_obj["education"] = education
+        
+        return cv_obj
+    except Exception as e:
+        print(f"Error processing parsed CV JSON: {e}")
+        return cv_obj
+
+    
+
 def reset_partition(partition_key_value):
     dynamodb = boto3.resource("dynamodb")
     table_name = "worko"

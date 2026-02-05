@@ -143,6 +143,8 @@ def lambda_handler(event, context):
         gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
         gpt_models = [gpt4]
         cvExtractedParsed = process_cv(resume_text, gpt_models)
+        cvExtractedParsed = process_parsed_cv_json(cvExtractedParsed)
+        
         
         if isinstance(cvExtractedParsed, str):
             return {'statusCode': 500, 'body': json.dumps('CV parsing failed')}
@@ -203,83 +205,83 @@ def lambda_handler(event, context):
             }
 
 
-if __name__ == "__main__":
-    # For local testing purposes
-    test_event = {
-        "Records": [
-            {
-            "eventSource": "aws:ses",
-            "eventVersion": "1.0",
-            "ses": {
-                "mail": {
-                "timestamp": "2026-01-30T14:38:39.823Z",
-                "source": "shaukatdatascience+caf_=01JWAQF1G96E0SE9XHXSFGHNWW=referral.worko.work@gmail.com",
-                "messageId": "osfqm2002g0aihailrb1q2g5ll6eor7gcjn7kh01",
-                "destination": [
-                    "shaukatdatascience@gmail.com"
-                ],
-                "headersTruncated": False,
-                "headers": [
-                    {
-                    "name": "Return-Path",
-                    "value": "<shaukatdatascience+caf_=01JWAQF1G96E0SE9XHXSFGHNWW=referral.worko.work@gmail.com>"
-                    },
-                    {
-                    "name": "Received",
-                    "value": "from mail-lj1-f179.google.com (mail-lj1-f179.google.com [209.85.208.179]) by inbound-smtp.ap-south-1.amazonaws.com with SMTP id osfqm2002g0aihailrb1q2g5ll6eor7gcjn7kh01 for 01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work; Fri, 30 Jan 2026 14:38:39 +0000 (UTC)"
-                    },
-                    {
-                    "name": "X-SES-Spam-Verdict",
-                    "value": "PASS"
-                    },
-                    {
-                    "name": "X-SES-Virus-Verdict",
-                    "value": "PASS"
-                    }
-                ],
-                "commonHeaders": {
-                    "returnPath": "shaukatdatascience+caf_=01JWAQF1G96E0SE9XHXSFGHNWW=referral.worko.work@gmail.com",
-                    "from": [
-                    "Shaukat Shaikh <shaukt1998@gmail.com>"
-                    ],
-                    "date": "Fri, 30 Jan 2026 20:09:43 +0530",
-                    "to": [
-                    "shaukatdatascience@gmail.com"
-                    ],
-                    "messageId": "<CAA6HCTh6JcrEqzua+CN29ng26F=uFE6Yx_NpCaC4yXSNGzohYg@mail.gmail.com>",
-                    "subject": ""
-                }
-                },
-                "receipt": {
-                "timestamp": "2026-01-30T14:38:39.823Z",
-                "processingTimeMillis": 1326,
-                "recipients": [
-                    "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
-                ],
-                "spamVerdict": {
-                    "status": "PASS"
-                },
-                "virusVerdict": {
-                    "status": "PASS"
-                },
-                "spfVerdict": {
-                    "status": "PASS"
-                },
-                "dkimVerdict": {
-                    "status": "PASS"
-                },
-                "dmarcVerdict": {
-                    "status": "PASS"
-                },
-                "action": {
-                    "type": "Lambda",
-                    "functionArn": "arn:aws:lambda:ap-south-1:211125353899:function:worko-referral-source-cand-profile-parser-dev",
-                    "invocationType": "Event"
-                }
-                }
-            }
-            }
-        ]
-        }
+# if __name__ == "__main__":
+#     # For local testing purposes
+#     test_event = {
+#         "Records": [
+#             {
+#             "eventSource": "aws:ses",
+#             "eventVersion": "1.0",
+#             "ses": {
+#                 "mail": {
+#                 "timestamp": "2026-01-30T14:38:39.823Z",
+#                 "source": "shaukatdatascience+caf_=01JWAQF1G96E0SE9XHXSFGHNWW=referral.worko.work@gmail.com",
+#                 "messageId": "osfqm2002g0aihailrb1q2g5ll6eor7gcjn7kh01",
+#                 "destination": [
+#                     "shaukatdatascience@gmail.com"
+#                 ],
+#                 "headersTruncated": False,
+#                 "headers": [
+#                     {
+#                     "name": "Return-Path",
+#                     "value": "<shaukatdatascience+caf_=01JWAQF1G96E0SE9XHXSFGHNWW=referral.worko.work@gmail.com>"
+#                     },
+#                     {
+#                     "name": "Received",
+#                     "value": "from mail-lj1-f179.google.com (mail-lj1-f179.google.com [209.85.208.179]) by inbound-smtp.ap-south-1.amazonaws.com with SMTP id osfqm2002g0aihailrb1q2g5ll6eor7gcjn7kh01 for 01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work; Fri, 30 Jan 2026 14:38:39 +0000 (UTC)"
+#                     },
+#                     {
+#                     "name": "X-SES-Spam-Verdict",
+#                     "value": "PASS"
+#                     },
+#                     {
+#                     "name": "X-SES-Virus-Verdict",
+#                     "value": "PASS"
+#                     }
+#                 ],
+#                 "commonHeaders": {
+#                     "returnPath": "shaukatdatascience+caf_=01JWAQF1G96E0SE9XHXSFGHNWW=referral.worko.work@gmail.com",
+#                     "from": [
+#                     "Shaukat Shaikh <shaukt1998@gmail.com>"
+#                     ],
+#                     "date": "Fri, 30 Jan 2026 20:09:43 +0530",
+#                     "to": [
+#                     "shaukatdatascience@gmail.com"
+#                     ],
+#                     "messageId": "<CAA6HCTh6JcrEqzua+CN29ng26F=uFE6Yx_NpCaC4yXSNGzohYg@mail.gmail.com>",
+#                     "subject": ""
+#                 }
+#                 },
+#                 "receipt": {
+#                 "timestamp": "2026-01-30T14:38:39.823Z",
+#                 "processingTimeMillis": 1326,
+#                 "recipients": [
+#                     "01JWAQF1G96E0SE9XHXSFGHNWW@referral.worko.work"
+#                 ],
+#                 "spamVerdict": {
+#                     "status": "PASS"
+#                 },
+#                 "virusVerdict": {
+#                     "status": "PASS"
+#                 },
+#                 "spfVerdict": {
+#                     "status": "PASS"
+#                 },
+#                 "dkimVerdict": {
+#                     "status": "PASS"
+#                 },
+#                 "dmarcVerdict": {
+#                     "status": "PASS"
+#                 },
+#                 "action": {
+#                     "type": "Lambda",
+#                     "functionArn": "arn:aws:lambda:ap-south-1:211125353899:function:worko-referral-source-cand-profile-parser-dev",
+#                     "invocationType": "Event"
+#                 }
+#                 }
+#             }
+#             }
+#         ]
+#         }
 
-    lambda_handler(test_event, None)
+#     lambda_handler(test_event, None)

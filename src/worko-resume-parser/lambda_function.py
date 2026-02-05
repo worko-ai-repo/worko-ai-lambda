@@ -35,7 +35,7 @@ def lambda_handler(event, context):
     secret_name = "AZURE-openai-secret-multimodel-"+env
     azure_openai_secret =get_secret(secret_name)
     models_available = ["gpt-4o","gpt-4.1-mini"]
-    
+    current_timestamp = datetime.now().isoformat()
 
     agencyUserId = event.get('agencyUserId',"")
     if agencyUserId:
@@ -94,11 +94,13 @@ def lambda_handler(event, context):
             }
 
             print("processed_text", processed_text)
-
+            # "currentCTC": 0,
+            # "expectedCTC": 0,
 
         prompt = """you are a Expert in Extracting data from Resume. do detailed analysis of below given resume text and extract
         the data return null if data is str or 0 if its number when you don't any data in resume.
         strict instructions: provide only below given json as output no other comments or explanations are allowd.
+        if noticePeriod is not mentioned in resume text return null for noticePeriod.
         {{
             "name": "",
             "email": "",
@@ -119,8 +121,7 @@ def lambda_handler(event, context):
             "currentDesignation": "",
             "totalYOE": 0,
             "relevantYOE": 0,
-            "currentCTC": 0,
-            "expectedCTC": 0,
+
             "noticePeriod": 0,
             "location": "",
             "readyToRelocate": false
@@ -134,7 +135,9 @@ def lambda_handler(event, context):
         gpt_4o_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
         gpt_4_1_mini_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
         response = gpt_4_1_mini_model.invoke_model_with_backoff(prompt,Task= "Agency Resume parsing " )
-        current_timestamp = datetime.now().isoformat()
+        
+        response = process_parsed_cv_json(response)
+
 
         prompt = (
             f"**Extract the following details from the resume extract:**\n"
@@ -318,7 +321,7 @@ def lambda_handler(event, context):
             # Continue with resume processing since we've confirmed it's a valid resume
             if processed_text != {"errorMsg": "Unfortunately, we are not able to read your resume"}:
             
-                current_timestamp = datetime.now().isoformat()
+                
                 prompt = (
                 f"**Extract the following details from the resume extract:**\n"
                 f"- Core Skills (max 30 chars each)\n"
@@ -601,9 +604,9 @@ def lambda_handler(event, context):
             }
 
 
-if __name__ == "__main__":
-    event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
-    "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
-    "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
-    "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
-    lambda_handler(event, None)
+# if __name__ == "__main__":
+#     event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
+#     "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
+#     "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
+#     "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
+#     lambda_handler(event, None)

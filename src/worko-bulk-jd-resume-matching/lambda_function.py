@@ -41,6 +41,33 @@ def extract_text_from_docx(docx_bytes):
         text += paragraph.text + "\n"
     return text
 
+
+def process_parsed_cv_json(cv_obj):
+    try:
+        if not isinstance(cv_obj, dict):
+            return cv_obj
+        
+        # Process education array separately
+        education = cv_obj.get("education", [])
+        if isinstance(education, list):
+            education = [
+                {k: v for k, v in item.items() if v not in (None, "", [], {}, "null", "NULL")}
+                for item in education
+                if isinstance(item, dict)
+            ]
+        
+        # Remove null/empty values from top level
+        cv_obj = {k: v for k, v in cv_obj.items() if v not in (None, "", [], {}, "null", "NULL")}
+        
+        # Add back cleaned education if it has items
+        if education:
+            cv_obj["education"] = education
+        
+        return cv_obj
+    except Exception as e:
+        print(f"Error processing parsed CV JSON: {e}")
+        return cv_obj
+
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
@@ -167,7 +194,10 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
         cv_extract = clean_text(cv_extract)
         print("cv_extract-------",cv_extract)
         
-        # Second extraction for parsed details
+       
+            # f"  \"candidateCurrentCTC\": 0,\n"
+            # f"  \"candidateExpectedCTC\": 0,\n"
+         # Second extraction for parsed details
         parsed_prompt = (
             f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
 
@@ -194,7 +224,10 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
             f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
             f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
             f"- if Phone number is give the you must fill all three variables"
-            f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int)"
+            f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int), 4.candidateNoticePeriod int or Null"
+            f"Rule to return null values:\n"
+            f" if any str key is not given in in resume text just return Null for that partcular fild "
+            f" example :candidateNoticePeriod,candidateLocation"
 
             f"*** Output Format (JSON only) ***\n"
             f"{{{{\n"
@@ -217,9 +250,8 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
             f"  \"candidateExperience\": 0,\n"
             f"  \"candidateTotalYOE\": 0,\n"
             f"  \"candidateRelevantYOE\": 0,\n"
-            f"  \"candidateCurrentCTC\": 0,\n"
-            f"  \"candidateExpectedCTC\": 0,\n"
-            f"  \"candidateNoticePeriod\": 0,\n"
+
+            f"  \"candidateNoticePeriod\":  \"\",\n"
             f"  \"candidateLocation\": \"\",\n"
             f"  \"candidateReadyToRelocate\": false,\n"
             f"  \"isNoticePeriodNegotiable\": false\n"
@@ -304,7 +336,7 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
         # cv_extracted_parsed2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
         cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Resume parsing for skills and pref " )
         merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
-        
+        merged = process_parsed_cv_json(merged)
         return cv_extract, merged
         
     except requests.exceptions.HTTPError as e:
@@ -598,8 +630,6 @@ def invoke_model_nova(prompt):
     )   
     response_body = json.loads(response['body'].read())    
     return response_body
-
-
 
 def invoke_model_deepseek(prompt):
     try:
