@@ -4,17 +4,75 @@ import json
 from typing import Tuple, Dict, Any, Optional, Union
 import boto3
 
-def get_queue_url(queue_name):
-    sqs = boto3.client('sqs')
-    response = sqs.get_queue_url(QueueName=queue_name)
-    return response['QueueUrl']
+import json
+from typing import Callable, Any
+
+def send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key): #send sqs for throttled error
+    print("Sending SQS message for throttling error...")
+
+retry_queue_name,processed_text,object_key ="","",""
+class RetryQueue:
+    def __init__(self):
+        self.queue = []
+        self.dead_letter_queue = []
+    
+    def process_event(self, event: dict, processor: Callable[[dict], None]) -> None:
+        """Process event with retry logic. Moves to DLQ after 3 retries."""
+        counter = event.get('counter', 0)
+        
+        try:
+            processor(event)
+        except Exception as execution_error:
+            error_message = str(execution_error).lower()
+            # error_traceback = traceback.format_exc()# Check if this is a throttling error
+            if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
+                print(f"Errore of {execution_error} now sending sqs for startuing again in next 60 seconds")
+                
+                counter += 1
+                send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key) #send sqs for throttled error
+                
+                if counter <= 3:
+                    event['counter'] = counter
+                    self.queue.append(event)
+                    print(f"Retry {counter}/3 - Event pushed to queue: {event}")
+                else:
+                    self.dead_letter_queue.append(event)
+                    print(f"Max retries exceeded - Event pushed to DLQ: {event}")
+    
+    def process_queue(self, processor: Callable[[dict], None]) -> None:
+        """Process all events in queue."""
+        while self.queue:
+            event = self.queue.pop(0)
+            self.process_event(event, processor)
+
+
+# Example usage
+if __name__ == "__main__":
+    retry_queue = RetryQueue()
+    
+    # Simulated processor that always fails
+    def failing_processor(event: dict):
+        print(f"Processing event: {event}")
+        raise Exception("Processing failed")
+    
+    # Initial event
+    event = {"id": 1, "data": "test"}
+    
+    # Process will fail and retry 3 times, then move to DLQ
+    retry_queue.process_event(event, failing_processor)
+    retry_queue.process_queue(failing_processor)
+
+# def get_queue_url(queue_name):
+#     sqs = boto3.client('sqs')
+#     response = sqs.get_queue_url(QueueName=queue_name)
+#     return response['QueueUrl']
 
 
 
 
 
-retry_queue_name = "worko-cand-profile-parser-retry-queue-dev"
-print(get_queue_url(retry_queue_name))
+# retry_queue_name = "worko-cand-profile-parser-retry-queue-dev"
+# print(get_queue_url(retry_queue_name))
 # azure_openai_secret = {"AZURE_OPENAI_API_KEY" :"REDACTED",
 #                         "AZURE_OPENAI_API_VERSION" : "2024-12-01-preview",
 #                         "AZURE_OPENAI_DEPLOYMENT" : "gpt-4.1-mini",

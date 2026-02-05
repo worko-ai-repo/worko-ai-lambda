@@ -551,8 +551,9 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
-def process_cv(retry_queue_name, processed_text, gpt_models, object_key) -> Tuple[str, Dict[str, str]]:
-    print("Processing cv for cvexractparesed")
+def process_cv(retry_queue_name, processed_text, gpt_models, object_key,retry_counter) -> Tuple[str, Dict[str, str]]:
+    retry_counter +=1
+    print("Processing cv for cvexractparesed with retry_counter:", retry_counter)
     try:
         processed_text = " ".join(processed_text.split())
 
@@ -717,8 +718,9 @@ def process_cv(retry_queue_name, processed_text, gpt_models, object_key) -> Tupl
         # error_traceback = traceback.format_exc()# Check if this is a throttling error
         if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
             print("Errore of {execution_error} now sending sqs for startuing again in next 60 seconds")
-
-            send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key) #send sqs for throttled error
+             
+            message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error","retry_counter":retry_counter }
+            send_sqs_for_throttling_error(retry_queue_name,message_body) #send sqs for throttled error
             return None 
         else:
             # For all other errors, just log and continue
@@ -735,18 +737,20 @@ def decimal_default(obj):
         return float(obj)
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
-def send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key):
+def send_sqs_for_throttling_error(retry_queue_name,message_body):
     try:
+        retry_counter = message_body.get("retry_counter", "retry_counter not found")
         from datetime import datetime, timedelta
         queue_url = get_queue_url(retry_queue_name)
         sqs = boto3.client('sqs')
         
-        message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
+        # message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
         delay_seconds = 60
         
         current_time = datetime.now()
         visible_time = current_time + timedelta(seconds=delay_seconds)
         
+        print(f"Sending message to SQS with retry_counter: {retry_counter}")
         print(f"[SQS SEND] Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"[SQS SEND] Message will be visible at: {visible_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
@@ -827,39 +831,34 @@ def lambda_handler(event, context):
 
 
     if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
-        record = event['Records'][0]
-        message_body = json.loads(record['body'])
-        repeated_count = message_body.get("repeated_count","")
-        if not repeated_count :
-            message_body["repeated_count"] = 1
-        else:
-            message_body["repeated_count"] = int(repeated_count) + 1
-
-
-
-        is_sqs_trigger = True
         print("This Event is triggered by SQS...")
-        
-        
-        receive_count = int(record['attributes'].get('ApproximateReceiveCount', 1))
-        print(f"Message receive count: {receive_count}")
+        record = event['Records'][0]
+        try:
+            message_body = json.loads(record['body'])
+        except Exception as e:
+            message_body = record['body']
+            print(f"message body direct loaded: {e}")
+        retry_counter = message_body.get("retry_counter", "retry_counter not found")
+        print(f"Message retry counter: {retry_counter}")
         
         
         processed_text = message_body.get("processed_text","")
         object_key = message_body.get("object_key","")
         file_name = object_key.split("/")[-1].split(".")[0]
         
-        if message_body["repeated_count"] >= 3:
-            print(f"Message received {message_body['repeated_count']} times, sending to DLQ")
+        if retry_counter >= 3:
+            print(f"Message received {retry_counter} times, sending to DLQ")
             dlq_name = f"worko-cand-profile-parser-dlq-{env}"
             dlq_url = get_queue_url(dlq_name)
             sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(message_body))
             return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
         
-        elif processed_text:
-            cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key)
+        elif processed_text and retry_counter != "retry_counter not found":
+            cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key,retry_counter)
             if cvExtractedParsed:
                 send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
+        else:
+            print("Missing processed_text or retry_counter in message body, cannot process CV.")
 
         return {
             'statusCode': 200,
@@ -898,7 +897,7 @@ def lambda_handler(event, context):
 
         
         
-        cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key)
+        cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key,0)
 
         try:
             if cvExtractedParsed:
@@ -913,130 +912,130 @@ def lambda_handler(event, context):
             'body': json.dumps('Lambda successful for s3 event')
         }
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
         
         
-    event = {
+    # event = {
     
-    "Records": [
-        {
-        "eventVersion": "2.1",
-        "eventSource": "aws:s3",
-        "awsRegion": "ap-south-1",
-        "eventTime": "2026-01-12T08:49:37.805Z",
-        "eventName": "ObjectCreated:Put",
-        "userIdentity": {
-            "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
-        },
-        "requestParameters": {
-            "sourceIPAddress": "103.176.210.144"
-        },
-        "responseElements": {
-            "x-amz-request-id": "F031QF2YBESZRM4Q",
-            "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
-        },
-        "s3": {
-            "s3SchemaVersion": "1.0",
-            "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
-            "bucket": {
-            "name": "worko-corporate-cand-profile-dev",
-            "ownerIdentity": {
-                "principalId": "A1V0APDMR493SG"
-            },
-            "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
-            },
-            "object": {
-            "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-            "size": 225212,
-            "eTag": "296eeb83abfe1d84d866db9a55621a78",
-            "sequencer": "006964B5A1B7FA55DF"
-            }
-        }
-        }
-    ]
-    }
+    # "Records": [
+    #     {
+    #     "eventVersion": "2.1",
+    #     "eventSource": "aws:s3",
+    #     "awsRegion": "ap-south-1",
+    #     "eventTime": "2026-01-12T08:49:37.805Z",
+    #     "eventName": "ObjectCreated:Put",
+    #     "userIdentity": {
+    #         "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
+    #     },
+    #     "requestParameters": {
+    #         "sourceIPAddress": "103.176.210.144"
+    #     },
+    #     "responseElements": {
+    #         "x-amz-request-id": "F031QF2YBESZRM4Q",
+    #         "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
+    #     },
+    #     "s3": {
+    #         "s3SchemaVersion": "1.0",
+    #         "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
+    #         "bucket": {
+    #         "name": "worko-corporate-cand-profile-dev",
+    #         "ownerIdentity": {
+    #             "principalId": "A1V0APDMR493SG"
+    #         },
+    #         "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
+    #         },
+    #         "object": {
+    #         "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+    #         "size": 225212,
+    #         "eTag": "296eeb83abfe1d84d866db9a55621a78",
+    #         "sequencer": "006964B5A1B7FA55DF"
+    #         }
+    #     }
+    #     }
+    # ]
+    # }
 
-    # event= {'Records':[{"eventSource":"aws:sqs","body":{"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-    #                                                     "processed_text":"""SHAUKAT SHAIKH
-    #     7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
-    #     github.com/Shaukat-Shaikh
-    #     Summary
-    #     linkedin.com/in/ShaukatShaikh71/
-    #     Data Science profess
-    #     ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
-    #     Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
-    #     LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
-    #     in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
-    #     complex business problems.
-    #     Work Experience
-    #     Al Engineer Intern, Worko.ai, Bangalore. Remote
-    #     •
-    #     Improved an Al-driven resume-job matching system using LLMs by 30% adding 
-    #     more structured logic and inserting feedback received from recruiter.
-    #     •
-    #     Implemented rag based job listing for job board using Aws Lambda Vector Store 
-    #     Opensearch.
-    #     •
-    #     Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
-    #     specific data to enhance semantic matching and candidate scoring.
-    #     Collaborated with fullstack team to build Ai driven a video interview product.
-    #     •
-    #     GenAl Trainer, Kalp Academy Remote
-    #     •
-    #     Delivering training programs on Generative AI, LLMs, and practical AI applications 
-    #     to aspiring professionals and developers.
-    #     •
-    #     Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
-    #     chain-of-thought prompting for optimal LLM performance.
-    #     •
-    #     Conducting hands-on sessions on LangChain framework for building production
-    #     grade LLM applications, agents, and memory systems.
-    #     •
-    #     Training on RAG pipelines, vector databases, embedding models, and semantic 
-    #     search optimization.
-    #     •
-    #     Developing course materials, assignments, and real-world projects for practical 
-    #     implementation.
-    #     •
-    #     Mentoring on GenAI deployment best practices, model selection, cost 
-    #     optimization, and ethical AI considerations.
-    #     Data science Engineer, Renew Instruments Wadala, Mumbai
-    #     •
-    #     Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
-    #     quantitative finance techniques to enhance predictive analytics and risk 
-    #     modelling.
-    #     •
-    #     Applied financial modelling expertise to equity options and futures, contributing 
-    #     to data-driven decision-making.
-    #     •
-    #     Utilized MS Office tools to document findings, create reports, and communicate 
-    #     financial insights effectively.
-    #     06/2025 – Present
-    #     11/2025 – Present
-    #     04/2024 – 03/2025
-    #     Technical Skills
-    #     Analytics
-    #     Programming Language
-    #     Python. Database Language: SQL MLOPS: CICD, 
-    #     GitHub Action. DockerHub
-    #     Al
-    #     GenAl, LangChain, LangGraph,
-    #     PROFESSIONAL COURSES
-    #     Numpy and Pandas Tools: Power BI, Advance Fixcel 
-    #     Cloud: AWS
-    #     Machin Learning
-    #     Data Pre-processing, Regression, Naive Bayes, 
-    #     Decision Trees, Support Vector Machines, K-Nearest 
-    #     Neighbors, Clustering, Principal Component 
-    #     Analysis, Boosting, Pytorch, Deep Learning (ANN, 
-    #     NLP, CNN)
-    #     MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
-    #     EDUCATION
-    #     2022 – 2023
-    #     MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
-    #     MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
-    #     2019 – 2022
-    #     2018 – 2019"""}}]}
+    event= {'Records':[{"eventSource":"aws:sqs","body":{"retry_counter":3,"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+                                                        "processed_text":"""SHAUKAT SHAIKH
+        7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
+        github.com/Shaukat-Shaikh
+        Summary
+        linkedin.com/in/ShaukatShaikh71/
+        Data Science profess
+        ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
+        Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
+        LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
+        in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
+        complex business problems.
+        Work Experience
+        Al Engineer Intern, Worko.ai, Bangalore. Remote
+        •
+        Improved an Al-driven resume-job matching system using LLMs by 30% adding 
+        more structured logic and inserting feedback received from recruiter.
+        •
+        Implemented rag based job listing for job board using Aws Lambda Vector Store 
+        Opensearch.
+        •
+        Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
+        specific data to enhance semantic matching and candidate scoring.
+        Collaborated with fullstack team to build Ai driven a video interview product.
+        •
+        GenAl Trainer, Kalp Academy Remote
+        •
+        Delivering training programs on Generative AI, LLMs, and practical AI applications 
+        to aspiring professionals and developers.
+        •
+        Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
+        chain-of-thought prompting for optimal LLM performance.
+        •
+        Conducting hands-on sessions on LangChain framework for building production
+        grade LLM applications, agents, and memory systems.
+        •
+        Training on RAG pipelines, vector databases, embedding models, and semantic 
+        search optimization.
+        •
+        Developing course materials, assignments, and real-world projects for practical 
+        implementation.
+        •
+        Mentoring on GenAI deployment best practices, model selection, cost 
+        optimization, and ethical AI considerations.
+        Data science Engineer, Renew Instruments Wadala, Mumbai
+        •
+        Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
+        quantitative finance techniques to enhance predictive analytics and risk 
+        modelling.
+        •
+        Applied financial modelling expertise to equity options and futures, contributing 
+        to data-driven decision-making.
+        •
+        Utilized MS Office tools to document findings, create reports, and communicate 
+        financial insights effectively.
+        06/2025 – Present
+        11/2025 – Present
+        04/2024 – 03/2025
+        Technical Skills
+        Analytics
+        Programming Language
+        Python. Database Language: SQL MLOPS: CICD, 
+        GitHub Action. DockerHub
+        Al
+        GenAl, LangChain, LangGraph,
+        PROFESSIONAL COURSES
+        Numpy and Pandas Tools: Power BI, Advance Fixcel 
+        Cloud: AWS
+        Machin Learning
+        Data Pre-processing, Regression, Naive Bayes, 
+        Decision Trees, Support Vector Machines, K-Nearest 
+        Neighbors, Clustering, Principal Component 
+        Analysis, Boosting, Pytorch, Deep Learning (ANN, 
+        NLP, CNN)
+        MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
+        EDUCATION
+        2022 – 2023
+        MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
+        MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
+        2019 – 2022
+        2018 – 2019"""}}]}
     lambda_handler(event, None)
 
 
