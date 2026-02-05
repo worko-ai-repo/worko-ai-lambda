@@ -838,9 +838,8 @@ def lambda_handler(event, context):
         except Exception as e:
             message_body = record['body']
             print(f"message body direct loaded: {e}")
-        retry_counter = message_body.get("retry_counter", "retry_counter not found")
-        print(f"Message retry counter: {retry_counter}")
-        
+        retry_counter = message_body.get("retry_counter", 0)
+        print(f"Message receved with retry counter: {retry_counter}")
         
         processed_text = message_body.get("processed_text","")
         object_key = message_body.get("object_key","")
@@ -853,12 +852,12 @@ def lambda_handler(event, context):
             sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(message_body))
             return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
         
-        elif processed_text and retry_counter != "retry_counter not found":
+        if processed_text:
             cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key,retry_counter)
             if cvExtractedParsed:
                 send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
         else:
-            print("Missing processed_text or retry_counter in message body, cannot process CV.")
+            print(f"Missing processed_text in SQS message body. Message: {message_body}")
 
         return {
             'statusCode': 200,
