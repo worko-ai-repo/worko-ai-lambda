@@ -54,7 +54,7 @@ def update_sqs_queue(message_body):
             QueueUrl=sqs_url,
             MessageBody=message_body_msg
             )
-        print("Do dubliact found, sqs (parsed cv) sent to backend")
+        print("Dublicate is not found, sqs (parsed cv) sent to backend")
         return {
             'statusCode': 200,
             'body': json.dumps('Message sent to SQS!')

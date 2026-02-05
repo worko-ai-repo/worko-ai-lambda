@@ -39,7 +39,9 @@ def process_parsed_cv_json(cv_obj):
     try:
         if not isinstance(cv_obj, dict):
             return cv_obj
-        
+        # candidateNoticePeriod = cv_obj.get("candidateNoticePeriod",0)
+        # if candidateNoticePeriod in (None, "", [], {}, "null", "NULL") or type(candidateNoticePeriod)==str:
+        #     cv_obj["candidateNoticePeriod"] = ""
         # Process education array separately
         education = cv_obj.get("education", [])
         if isinstance(education, list):
