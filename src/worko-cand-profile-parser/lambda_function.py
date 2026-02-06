@@ -937,7 +937,7 @@ def lambda_handler(event, context):
             'body': json.dumps('Lambda successful for s3 event')
         }
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
         
         
     # event = {
@@ -980,88 +980,88 @@ def lambda_handler(event, context):
     # ]
     # }
 
-    # event= {'Records':[{"eventSource":"aws:sqs","body":{"retry_counter":2,"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-    #                                                     "processed_text":"""SHAUKAT SHAIKH
-    #     7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
-    #     github.com/Shaukat-Shaikh
-    #     Summary
-    #     linkedin.com/in/ShaukatShaikh71/
-    #     Data Science profess
-    #     ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
-    #     Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
-    #     LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
-    #     in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
-    #     complex business problems.
-    #     Work Experience
-    #     Al Engineer Intern, Worko.ai, Bangalore. Remote
-    #     •
-    #     Improved an Al-driven resume-job matching system using LLMs by 30% adding 
-    #     more structured logic and inserting feedback received from recruiter.
-    #     •
-    #     Implemented rag based job listing for job board using Aws Lambda Vector Store 
-    #     Opensearch.
-    #     •
-    #     Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
-    #     specific data to enhance semantic matching and candidate scoring.
-    #     Collaborated with fullstack team to build Ai driven a video interview product.
-    #     •
-    #     GenAl Trainer, Kalp Academy Remote
-    #     •
-    #     Delivering training programs on Generative AI, LLMs, and practical AI applications 
-    #     to aspiring professionals and developers.
-    #     •
-    #     Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
-    #     chain-of-thought prompting for optimal LLM performance.
-    #     •
-    #     Conducting hands-on sessions on LangChain framework for building production
-    #     grade LLM applications, agents, and memory systems.
-    #     •
-    #     Training on RAG pipelines, vector databases, embedding models, and semantic 
-    #     search optimization.
-    #     •
-    #     Developing course materials, assignments, and real-world projects for practical 
-    #     implementation.
-    #     •
-    #     Mentoring on GenAI deployment best practices, model selection, cost 
-    #     optimization, and ethical AI considerations.
-    #     Data science Engineer, Renew Instruments Wadala, Mumbai
-    #     •
-    #     Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
-    #     quantitative finance techniques to enhance predictive analytics and risk 
-    #     modelling.
-    #     •
-    #     Applied financial modelling expertise to equity options and futures, contributing 
-    #     to data-driven decision-making.
-    #     •
-    #     Utilized MS Office tools to document findings, create reports, and communicate 
-    #     financial insights effectively.
-    #     06/2025 – Present
-    #     11/2025 – Present
-    #     04/2024 – 03/2025
-    #     Technical Skills
-    #     Analytics
-    #     Programming Language
-    #     Python. Database Language: SQL MLOPS: CICD, 
-    #     GitHub Action. DockerHub
-    #     Al
-    #     GenAl, LangChain, LangGraph,
-    #     PROFESSIONAL COURSES
-    #     Numpy and Pandas Tools: Power BI, Advance Fixcel 
-    #     Cloud: AWS
-    #     Machin Learning
-    #     Data Pre-processing, Regression, Naive Bayes, 
-    #     Decision Trees, Support Vector Machines, K-Nearest 
-    #     Neighbors, Clustering, Principal Component 
-    #     Analysis, Boosting, Pytorch, Deep Learning (ANN, 
-    #     NLP, CNN)
-    #     MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
-    #     EDUCATION
-    #     2022 – 2023
-    #     MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
-    #     MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
-    #     2019 – 2022
-    #     2018 – 2019"""}}]}
-    # lambda_handler(event, None)
+    event= {'Records':[{"eventSource":"aws:sqs","body":{"retry_counter":0,"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+                                                        "processed_text":"""SHAUKAT SHAIKH
+        7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
+        github.com/Shaukat-Shaikh
+        Summary
+        linkedin.com/in/ShaukatShaikh71/
+        Data Science profess
+        ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
+        Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
+        LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
+        in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
+        complex business problems.
+        Work Experience
+        Al Engineer Intern, Worko.ai, Bangalore. Remote
+        •
+        Improved an Al-driven resume-job matching system using LLMs by 30% adding 
+        more structured logic and inserting feedback received from recruiter.
+        •
+        Implemented rag based job listing for job board using Aws Lambda Vector Store 
+        Opensearch.
+        •
+        Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
+        specific data to enhance semantic matching and candidate scoring.
+        Collaborated with fullstack team to build Ai driven a video interview product.
+        •
+        GenAl Trainer, Kalp Academy Remote
+        •
+        Delivering training programs on Generative AI, LLMs, and practical AI applications 
+        to aspiring professionals and developers.
+        •
+        Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
+        chain-of-thought prompting for optimal LLM performance.
+        •
+        Conducting hands-on sessions on LangChain framework for building production
+        grade LLM applications, agents, and memory systems.
+        •
+        Training on RAG pipelines, vector databases, embedding models, and semantic 
+        search optimization.
+        •
+        Developing course materials, assignments, and real-world projects for practical 
+        implementation.
+        •
+        Mentoring on GenAI deployment best practices, model selection, cost 
+        optimization, and ethical AI considerations.
+        Data science Engineer, Renew Instruments Wadala, Mumbai
+        •
+        Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
+        quantitative finance techniques to enhance predictive analytics and risk 
+        modelling.
+        •
+        Applied financial modelling expertise to equity options and futures, contributing 
+        to data-driven decision-making.
+        •
+        Utilized MS Office tools to document findings, create reports, and communicate 
+        financial insights effectively.
+        06/2025 – Present
+        11/2025 – Present
+        04/2024 – 03/2025
+        Technical Skills
+        Analytics
+        Programming Language
+        Python. Database Language: SQL MLOPS: CICD, 
+        GitHub Action. DockerHub
+        Al
+        GenAl, LangChain, LangGraph,
+        PROFESSIONAL COURSES
+        Numpy and Pandas Tools: Power BI, Advance Fixcel 
+        Cloud: AWS
+        Machin Learning
+        Data Pre-processing, Regression, Naive Bayes, 
+        Decision Trees, Support Vector Machines, K-Nearest 
+        Neighbors, Clustering, Principal Component 
+        Analysis, Boosting, Pytorch, Deep Learning (ANN, 
+        NLP, CNN)
+        MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
+        EDUCATION
+        2022 – 2023
+        MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
+        MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
+        2019 – 2022
+        2018 – 2019"""}}]}
+    lambda_handler(event, None)
 
 
 

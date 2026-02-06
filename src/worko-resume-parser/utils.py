@@ -52,7 +52,6 @@ def process_parsed_cv_json(cv_obj):
     except Exception as e:
         print(f"Error processing parsed CV JSON: {e}")
         return cv_obj
-
     
 
 def reset_partition(partition_key_value):

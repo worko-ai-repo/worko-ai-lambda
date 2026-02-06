@@ -221,6 +221,7 @@ def lambda_handler(event, context):
         #                 "candidateParsedCvAwsS3FileName":candidateParsedCvAwsS3File,
         #                 "agencyUserId":companyId}
         merged = {**response, **content2}  # , **addded_details}
+        merged = process_parsed_cv_json(merged)
         print("final response for agency", merged)
         return {
             'statusCode': 200,
@@ -604,9 +605,9 @@ def lambda_handler(event, context):
             }
 
 
-# if __name__ == "__main__":
-#     event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
-#     "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
-#     "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
-#     "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
-#     lambda_handler(event, None)
+if __name__ == "__main__":
+    event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
+    "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
+    "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
+    "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
+    lambda_handler(event, None)

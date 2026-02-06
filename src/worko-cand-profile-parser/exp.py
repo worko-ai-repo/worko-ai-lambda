@@ -3,65 +3,64 @@ import requests
 import json
 from typing import Tuple, Dict, Any, Optional, Union
 import boto3
-
+import time
 import json
 from typing import Callable, Any
 
-def send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key): #send sqs for throttled error
-    print("Sending SQS message for throttling error...")
 
-retry_queue_name,processed_text,object_key ="","",""
-class RetryQueue:
-    def __init__(self):
-        self.queue = []
-        self.dead_letter_queue = []
-    
-    def process_event(self, event: dict, processor: Callable[[dict], None]) -> None:
-        """Process event with retry logic. Moves to DLQ after 3 retries."""
-        counter = event.get('counter', 0)
+
+#     ############################################################################
+# def get_queue_url(queue_name):
+#     sqs = boto3.client('sqs')
+#     response = sqs.get_queue_url(QueueName=queue_name)
+#     return response['QueueUrl']
+
+# def decimal_default(obj):
+#     if isinstance(obj, Decimal):
+#         return float(obj)
+#     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+# def send_sqs_for_throttling_error(retry_queue_name,message_body):
+#     try:
+#         retry_counter = message_body.get("retry_counter", "retry_counter not found")
+#         from datetime import datetime, timedelta
+#         queue_url = get_queue_url(retry_queue_name)
+#         sqs = boto3.client('sqs')
         
-        try:
-            processor(event)
-        except Exception as execution_error:
-            error_message = str(execution_error).lower()
-            # error_traceback = traceback.format_exc()# Check if this is a throttling error
-            if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
-                print(f"Errore of {execution_error} now sending sqs for startuing again in next 60 seconds")
-                
-                counter += 1
-                send_sqs_for_throttling_error(retry_queue_name,processed_text,object_key) #send sqs for throttled error
-                
-                if counter <= 3:
-                    event['counter'] = counter
-                    self.queue.append(event)
-                    print(f"Retry {counter}/3 - Event pushed to queue: {event}")
-                else:
-                    self.dead_letter_queue.append(event)
-                    print(f"Max retries exceeded - Event pushed to DLQ: {event}")
-    
-    def process_queue(self, processor: Callable[[dict], None]) -> None:
-        """Process all events in queue."""
-        while self.queue:
-            event = self.queue.pop(0)
-            self.process_event(event, processor)
+#         # message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
+#         delay_seconds = 5
+        
+#         current_time = datetime.now()
+#         visible_time = current_time + timedelta(seconds=delay_seconds)
+        
+#         print(f"Sending message to SQS with retry_counter: {retry_counter}")
+#         print(f"[SQS SEND] Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+#         print(f"[SQS SEND] Message will be visible at: {visible_time.strftime('%Y-%m-%d %H:%M:%S')}")
+#         print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
+#         print(f"SQS message body for throttled steps: {json.dumps(str(message_body)[:100])}")
+        
+#         response = sqs.send_message(
+#             QueueUrl=queue_url,
+#             MessageBody=json.dumps(message_body, default=decimal_default),
+#             DelaySeconds=delay_seconds
+#         )
+        
+#         print(f"[SQS SEND] MessageId: {response.get('MessageId', 'N/A')}")
+        
+        
+#     except Exception as sqs_error:
+#         print(f"Error sending send_sqs_for_throttling_error step to SQS: {sqs_error}")
+#         print(f"Queue URL attempted: {queue_url}")
+#         print(f"Message body: {message_body}")
 
+# retry_queue_name = "worko-cand-profile-parser-retry-queue-dev"
 
-# Example usage
-if __name__ == "__main__":
-    retry_queue = RetryQueue()
-    
-    # Simulated processor that always fails
-    def failing_processor(event: dict):
-        print(f"Processing event: {event}")
-        raise Exception("Processing failed")
-    
-    # Initial event
-    event = {"id": 1, "data": "test"}
-    
-    # Process will fail and retry 3 times, then move to DLQ
-    retry_queue.process_event(event, failing_processor)
-    retry_queue.process_queue(failing_processor)
+# for i in range(10):
+#     message_body = {f"testing_and_test{i}":"7757852171"}
+#     # time.sleep(2)
+#     send_sqs_for_throttling_error(retry_queue_name,message_body)
 
+    ############################################################################
 # def get_queue_url(queue_name):
 #     sqs = boto3.client('sqs')
 #     response = sqs.get_queue_url(QueueName=queue_name)
@@ -292,3 +291,63 @@ if __name__ == "__main__":
 
 
 # print(output)
+
+
+import boto3
+from datetime import datetime
+
+def download_lambda_logs(function_name, output_file='lambda_logs.txt', max_events=200):
+    """Download last N CloudWatch logs for a Lambda function."""
+    logs_client = boto3.client('logs', region_name='ap-south-1')
+    log_group_name = f'/aws/lambda/{function_name}'
+    
+    try:
+        # Get log streams sorted by last event time
+        streams_response = logs_client.describe_log_streams(
+            logGroupName=log_group_name,
+            orderBy='LastEventTime',
+            descending=True,
+            limit=5
+        )
+        
+        all_events = []
+        
+        # Fetch events from recent streams
+        for stream in streams_response['logStreams']:
+            stream_name = stream['logStreamName']
+            
+            events_response = logs_client.get_log_events(
+                logGroupName=log_group_name,
+                logStreamName=stream_name,
+                limit=max_events,
+                startFromHead=False
+            )
+            
+            all_events.extend(events_response['events'])
+            
+            if len(all_events) >= max_events:
+                break
+        
+        # Sort by timestamp and take last N
+        all_events.sort(key=lambda x: x['timestamp'])
+        recent_events = all_events[-max_events:]
+        
+        # Write to file
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(f"Lambda Function: {function_name}\n")
+            f.write(f"Log Group: {log_group_name}\n")
+            f.write(f"Downloaded: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Total Events: {len(recent_events)}\n")
+            f.write("="*80 + "\n\n")
+            
+            for event in recent_events:
+                timestamp = datetime.fromtimestamp(event['timestamp']/1000).strftime('%Y-%m-%d %H:%M:%S')
+                f.write(f"[{timestamp}] {event['message']}\n")
+        
+        print(f"Downloaded {len(recent_events)} log events to {output_file}")
+        
+    except Exception as e:
+        print(f"Error downloading logs: {e}")
+
+# Usage
+download_lambda_logs('worko-bulk-jd-resume-matching-dev', 'lambda_logs.txt', 200)
