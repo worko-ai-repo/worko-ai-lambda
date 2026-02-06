@@ -773,12 +773,7 @@ def send_sqs_for_throttling_error(retry_queue_name,message_body):
         # message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
         delay_seconds = 60
         
-        current_time = datetime.now()
-        visible_time = current_time + timedelta(seconds=delay_seconds)
-        
         print(f"Sending message to SQS with retry_counter: {retry_counter}")
-        print(f"[SQS SEND] Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"[SQS SEND] Message will be visible at: {visible_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
         print(f"SQS message body for throttled steps: {json.dumps(str(message_body)[:100])}")
         
@@ -819,7 +814,7 @@ def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
             "cvExtractedParsed":cvExtractedParsed}
             update_sqs_queue(sqs_send_data)
 
-            print(f"trigring sqs as  do not found any dublicate record in collection corporateCandidateProfiles :- {cvExtractedParsed}")
+            print(f"trigring sqs, as found no dublicate record in collection corporateCandidateProfiles :- {cvExtractedParsed}")
             #trigre sqs
     else:
 
