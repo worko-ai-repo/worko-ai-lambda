@@ -112,8 +112,11 @@ def lambda_handler(event, context):
 
         prompt = """you are a Expert in Extracting data from Resume. do detailed analysis of below given resume text and extract
         the data return null if data is str or 0 if its number when you don't any data in resume.
-        strict instructions: provide only below given json as output no other comments or explanations are allowd.
-        if noticePeriod is not mentioned in resume text return null for noticePeriod.
+        strict instructions: 
+        1) provide only below given json as output no other comments or explanations are allowd.
+        2) if noticePeriod is not mentioned in resume text return null for noticePeriod.
+        3) startedYear and passingYear must be number or null not str eg, 2014, 2020 or null if not mentioned in resume text.
+
         {{
             "name": "",
             "email": "",
@@ -618,16 +621,16 @@ def lambda_handler(event, context):
             }
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
     # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
     # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
     # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
-    # event = {
-    # "companyId": "01JWAQF1G96E0SE9XHXSFGHNWW",
-    # "jobId": "01K7Z7RM97J7V8E4059KQ1D2Z6",
-    # "candidateParsedCvAwsS3FileName": "01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf",
-    # "cvAwsS3ResourceType": "CAND_SUBMIT_CV_JOB"
-    #     }
+    event = {
+    "companyId": "01JWAQF1G96E0SE9XHXSFGHNWW",
+    "jobId": "01K7Z7RM97J7V8E4059KQ1D2Z6",
+    "candidateParsedCvAwsS3FileName": "01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf",
+    "cvAwsS3ResourceType": "CAND_SUBMIT_CV_JOB"
+        }
     # # example_path = "s3://worko-app-dev/candidate-submit-cvs/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K7Z7RM97J7V8E4059KQ1D2Z6/cvs/01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf"
-    # lambda_handler(event, None)
+    lambda_handler(event, None)
