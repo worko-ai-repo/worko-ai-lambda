@@ -38,18 +38,31 @@ def lambda_handler(event, context):
     current_timestamp = datetime.now().isoformat()
 
     agencyUserId = event.get('agencyUserId',"")
-    if agencyUserId:
-        companyId = event.get('companyId',"")
-        jobId = event.get('jobId',"")
-        candidateParsedCvAwsS3FileName = event.get("candidateParsedCvAwsS3FileName","")
-        key = f"agencies/{agencyUserId}/companies/{companyId}/jobs/{jobId}/user-profiles/{candidateParsedCvAwsS3FileName}"
-        print("key",key)
-        # s3_path = "agencies/{agencyUserId}/companies/{companyId}/jobs/{jobId}/user-profiles/{candidateParsedCvAwsS3FileName}"
+    cvAwsS3ResourceType = event.get("cvAwsS3ResourceType","")
 
+    if agencyUserId or cvAwsS3ResourceType == "CAND_SUBMIT_CV_JOB":
+        S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME',"worko-app-dev")
+        s3_bucket_name = S3_BUCKET_NAME
+        if cvAwsS3ResourceType == "CAND_SUBMIT_CV_JOB":
+            companyId= event.get("companyId","")
+            jobId = event.get("jobId","")
+            candidateParsedCvAwsS3FileName = event.get("candidateParsedCvAwsS3FileName","")
+            # example_path = "s3://worko-app-dev/candidate-submit-cvs/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K7Z7RM97J7V8E4059KQ1D2Z6/cvs/01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf"
+            key = f"candidate-submit-cvs/companies/{companyId}/jobs/{jobId}/cvs/{candidateParsedCvAwsS3FileName}"
+            print("key",key)
         
+        else:
+            companyId = event.get('companyId',"")
+            jobId = event.get('jobId',"")
+            candidateParsedCvAwsS3FileName = event.get("candidateParsedCvAwsS3FileName","")
+            key = f"agencies/{agencyUserId}/companies/{companyId}/jobs/{jobId}/user-profiles/{candidateParsedCvAwsS3FileName}"
+            print("key",key)
+
+            # s3_path = "agencies/{agencyUserId}/companies/{companyId}/jobs/{jobId}/user-profiles/{candidateParsedCvAwsS3FileName}"
+
+            
         try:
-            S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME',"worko-app-dev")
-            s3_bucket_name = S3_BUCKET_NAME
+
             # Attempt to fetch the PDF file from S3
             response = s3_client.get_object(Bucket=s3_bucket_name, Key=key)
             data = response['Body'].read()
@@ -605,9 +618,16 @@ def lambda_handler(event, context):
             }
 
 
-if __name__ == "__main__":
-    event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
-    "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
-    "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
-    "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
-    lambda_handler(event, None)
+# if __name__ == "__main__":
+    # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
+    # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
+    # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
+    # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
+    # event = {
+    # "companyId": "01JWAQF1G96E0SE9XHXSFGHNWW",
+    # "jobId": "01K7Z7RM97J7V8E4059KQ1D2Z6",
+    # "candidateParsedCvAwsS3FileName": "01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf",
+    # "cvAwsS3ResourceType": "CAND_SUBMIT_CV_JOB"
+    #     }
+    # # example_path = "s3://worko-app-dev/candidate-submit-cvs/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K7Z7RM97J7V8E4059KQ1D2Z6/cvs/01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf"
+    # lambda_handler(event, None)
