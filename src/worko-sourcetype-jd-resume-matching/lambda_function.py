@@ -4,8 +4,6 @@ from prompts import *
 import requests
 import random
 import os
-# from dotenv import load_dotenv
-# load_dotenv()
 import time
 import json
 from decimal import Decimal
@@ -13,7 +11,7 @@ from typing import List, Tuple, Dict, Any, Optional, Union
 from boto3.dynamodb.conditions import Key, Attr
 import re
 from botocore.exceptions import ClientError
-# iac deploy 11
+from utils import get_secret, AzureOpenAIClient
 dynamodb = boto3.resource('dynamodb')
 from google.cloud import firestore
 from google.oauth2 import service_account
@@ -48,80 +46,7 @@ def has_key_elements(text, key_elements, threshold):
     present_elements = sum(1 for element in key_elements if element.lower() in text.lower())
     return present_elements >= threshold
 
-def invoke_model_with_backoff_OpenAI(prompt,Task="Not Specifield" ,max_retries=2, want_json=True, base_delay=2):
-    print({"Task to ai":Task})
-    system_content = "You are a helpful assistant."
-    
-    for attempt in range(max_retries):
-        try:
-            return invoke_model_OpenAI(system_content, prompt,want_json)
-        except Exception as e:
-            if "ThrottlingException" in str(e) and attempt < max_retries - 1:
-                delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
-                print(f"Throttling occurred. Retrying in {delay:.2f} seconds...")
-                time.sleep(delay)
-            else:
-                raise
 
-def invoke_model_OpenAI(system_content, prompt, want_json=True, max_try_for_json=2):
-    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")     
-    deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-05-01-preview")
-    api_key = os.getenv("AZURE_OPENAI_API_KEY")
-
-    if not all([endpoint, deployment_name, api_version, api_key]):
-        raise ValueError("Missing Azure OpenAI configuration in environment variables")
-
-    url = f"{endpoint}/openai/deployments/{deployment_name}/chat/completions?api-version={api_version}"
-
-    headers = {
-        "Content-Type": "application/json",
-        "api-key": api_key
-    }
-
-    data = {
-        "messages": [
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.3
-    }
-
-    # If user does not want JSON output
-    if not want_json:
-        response = requests.post(url=url, headers=headers, json=data)
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
-
-    # JSON parsing mode
-    for attempt in range(max_try_for_json):
-        result = None  # <-- important fix
-
-        try:
-            response = requests.post(url=url, headers=headers, json=data)
-            response.raise_for_status()
-
-            response_json = response.json()
-            result = response_json["choices"][0]["message"]["content"]
-
-            cleaned = result.strip().removeprefix("```json").removesuffix("```").strip()
-
-            return json.loads(cleaned)
-
-        except Exception as e:
-            remaining = max_try_for_json - attempt - 1
-            print(f"JSON parse failed. Retries left: {remaining}")
-
-            # Safe printing
-            print("Raw result:", result if result else "No result captured")
-
-            print("Error:", e)
-
-            if remaining == 0:
-                raise
-
-            time.sleep(5)
 
              
 def get_scoring_prompts(department,experience):
@@ -145,7 +70,7 @@ def get_scoring_prompts(department,experience):
         if experience=="fresher":
             prompt =Tech_fresher
     else:
-        prompt =" give a errore in json format"
+        prompt =" give an error in json format"
     return prompt 
 
 def ensure_decimal(value: Union[float, int, str, Decimal, None]) -> Optional[Decimal]:
@@ -259,7 +184,7 @@ def extract_score_from_OpenAI_response(response):
     
     return temp_score
 
-def quiry_dynamo_for_job_feedbacks(partition_key ,table_name='worko',sort_key_prefix='ID#'):
+def query_dynamo_for_job_feedbacks(partition_key ,table_name='worko',sort_key_prefix='ID#'):
 
     partition_key = f'JOB#ID#{partition_key}'
     dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
@@ -302,11 +227,11 @@ def quiry_dynamo_for_job_feedbacks(partition_key ,table_name='worko',sort_key_pr
             feedback.append({"reason":output[f"reason"],"recruiterComment" : output[f"recruiterComment"]})
           
 
-        detaild_feedback = {"Salary_mismatched":Salary_mismatched,"Industry_mismatched":Industry_mismatched,
+        detailed_feedback = {"Salary_mismatched":Salary_mismatched,"Industry_mismatched":Industry_mismatched,
                 "Educational_mismatched":Educational_mismatched,"Experience_mismatched":Experience_mismatched,
                 "Other_mismatched":Other_mismatched}
 
-        return feedback,detaild_feedback
+        return feedback,detailed_feedback
     else:
         return False,False
 
@@ -321,7 +246,7 @@ def query_dynamodb_item_with_sk_prefix(table_name, partition_key_value, sort_key
         return items[0]
     return None
 
-def quiry_dynamo_for_candidate_feedbacks(partition_key='USR#EML#shaukt1998+34@gmail.com'):
+def query_dynamo_for_candidate_feedbacks(partition_key='USR#EML#shaukt1998+34@gmail.com'):
     dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
     table = dynamodb.Table('worko-job-app')
     
@@ -340,13 +265,13 @@ def quiry_dynamo_for_candidate_feedbacks(partition_key='USR#EML#shaukt1998+34@gm
     else:
         return False
 
-def check_exp_ctc(inpute):
+def check_exp_ctc(input_data):
     # Convert all numeric inputs to float safely
-    cv_ctc = float(inpute["cv_ctc"])
-    cv_exp = float(inpute["cv_exp"])
+    cv_ctc = float(input_data["cv_ctc"])
+    cv_exp = float(input_data["cv_exp"])
 
-    jd_ctc = inpute["jd_ctc"]
-    jd_exp = inpute["jd_exp"]
+    jd_ctc = input_data["jd_ctc"]
+    jd_exp = input_data["jd_exp"]
 
     jd_ctc_min = float(jd_ctc["min"])
     jd_ctc_max = float(jd_ctc["max"])
@@ -356,54 +281,54 @@ def check_exp_ctc(inpute):
 
     result = {"ctc": False, "experience": False, "Explanation": False}
     explanations = []  # collect multiple messages
-    min_threshhold_ctc = jd_ctc_min*0.7
-    max_threshhold_ctc = jd_ctc_max*0.6
+    min_threshold_ctc = jd_ctc_min*0.7
+    max_threshold_ctc = jd_ctc_max*0.6
     
     if jd_exp_max<=4:
-        print(f'exp less the 4 jd exp {jd_exp_max} cv exp {cv_exp}')
+        print(f'exp less than 4 jd exp {jd_exp_max} cv exp {cv_exp}')
         if cv_exp>(jd_exp_max*1.6): #(overqualified exp)
-            print("statment 1")
+            print("statement 1")
             msg = (
-                f"You are overqualified for this role in terms of experience. your total experience is"
-                f"{cv_exp} years But this role expected maximum {jd_exp_max} years of experience ."
+                f"You are overqualified for this role in terms of experience. Your total experience is "
+                f"{cv_exp} years but this role expected maximum {jd_exp_max} years of experience."
             )
             result["experience"] = "above"
             explanations.append(msg)
         
 
     
-    elif jd_exp_min*0.3>=3:      # if  30% of minimum exp is grater then 3   (underqualified exp)
-        print("Min exp 30% is Greater then 3")
+    elif jd_exp_min*0.3>=3:      # if  30% of minimum exp is greater than 3   (underqualified exp)
+        print("Min exp 30% is Greater than 3")
         print("1")
         
-        if jd_exp_min-cv_exp>3: # check if candidate exp is 3 years less then min_exp_jd
-            print("statment 2")
+        if jd_exp_min-cv_exp>3: # check if candidate exp is 3 years less than min_exp_jd
+            print("statement 2")
             print(f"jd_mim {jd_exp_min} cv exp {cv_exp}")
             # print("under qualified rejected")
             msg = (
-                f"You are underqualified in terms of experience your total experience is "
-                f"{cv_exp} years But this role expected minimum of {jd_exp_min} years of experience ."
+                f"You are underqualified in terms of experience. Your total experience is "
+                f"{cv_exp} years but this role expected minimum of {jd_exp_min} years of experience."
             )
             result["experience"] = "below"  # True
             explanations.append(msg)
             
     elif cv_exp < (jd_exp_min * 0.7):
-        print("statment 3")
+        print("statement 3")
         msg = (
-            f"You are underqualified in terms of experience your total experience is "
-            f"{cv_exp} years But this role expected minimum of {jd_exp_min} years of experience ."
+            f"You are underqualified in terms of experience. Your total experience is "
+            f"{cv_exp} years but this role expected minimum of {jd_exp_min} years of experience."
         )
         result["experience"] = "below" #True
         explanations.append(msg)
 
             
-    if jd_exp_max*0.4>4:  # if  40% of maximum exp is grater then 4  (overqualified exp)
-        print("max exp 40% is Greater then 4")
+    if jd_exp_max*0.4>4:  # if  40% of maximum exp is greater than 4  (overqualified exp)
+        print("max exp 40% is Greater than 4")
         
         
-        if cv_exp - jd_exp_max>4: # check if candidate exp is 4 years greater then max_jd_exp
+        if cv_exp - jd_exp_max>4: # check if candidate exp is 4 years greater than max_jd_exp
             print(f"jd_mx {jd_exp_max} cv exp {cv_exp}")
-            print("statment 4")
+            print("statement 4")
             msg = (
                 f"You are overqualified for this role in terms of experience. your total experience is "
                 f"{cv_exp} years which exceeds job’s maximum required experience is {jd_exp_max} years."
@@ -411,7 +336,7 @@ def check_exp_ctc(inpute):
             result["experience"] = "above" #True
             explanations.append(msg)
     elif cv_exp > jd_exp_max * 1.4 and jd_exp_max>4 :
-        print("statment 5")
+        print("statement 5")
         msg = (
             f"You are overqualified for this role in terms of experience. your total experience is "
             f"{cv_exp} years which exceeds job’s maximum required experience is {jd_exp_max} years."
@@ -421,19 +346,19 @@ def check_exp_ctc(inpute):
 
         
     if ECTC > jd_ctc_max * 1.2 and (jd_ctc_max * 1.2)>10 :        # CTC logic
-        print("statment 6")
+        print("statement 6")
         msg = (
-            f"You are overqualified in terms of compensation, as your current CTC "
-            f"{cv_ctc} LPA and maximum offered by this role is {jd_ctc_max} LPA."
+            f"You are overqualified in terms of compensation, as your current CTC is "
+            f"{cv_ctc} LPA and the maximum offered by this role is {jd_ctc_max} LPA."
         )
         result["ctc"] = "above" #True
         explanations.append(msg)
         
     if ECTC > jd_ctc_max * 1.3 and (jd_ctc_max * 1.2)<10:        # CTC logic
-        print("statment 7")
+        print("statement 7")
         msg = (
-            f"You are overqualified in terms of compensation, as your current CTC "
-            f"{cv_ctc} LPA and maximum offered by this role is {jd_ctc_max} LPA."
+            f"You are overqualified in terms of compensation, as your current CTC is "
+            f"{cv_ctc} LPA and the maximum offered by this role is {jd_ctc_max} LPA."
         )
         result["ctc"] = "above" #True
         explanations.append(msg)
@@ -469,7 +394,7 @@ def expRejectCheck(inps):
     return new_check
 
 def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text):
-    print("found a registerd user ... started analysis")
+    print("found a registered user ... started analysis")
     print("partition_key_value...",partition_key_value)
     table_name="worko"
     sort_key_prefix1 = "ID#"
@@ -482,11 +407,11 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
     ############################################  Feedback  #########################################################################
 
     number_of_candidate_feedbacks_requirements_MetOrNot=False
-    candidate_feedbacks = quiry_dynamo_for_candidate_feedbacks(partition_key_value)
+    candidate_feedbacks = query_dynamo_for_candidate_feedbacks(partition_key_value)
     
-    feedbacks,job_feedbacks = quiry_dynamo_for_job_feedbacks(jobs_id)
+    feedbacks,job_feedbacks = query_dynamo_for_job_feedbacks(jobs_id)
     if feedbacks:
-        print(f"feedbacks got for the job {job_feedbacks}")
+        print(f"feedbacks received for the job {job_feedbacks}")
         # Experience_mismatched = False
 
         Salary_mismatched = job_feedbacks.get("Salary_mismatched","")
@@ -508,7 +433,7 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
         otherRequirements=otherRequirements,
         feedbacks=feedbacks
         )
-        requirementsFormFeedback = invoke_model_with_backoff_OpenAI(prompt=prompt, Task="AI for feedback Extraction.")
+        requirementsFormFeedback = gpt_models[0].invoke_model_with_backoff(prompt=prompt, Task="AI for feedback extraction")
         RequirementsFromFeedback = requirementsFormFeedback.get("requirements","")
         mandatoryRequirementsFromFeedback = requirementsFormFeedback.get("repeatedmandatoryRequirements","") + requirementsFormFeedback.get("feedbackmandatoryRequirements","")
 
@@ -531,7 +456,7 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
             f"   - If nothing matches, set 'partOfcandidateResume': 'null'.\n"
             f"5. Never include extra explanation or commentary outside JSON.\n"
             f"6. The output must be strictly valid JSON — no markdown, no trailing commas, no commentary.\n\n"
-            f"7. Be verry specific with every requirements if not met exactly say MetOrNot == no"
+            f"7. Be very specific with every requirement; if not met exactly say MetOrNot == no"
             f"### Output Format (Strict JSON Array)\n"
             f"Return an array where each element corresponds to one requirement from the job description:\n\n"
             f"[\n"
@@ -558,13 +483,13 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
             f"Now, analyze the candidate’s resume **against each job requirement one by one** and provide your final JSON response below — strictly following the above format."
             )
 
-            feedbackMachingWithCandidate =  invoke_model_with_backoff_OpenAI(prompt,Task= "Ask ai, feedback matching or not")
+            feedbackMatchingWithCandidate =  gpt_models[0].invoke_model_with_backoff(prompt, Task="Ask AI, feedback matching or not")
             not_met = [item for item in data if item.get("MetOrNot", "").lower() == "no"]
-            print('feedbackMachingWithCandidate :- ' ,feedbackMachingWithCandidate)
+            print('feedbackMatchingWithCandidate :- ' ,feedbackMatchingWithCandidate)
             
             if len(not_met)!=0:
                 Rejection_object["jobFeedbackNotMet"]=True
-                Rejection_object["jobFeedbackNotMetObj"]=feedbackMachingWithCandidate
+                Rejection_object["jobFeedbackNotMetObj"]=feedbackMatchingWithCandidate
 
     item = query_dynamodb_item_with_sk_prefix(table_name, partition_key_value, sort_key_prefix1)
     YOE_from_cv = item.get('YOE')
@@ -582,7 +507,7 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
             f'    "Requirements": ["Must have experience in SQL", "candidate msut know python language"]\n'
             f"  }},\n"
         )
-        candidate_feedbacks_requirements =  invoke_model_with_backoff_OpenAI(prompt,Task= "Ask ai, extract candidate feedback",want_json=False)
+        candidate_feedbacks_requirements =  gpt_models[0].invoke_model_with_backoff(prompt, Task="Ask ai, extract candidate feedback", want_json=False)
         print("candidate_feedbacks_requirements : -",candidate_feedbacks_requirements)
 
         prompt = (
@@ -622,7 +547,7 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
         f"]\n\n"
         f"Now, analyze the Requirements **against each JobDescription one by one** and provide your final JSON response below — strictly following the above format."
         )
-        candidate_feedbacks_requirements_MetOrNot_response =  invoke_model_with_backoff_OpenAI(prompt,Task= "Ask ai, extract candidate feedback")
+        candidate_feedbacks_requirements_MetOrNot_response =  gpt_models[0].invoke_model_with_backoff(prompt, Task="Ask ai, extract candidate feedback")
         print("candidate_feedbacks_requirements_MetOrNot :--",candidate_feedbacks_requirements_MetOrNot_response)
         
         try:
@@ -635,7 +560,7 @@ def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value
             print(f'Requirements not met from candidate_feedback :--',number_of_candidate_feedbacks_requirements_MetOrNot)
         except Exception as e:
             number_of_candidate_feedbacks_requirements_MetOrNot=False
-            print("cheching requiremnet from feedback faild",e)
+            print("checking requirement from feedback failed",e)
 
         ##################################################### Salay and exp  ##########################################################
     salaryRange = jdItem.get('salaryRange')
@@ -762,11 +687,6 @@ class FirestoreManager:
 def lambda_handler(event, context):
 
     print("Got event:", event)
-    # path = r"agencies/5HWCYGNW71E32A5GY6133TFH8Q/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K99Y99X89H2DC588AZJ2J6RV/user-profiles/01K9VHKJS36RQ3P39BZPW2E43Z.pdf" #1
-    # path= r"companies/01HZM77Q7XWBW58CH8NF3WFWT2/bulk-cvs/01JJE6VEEGAPH1QNCC7E22118A/01JJE6VEV1JRQ424RMJNXYVEN3.pdf" #3
-    # path = r"users/01038d8a-80c1-7018-fd41-bf83638314b4/resumes/01JW1CW2XX2N4THW5376VDX6EB.pdf" #2
-    # s3_bucket_name = "worko-app-dev"
-    # s3_bucket_name = "worko-corporate-dev"
     
     Doc_ID = event.get("agencyUserSubmissionId","")
     s3_bucket_name = event.get("cvAwsS3BucketName")
@@ -776,18 +696,20 @@ def lambda_handler(event, context):
     partition_key_value= event.get("USER_PK","")
     candidateJobMatchingId = event.get("candidateJobMatchingId","")
 
-    
-
-
     current_datetime = datetime.now()
-    # Convert it to an ISO 8601 formatted string
     iso_string = current_datetime.isoformat()
     actionByCorporateUserId = event.get("actionByCorporateUserId","")
     actionByUserId = event.get("actionByUserId")
-    # actionByUserId = event.get("agencyUserSubmissionId","")
-    env = os.environ.get("ENVIRONMENT")
+    
+    env = os.environ.get("ENVIRONMENT","dev")
     GCP_secret_name = "GCP-firestore-secret-"+env
-    GCP_DATABASE_NAME = "worko-corp-db-" +env 
+    GCP_DATABASE_NAME = "worko-corp-db-" +env
+    
+    # Initialize Azure OpenAI Client
+    azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+    azure_openai_secret = get_secret(azure_openai_secret_name)
+    gpt4 = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
+    gpt_models = [gpt4] 
     if candidateJobMatchingId: #update flag in case of candidateJobMatchingId
         DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
         collection_name = "candidateJobMatchings" 
@@ -879,7 +801,7 @@ def lambda_handler(event, context):
 
     # prompt = tech_non_tech_prompt.format(jdItem_extracted)
 
-    content = invoke_model_with_backoff_OpenAI(tech_non_tech_prompt,Task= "step 1 figure out tech or non tech jd", want_json=True)
+    content = gpt_models[0].invoke_model_with_backoff(tech_non_tech_prompt, Task="Step 1: Determine tech or non-tech JD", want_json=True)
     print("tech_non_tech_prompt response",content)
     tech_non_tech = content.get("department")
  
@@ -887,7 +809,7 @@ def lambda_handler(event, context):
 
     # get the prompt for finding experience in jd
     prompt = experience_determine_prompt.format(jdItem_extracted)
-    content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 2 figure experience of jd", want_json=True)
+    content = gpt_models[0].invoke_model_with_backoff(prompt, Task="Step 2: Determine experience level of JD", want_json=True)
     print("experience of jd",content)
     experience_level_jd = content.get("experience_level")   
 
@@ -902,8 +824,8 @@ def lambda_handler(event, context):
                 # Use different model invocation functions for each step
                 if i == 0:
                     
-                    # Adding code for Open AI processing
-                    content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 1 for score calculations" ,want_json=False)
+                    # Adding code for OpenAI processing
+                    content = gpt_models[0].invoke_model_with_backoff(prompt, Task="Step 1 for score calculations", want_json=False)
                     print("Open AI content",content)
                     overall_Analysis = overall_Analysis + content
                     temp_score = extract_score_from_OpenAI_response(content)
@@ -918,8 +840,8 @@ def lambda_handler(event, context):
 
                 elif i == 1:
 
-                    # Adding code for Open AI processing
-                    content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 2 for score calculations", want_json=False)
+                    # Adding code for OpenAI processing
+                    content = gpt_models[0].invoke_model_with_backoff(prompt, Task="Step 2 for score calculations", want_json=False)
                     print("Open AI content",content)
                     overall_Analysis = overall_Analysis + content
                     temp_score = extract_score_from_OpenAI_response(content)
@@ -932,7 +854,7 @@ def lambda_handler(event, context):
                         temp_score = 36
 
                 elif i == 2:
-                    content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 3 for score calculations", want_json=False)
+                    content = gpt_models[0].invoke_model_with_backoff(prompt, Task="Step 3 for score calculations", want_json=False)
                     print("Open AI content",content)
                     overall_Analysis = overall_Analysis + content
                     temp_score = extract_score_from_OpenAI_response(content)
@@ -945,8 +867,8 @@ def lambda_handler(event, context):
                         temp_score = 9
 
                 elif i == 3:
-                    # Adding code for Open AI processing
-                    content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 4 for score calculations", want_json=False)
+                    # Adding code for OpenAI processing
+                    content = gpt_models[0].invoke_model_with_backoff(prompt, Task="Step 4 for score calculations", want_json=False)
                     print("Open AI content",content)
                     overall_Analysis = overall_Analysis + content
                     temp_score = extract_score_from_OpenAI_response(content)
@@ -959,7 +881,7 @@ def lambda_handler(event, context):
                         temp_score = 18
                 else:
                     # Fallback to original function if there are more steps than defined functions
-                    content = invoke_model_with_backoff_OpenAI(prompt,Task= "step 2 for score calculations", want_json=False)
+                    content = gpt_models[0].invoke_model_with_backoff(prompt, Task="Step 2 for score calculations", want_json=False)
 
                 # If temp_score is coming from the JSON as a list
                 if isinstance(temp_score, list) and len(temp_score) > 0:
@@ -978,8 +900,8 @@ def lambda_handler(event, context):
                     print("No valid score found in this response")
             print("final score: ---",overall_matching_score)
         except Exception as e:
-            print("final score: ---","Error occured in scoring ")
-
+            print("final score: ---","Error occurred in scoring")
+        overall_matching_score = 80 #testing
         if 1 <= overall_matching_score < 70:
             prompt = (f"candidate profile : {processed_text}, job requirements : {jdItem_extracted}\n"
                 f"Analyze why this candidate scored low against job requirements highlight. Return response in exact JSON format:\n"
@@ -1039,7 +961,7 @@ def lambda_handler(event, context):
                 f"- Omit detail field if heading itself is self-explanatory.\n"
             )
 
-            completion_text_rejection = invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
+            completion_text_rejection = gpt_models[0].invoke_model_with_backoff(prompt, Task="Rejection for 1 <= overall_matching_score < 70")
 
             completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
             completion_text_rejection= completion_text_rejection.get("feedback_Recruiter")
@@ -1048,409 +970,65 @@ def lambda_handler(event, context):
             completion_text_rejection = json.dumps(completion_text_rejection)        ### make it string again to store in db
             completion_text_rejection_for_candidate = json.dumps(completion_text_rejection_for_candidate)
 
-            print_completion_text(f"rjection feedback for Recruiter {completion_text_rejection}")
-            print_completion_text(f"rjection feedback for Candidate {completion_text_rejection_for_candidate}")
+            print_completion_text(f"rejection feedback for Recruiter {completion_text_rejection}")
+            print_completion_text(f"rejection feedback for Candidate {completion_text_rejection_for_candidate}")
             rejection_feedback = completion_text_rejection
             rejectionFeedbackBySystemForApplicant = completion_text_rejection_for_candidate
 
 
-        if overall_matching_score >= 40:
-            prompt = (f"You are an expert recruiter. Your only task is to compare the candidate profile against the job description."
-                    f"Only use details explicitly stated in the provided text. Do not infer, assume, or invent information."
-                    f"Input:"
-                    f"- Candidate Profile: {processed_text}"
-                    f"- Job Description: {job_desc}"
-                    f"- Extra Analysis: {overall_Analysis}"
-                    f"Output:"
-                    f"Provide recruiter feedback in JSON format with three keys: \"RecruiterNote\", \"Strengths\", and \"Areas of Concern\"."
-                    f"Format Example:"
-                    f"{{\n"
-                    f"  \"feedback_Recruiter\": {{\n"
-                    f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
-                    f"    \"Strengths\": [\n"
-                    f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                    f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                    f"    ],\n"
-                    f"    \"AreasOfConcern\": [\n"
-                    f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                    f"    ]\n"
-                    f"  }},\n"
-                    f"  \"feedback_Candidate\": {{\n"
-                    f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
-                    f"    \"Strengths\": [\n"
-                    f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                    f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                    f"    ],\n"
-                    f"    \"AreasOfConcern\": [\n"
-                    f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                    f"    ]\n"
-                    f"  }}\n"
-                    f"}}\n"
-                    f"Strict Rules:"
-                    f"1. **RecruiterNote** → A concise 2–3 line summary of candidate fit, overall impression, and readiness for the role."
-                    f"2. Every point in \"Strengths\" and \"Areas of Concern\" must be a **direct JD vs candidate comparison**."
-                    f"   - If it's not in both, do not mention it."
-                    f"   - If requirement is missing in profile, flag under concerns."
-                    f"   - If requirement is fully met/exceeded, add to strengths."
-                    f"3. Maximum 3 strengths and 2 concerns (total 5 points)."
-                    f"4. Each statement must be 15–25 words, factual, and recruiter-ready."
-                    f"5. Treat missing info as missing — never assume."
-                    f"6. Apply Special Mentions only if explicitly visible:"
-                    f"   - Unemployed for 12+ months."
-                    f"   - Frequent job changes (<1 year)."
-                    f"   - Experience significantly above requirement (mark as strength)."
-                    f"7. Do not comment on communication skills or location unless explicitly stated in both JD and profile."
-                    f"8. Never use phrases like \"resume shows\" or \"appears to have.\" Always describe the candidate directly."
-                    f"9. there must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
-                    f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
-                    f"10. Output must be valid JSON only — no text outside JSON"
-                    )
-            
-            completion_text_approval= invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback  for >40")
-
-            print_completion_text(completion_text_approval)
-            scoreDetails = completion_text_approval.get("feedback_Recruiter")
-            scoreDetailsForApplicant = completion_text_approval.get("feedback_Candidate")
-
-            scoreDetails = json.dumps(scoreDetails)        ### make it string again to store in db
-            scoreDetailsForApplicant = json.dumps(scoreDetailsForApplicant)        ### make it string again to store in db
-        
-        if 1 <= overall_matching_score < 70:
-            prompt = (f"candidate profile : {processed_text}, job requirements : {jdItem_extracted}\n"
-                f"Analyze why this candidate scored low against job requirements highlight. Return response in exact JSON format:\n"
-                f"JSON must contain exactly two top-level keys: feedback_Recruiter and feedback_Candidate\n"
-                f"{{\n"
-                f"  \"feedback_Recruiter\": {{\n"
-                f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
-                f"    \"Strengths\": [\n"
-                f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                f"    ],\n"
-                f"    \"AreasOfConcern\": [\n"
-                f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                f"    ]\n"
-                f"  }},\n"
-                f"  \"feedback_Candidate\": {{\n"
-                f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
-                f"    \"Strengths\": [\n"
-                f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                f"    ],\n"
-                f"    \"AreasOfConcern\": [\n"
-                f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                f"    ]\n"
-                f"  }}\n"
-                f"}}\n"
-                f"Strict Rule 1 :\n"
-                f"1. RecruiterNote → Concise 3–5 line factual summary of candidate fit and readiness.\n"
-                f"2. Every point in Strengths and AreasOfConcern must be a direct Job Description vs Candidate comparison only.\n"
-                f"   - If requirement not present in JD or Candidate Profile → do not mention.\n"
-                f"   - If requirement in JD but missing in Candidate Profile → flag under AreasOfConcern.\n"
-                f"   - If requirement in JD and fully/over met → include under Strengths.\n"
-                f"3. Limit: max 3 strengths and 2 concerns (5 points total).\n"
-                f"4. Each point must be 15–25 words, sharp, factual, recruiter-ready.\n"
-                f"5. Treat missing info as missing — never assume.\n"
-                f"6. Apply Special Mentions only if explicitly visible in Candidate Profile:\n"
-                f"   - Unemployed 12+ months.\n"
-                f"   - Frequent job changes (<1 year).\n"
-                f"   - Experience significantly above requirement (mark as strength).\n"
-                f"Strict Rule 2 :\n"
-                f"In RecruiterNote → Never use speculative phrases like 'resume shows' or 'appears to have'. State facts directly.with calling candidate. [name of candidate] have 15+ experience in...\n"
-                f"Strict Rule 3 :\n"
-                f"In CandidateNote → Never use speculative phrases like 'your resume shows' or 'appears to have'. State facts directly with 'you...'\n"
-                f"Requirements:\n"
-                f"- Total 3 items focusing on critical gaps that caused rejection.\n"
-                f"- Each detail must be a direct 15–25 word statement starting with 'Candidate has no...' or 'Candidate lacks...'\n"
-                f"- Headings should be meaningful and aligned with the issue (e.g., 'Missing Required Certification', 'Insufficient Industry Experience').\n"
-                f"- Never start headings with 'Candidate has no...' — that's for the details.\n"
-                f"- Focus only on missing mandatory requirements from the JD.\n"
-                f"- Flag: Educational gaps, experience above requirement, missing technical skills, insufficient industry experience, absent certifications, lacking leadership/management, career inconsistencies.\n"
-                f"- Special Mentions: Extended unemployment 12+ months, frequent short tenure roles <1 year.\n"
-                f"- Location: Only mention if candidate explicitly states inability to work in required location.\n"
-                f"- Language: Only mention if candidate explicitly lacks required language skills.\n"
-                f"- Tone: Objective, professional, decision-focused.\n"
-                f"- There must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
-                f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
-                f"- Omit detail field if heading itself is self-explanatory.\n"
-            )
-
-
-
-                    
-
-            completion_text_rejection = invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
-
-            completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
-            completion_text_rejection= completion_text_rejection.get("feedback_Recruiter")
-            
-
-            completion_text_rejection = json.dumps(completion_text_rejection)        ### make it string again to store in db
-            completion_text_rejection_for_candidate = json.dumps(completion_text_rejection_for_candidate)
-
-            print_completion_text(f"rjection feedback for Recruiter {completion_text_rejection}")
-            print_completion_text(f"rjection feedback for Candidate {completion_text_rejection_for_candidate}")
-            rejection_feedback = completion_text_rejection
-            rejectionFeedbackBySystemForApplicant = completion_text_rejection_for_candidate
-
-
-            if 1 <= overall_matching_score < 70:
-                prompt = (f"candidate profile : {processed_text}, job requirements : {jdItem_extracted}\n"
-                    f"Analyze why this candidate scored low against job requirements highlight. Return response in exact JSON format:\n"
-                    f"JSON must contain exactly two top-level keys: feedback_Recruiter and feedback_Candidate\n"
-                    f"{{\n"
-                    f"  \"feedback_Recruiter\": {{\n"
-                    f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
-                    f"    \"Strengths\": [\n"
-                    f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                    f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                    f"    ],\n"
-                    f"    \"AreasOfConcern\": [\n"
-                    f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                    f"    ]\n"
-                    f"  }},\n"
-                    f"  \"feedback_Candidate\": {{\n"
-                    f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
-                    f"    \"Strengths\": [\n"
-                    f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                    f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                    f"    ],\n"
-                    f"    \"AreasOfConcern\": [\n"
-                    f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                    f"    ]\n"
-                    f"  }}\n"
-                    f"}}\n"
-                    f"Strict Rule 1 :\n"
-                    f"1. RecruiterNote → Concise 3–5 line factual summary of candidate fit and readiness.\n"
-                    f"2. Every point in Strengths and AreasOfConcern must be a direct Job Description vs Candidate comparison only.\n"
-                    f"   - If requirement not present in JD or Candidate Profile → do not mention.\n"
-                    f"   - If requirement in JD but missing in Candidate Profile → flag under AreasOfConcern.\n"
-                    f"   - If requirement in JD and fully/over met → include under Strengths.\n"
-                    f"3. Limit: max 3 strengths and 2 concerns (5 points total).\n"
-                    f"4. Each point must be 15–25 words, sharp, factual, recruiter-ready.\n"
-                    f"5. Treat missing info as missing — never assume.\n"
-                    f"6. Apply Special Mentions only if explicitly visible in Candidate Profile:\n"
-                    f"   - Unemployed 12+ months.\n"
-                    f"   - Frequent job changes (<1 year).\n"
-                    f"   - Experience significantly above requirement (mark as strength).\n"
-                    f"Strict Rule 2 :\n"
-                    f"In RecruiterNote → Never use speculative phrases like 'resume shows' or 'appears to have'. State facts directly.with calling candidate. [name of candidate] have 15+ experience in...\n"
-                    f"Strict Rule 3 :\n"
-                    f"In CandidateNote → Never use speculative phrases like 'your resume shows' or 'appears to have'. State facts directly with 'you...'\n"
-                    f"Requirements:\n"
-                    f"- Total 3 items focusing on critical gaps that caused rejection.\n"
-                    f"- Each detail must be a direct 15–25 word statement starting with 'Candidate has no...' or 'Candidate lacks...'\n"
-                    f"- Headings should be meaningful and aligned with the issue (e.g., 'Missing Required Certification', 'Insufficient Industry Experience').\n"
-                    f"- Never start headings with 'Candidate has no...' — that's for the details.\n"
-                    f"- Focus only on missing mandatory requirements from the JD.\n"
-                    f"- Flag: Educational gaps, experience above requirement, missing technical skills, insufficient industry experience, absent certifications, lacking leadership/management, career inconsistencies.\n"
-                    f"- Special Mentions: Extended unemployment 12+ months, frequent short tenure roles <1 year.\n"
-                    f"- Location: Only mention if candidate explicitly states inability to work in required location.\n"
-                    f"- Language: Only mention if candidate explicitly lacks required language skills.\n"
-                    f"- Tone: Objective, professional, decision-focused.\n"
-                    f"- There must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
-                    f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
-                    f"- Omit detail field if heading itself is self-explanatory.\n"
-                )
-
-
-
-                        
-
-                completion_text_rejection = invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
-                # content = invoke_model_with_backoff_OpenAI(prompt)
-                # completion_text_rejection = clean_json_response(content)
-                # try:
-                #     completion_text_rejection = json.loads(completion_text_rejection)
-                # except Exception as e:
-                #     print("can't load this feed back json in 1-70 rejection")
-
-                completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
-                completion_text_rejection= completion_text_rejection.get("feedback_Recruiter")
-                
-
-                completion_text_rejection = json.dumps(completion_text_rejection)        ### make it string again to store in db
-                completion_text_rejection_for_candidate = json.dumps(completion_text_rejection_for_candidate)
-
-                print_completion_text(f"rjection feedback for Recruiter {completion_text_rejection}")
-                print_completion_text(f"rjection feedback for Candidate {completion_text_rejection_for_candidate}")
-                rejection_feedback = completion_text_rejection
-                rejectionFeedbackBySystemForApplicant = completion_text_rejection_for_candidate
-
-                
-                if overall_matching_score >= 40:
-                    prompt = (f"You are an expert recruiter. Your only task is to compare the candidate profile against the job description."
-                            f"Only use details explicitly stated in the provided text. Do not infer, assume, or invent information."
-                            f"Input:"
-                            f"- Candidate Profile: {processed_text}"
-                            f"- Job Description: {job_desc}"
-                            f"- Extra Analysis: {overall_Analysis}"
-                            f"Output:"
-                            f"Provide recruiter feedback in JSON format with three keys: \"RecruiterNote\", \"Strengths\", and \"Areas of Concern\"."
-                            f"Format Example:"
-                            f"{{\n"
-                            f"  \"feedback_Recruiter\": {{\n"
-                            f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
-                            f"    \"Strengths\": [\n"
-                            f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                            f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                            f"    ],\n"
-                            f"    \"AreasOfConcern\": [\n"
-                            f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                            f"    ]\n"
-                            f"  }},\n"
-                            f"  \"feedback_Candidate\": {{\n"
-                            f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
-                            f"    \"Strengths\": [\n"
-                            f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                            f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                            f"    ],\n"
-                            f"    \"AreasOfConcern\": [\n"
-                            f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                            f"    ]\n"
-                            f"  }}\n"
-                            f"}}\n"
-                            f"Strict Rules:"
-                            f"1. **RecruiterNote** → A concise 2–3 line summary of candidate fit, overall impression, and readiness for the role."
-                            f"2. Every point in \"Strengths\" and \"Areas of Concern\" must be a **direct JD vs candidate comparison**."
-                            f"   - If it's not in both, do not mention it."
-                            f"   - If requirement is missing in profile, flag under concerns."
-                            f"   - If requirement is fully met/exceeded, add to strengths."
-                            f"3. Maximum 3 strengths and 2 concerns (total 5 points)."
-                            f"4. Each statement must be 15–25 words, factual, and recruiter-ready."
-                            f"5. Treat missing info as missing — never assume."
-                            f"6. Apply Special Mentions only if explicitly visible:"
-                            f"   - Unemployed for 12+ months."
-                            f"   - Frequent job changes (<1 year)."
-                            f"   - Experience significantly above requirement (mark as strength)."
-                            f"7. Do not comment on communication skills or location unless explicitly stated in both JD and profile."
-                            f"8. Never use phrases like \"resume shows\" or \"appears to have.\" Always describe the candidate directly."
-                            f"9. there must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
-                            f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
-                            f"10. Output must be valid JSON only — no text outside JSON"
-                            )
-                    
-                    # content = invoke_model_with_backoff_nova(prompt)
-                    # completion_text_approval = extract_text_from_nova(content)
-                    # print_completion_text(completion_text_approval)
-                    # scoreDetails = completion_text_approval
-
-                    completion_text_approval= invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback  for >40")
-                    # content = invoke_model_with_backoff_OpenAI(prompt)
-                    # completion_text_approval = clean_json_response(content)
-                    # try:
-                    #     completion_text_approval = json.loads(completion_text_approval)
-                    # except Exception as e:
-                    #     print("can't load this feed back json in >40 scoreDetails")
-
-                    print_completion_text(completion_text_approval)
-                    scoreDetails = completion_text_approval.get("feedback_Recruiter")
-                    scoreDetailsForApplicant = completion_text_approval.get("feedback_Candidate")
-
-                    scoreDetails = json.dumps(scoreDetails)        ### make it string again to store in db
-                    scoreDetailsForApplicant = json.dumps(scoreDetailsForApplicant)        ### make it string again to store in db
-                
-                if overall_matching_score >= 40:
-                    prompt = (f"{completion_text_approval}\n"
-                            f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
-                            f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
-
-                    # content = invoke_model_with_backoff_nova(prompt)
-                    # emailFeedback = extract_text_from_nova(content)
-                    emailFeedback = invoke_model_with_backoff_OpenAI(prompt,want_json=False)
-                    print("feedback_for_email:-",emailFeedback)
-            
-            elif overall_matching_score >= 70:
+            if overall_matching_score >= 40:
                 prompt = (f"You are an expert recruiter. Your only task is to compare the candidate profile against the job description."
-                            f"Only use details explicitly stated in the provided text. Do not infer, assume, or invent information."
-                            f"Input:"
-                            f"- Candidate Profile: {processed_text}"
-                            f"- Job Description: {job_desc}"
-                            f"- Extra Analysis: {overall_Analysis}"
-                            f"Output:"
-                            f"Provide recruiter feedback in JSON format with two keys: feedback_Recruiter, feedback_Candidate"
-                            f"Each feedback will have three keys: \"Note\", \"Strengths\", and \"Areas of Concern\"."
-                            f"Format Example:"
-                            f"{{\n"
-                            f"  \"feedback_Recruiter\": {{\n"
-                            f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
-                            f"    \"Strengths\": [\n"
-                            f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                            f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                            f"    ],\n"
-                            f"    \"AreasOfConcern\": [\n"
-                            f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                            f"    ]\n"
-                            f"  }},\n"
-                            f"  \"feedback_Candidate\": {{\n"
-                            f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
-                            f"    \"Strengths\": [\n"
-                            f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                            f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                            f"    ],\n"
-                            f"    \"AreasOfConcern\": [\n"
-                            f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                            f"    ]\n"
-                            f"  }}\n"
-                            f"}}\n"
-                            f"Strict Rules:"  
-                            f"1. **RecruiterNote or CandidateNote ** → A concise 3–5 line summary of candidate fit, overall impression, and readiness for the role."  
-                            f"2. Every point in \"Strengths\" and \"Areas of Concern\" must be a **direct Job Description vs Candidate comparison** only."  
-                            f"   - If requirement is not present in Job Description or Candidate Profile, do not mention it."  
-                            f"   - If requirement is in Job Description but missing in Candidate Profile, flag it under concerns."  
-                            f"   - If requirement is in Job Description and fully/over met in Candidate Profile, add it under strengths."  
-                            f"3. Limit to maximum **3 strengths** and **2 concerns** (total 5 points)."  
-                            f"4. Each point must be **15–25 words**, sharp, factual, and recruiter-ready."  
-                            f"5. Treat missing info as missing — never assume or generalize."  
-                            f"6. Apply Special Mentions only if explicitly visible in Candidate Profile:"  
-                            f"   - Unemployed for 12+ months."  
-                            f"   - Frequent job changes (<1 year)."  
-                            f"   - Experience significantly above requirement (mark as strength)." 
-                            f"7.Use natural, direct language that sounds human-written, not AI-generated\n"
-                            f"- Flag: Educational qualification gaps\n"
-                            f"- Flag: Experience is higher than the required experience for the job\n"
-                            f"- Flag: Critical technical skills missing\n"
-                            f"- Flag: Industry experience insufficient\n"
-                            f"- Flag: Required certifications absent\n"
-                            f"- Flag: Leadership/management experience lacking when required\n"
-                            f"- Flag: Career progression inconsistencies\n"
-                            f"- SPECIAL MENTION: Extended unemployment periods (12+ months)\n"
-                            f"- SPECIAL MENTION: Pattern of short tenure roles (<1 year)\n"
-                            f"- LOCATION RULE: Only mention location concerns if candidate explicitly states inability to work from required location in resume. If location not mentioned, assume candidate is willing to work from any location.\n"
-                            f"- LANGUAGE RULE: Only mention language deficiency if candidate explicitly lacks required languages in resume. If languages not mentioned, assume candidate has required language skills.\n"
-                            f"- Tone should be objective, professional, and decision-focused for HR evaluation\n" 
-                            
-                            f"8. Focus only on **Job Description requirements matched with candidate evidence** — highlight why candidate deserves shortlist."  
-                            f"9. Keep summary **crisp, keyword-heavy**, pulling exact terms from Job Description and Job Description."  
-                            f"10. if you say skills matches tell which particular skill which is direct from Candidate Profile and Job Description, if you say experience matches then tell which particular experience matches."
-                            f"11. Never say anything in a broad perspective just porvide all the exact reasons from Candidate Profile that why this is a ideal candidate."
-                            f"12. Do not mention communication skills, cultural fit, or location unless explicitly present in both Job Description and Resume."  
-                            f"13. -For RecruiterNote never use speculative phrases like 'resume shows' or 'appears to have' — state facts directly with calling candidate name."
-                            f"    -For CandidateNote never use speculative phrases like 'your resume shows' or 'appears to have' — talk dierectly with candidate. state facts directly with calling candidate name."
-                            f"15. **EXACT WORDING RULE**: Only use terminology explicitly stated in the resume/Job Description. Never generalize specific implementations into broader industry terms."
-                            f"16. **NO DOMAIN INFERENCE**: Do not infer industry expertise from individual projects or features. State only the specific technologies/projects mentioned."
-                            f"17. **FACT-CHECK REQUIREMENT**: Before including any point, verify the exact phrase exists in either the Job Description or Candidate Profile text."
-                            f"18. there must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
-                            f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
-                            f"19. **GRANULAR SPECIFICITY**: When mentioning experience, reference the exact role/company where it was gained, not as broad industry background."  
-                            f"20. Output format must be **valid JSON only**, no text outside JSON."   
-        
+                        f"Only use details explicitly stated in the provided text. Do not infer, assume, or invent information."
+                        f"Input:"
+                        f"- Candidate Profile: {processed_text}"
+                        f"- Job Description: {job_desc}"
+                        f"- Extra Analysis: {overall_Analysis}"
+                        f"Output:"
+                        f"Provide recruiter feedback in JSON format with three keys: \"RecruiterNote\", \"Strengths\", and \"Areas of Concern\"."
+                        f"Format Example:"
+                        f"{{\n"
+                        f"  \"feedback_Recruiter\": {{\n"
+                        f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
+                        f"    \"Strengths\": [\n"
+                        f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
+                        f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
+                        f"    ],\n"
+                        f"    \"AreasOfConcern\": [\n"
+                        f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
+                        f"    ]\n"
+                        f"  }},\n"
+                        f"  \"feedback_Candidate\": {{\n"
+                        f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
+                        f"    \"Strengths\": [\n"
+                        f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
+                        f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
+                        f"    ],\n"
+                        f"    \"AreasOfConcern\": [\n"
+                        f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
+                        f"    ]\n"
+                        f"  }}\n"
+                        f"}}\n"
+                        f"Strict Rules:"
+                        f"1. **RecruiterNote** → A concise 2–3 line summary of candidate fit, overall impression, and readiness for the role."
+                        f"2. Every point in \"Strengths\" and \"Areas of Concern\" must be a **direct JD vs candidate comparison**."
+                        f"   - If it's not in both, do not mention it."
+                        f"   - If requirement is missing in profile, flag under concerns."
+                        f"   - If requirement is fully met/exceeded, add to strengths."
+                        f"3. Maximum 3 strengths and 2 concerns (total 5 points)."
+                        f"4. Each statement must be 15–25 words, factual, and recruiter-ready."
+                        f"5. Treat missing info as missing — never assume."
+                        f"6. Apply Special Mentions only if explicitly visible:"
+                        f"   - Unemployed for 12+ months."
+                        f"   - Frequent job changes (<1 year)."
+                        f"   - Experience significantly above requirement (mark as strength)."
+                        f"7. Do not comment on communication skills or location unless explicitly stated in both JD and profile."
+                        f"8. Never use phrases like \"resume shows\" or \"appears to have.\" Always describe the candidate directly."
+                        f"9. there must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
+                        f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
+                        f"10. Output must be valid JSON only — no text outside JSON"
                         )
                 
-                # content = invoke_model_with_backoff_nova(prompt)
-                # completion_text_approval = extract_text_from_nova(content)
-                # print_completion_text(completion_text_approval)
-                # scoreDetails = completion_text_approval
-
-                completion_text_approval =invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback for >70")
-                # content = invoke_model_with_backoff_OpenAI(prompt)
-                # completion_text_approval = clean_json_response(content)
-
-                ###########################################
-                print_completion_text(completion_text_approval)
-                # try:
-                #     completion_text_approval = json.loads(completion_text_approval)
-                # except Exception as e:
-                #     print("can't load this feed back json in >=70 scoreDetails")
+                completion_text_approval= gpt_models[0].invoke_model_with_backoff(prompt, Task="Score feedback for >40")
 
                 print_completion_text(completion_text_approval)
                 scoreDetails = completion_text_approval.get("feedback_Recruiter")
@@ -1458,182 +1036,271 @@ def lambda_handler(event, context):
 
                 scoreDetails = json.dumps(scoreDetails)        ### make it string again to store in db
                 scoreDetailsForApplicant = json.dumps(scoreDetailsForApplicant)        ### make it string again to store in db
-                ###########################################
-
-
-                # scoreDetails = completion_text_approval
-
-                prompt = (f"{completion_text_approval}\n"
-                        f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
-                        f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
-
-                content = invoke_model_with_backoff_nova(prompt)
-                emailFeedback = extract_text_from_nova(content)
-                print("feedback_for_email:-", emailFeedback)
-                
-
-                print("otherRequirements:-", otherRequirements)
-                if otherRequirements:
-                    # otherRequirements  = str(otherRequirements) + "candidate must have experience working in zomato"  #test
-
-        
-                    
-                    prompt = (f"You are a precise resume analysis assistant. Your task is to determine if a candidate meets ALL mandatory requirements.\n\n"
-                                f"**Resume Content:**\n"
-                                f"{processed_text}\n\n"
-                                f"**Mandatory Requirements:**\n"
-                                f"{otherRequirements}\n\n"
-                                f"**Critical Parsing Instructions:**\n"
-                                f"You need to check Resume Content whether the Mandatory Requirements met by candidate or Not be verry strict and do not over evaluate candidate. say yes or Not"
-                                f"all Mandatory Requirements should strictly match with Resume then only say No otherwise If any one Mandatory Requirement is not met say directly Yes"
-                                f"1. FIRST, carefully parse the requirements text to identify individual requirements\n"
-                                f"2. Look for conjunctions like 'and', semicolons, bullet points, or numbered lists that separate requirements\n"
-                                f"3. Pay attention to negations like 'not necessary', 'not required' - these typically indicate something is NOT a requirement\n"
-                                f"4. If a sentence contains multiple clauses, break them down logically\n"
-                                f"5. Example: 'Must have X and Y is not necessary' = Two items: 'Must have X' (required) + 'Y is not necessary' (Y is NOT required)\n\n"
-                                f" if Mandatory Requirements is NA or Null the it mean there is no Mandatory Requirements provided in job description in this case say No "
-                                f"**Analysis Instructions:**\n"
-                                f"1. For each identified requirement, look for clear, explicit evidence in the resume\n"
-                                f"2. A requirement is 'met' only if there is direct evidence or reasonable inference from resume content\n"
-                                f"3. For work authorization: Look for explicit statements, citizenship mentions, or work history patterns that indicate legal work status\n"
-                                f"4. For location/relocation: Consider current location and any mobility statements\n"
-                                f"5. For skills/experience: Look for direct mentions, project descriptions, or work history that demonstrates the skill\n"
-                                f"6. If ANY mandatory requirement lacks sufficient evidence, flag as missing\n"
-                                f"7. Be reasonably conservative but not overly strict - use professional judgment\n\n"
-                                f"Example: Must have a tier 1 college degree Output --> Yes"
-                                f"**Required JSON Response Format:**\n"
-                                f"{{\n"
-                                f'    "mandatory_skills_missing": "Yes" or "No",\n'
-                                f'    "analysis": {{\n'
-                                f'        "parsed_requirements": ["list each individual requirement you identified"],\n'
-                                f'        "requirements_met": ["requirements with sufficient evidence"],\n'
-                                f'        "requirements_missing": ["requirements lacking evidence"],\n'
-                                f'        "evidence_summary": {{\n'
-                                f'            "requirement_1": "evidence found or reason for missing",\n'
-                                f'            "requirement_2": "evidence found or reason for missing"\n'
-                                f"        }},\n"
-                                f'        "confidence_level": "High" or "Medium" or "Low"\n'
-                                f"    }}\n"
-                                f"}}\n\n"
-                                f"**Important Guidelines:**\n"
-                                f"- Use professional judgment to parse complex requirement strings\n"
-                                f"- Look for explicit evidence but allow reasonable inferences from work history\n"
-                                f"- If requirements are unclear or contradictory, note this in your analysis\n"
-                                f"- Respond with valid JSON only, no additional text")
-                        
-                    # content = invoke_model_with_backoff_nova(prompt)
-                    # analysis_result = extract_text_from_nova(content)
-                    
-                    # content = invoke_model_with_backoff_claude(prompt)  #cloud
-                    # analysis_result = extract_text(content)
-
-                    analysis_result_json  = invoke_model_with_backoff_OpenAI(prompt,Task= "Cheching Mandatoey Requirements") 
-                    # content = invoke_model_with_backoff_OpenAI(prompt)   #open ai
-                    # analysis_result = clean_json_response(content)
-                    print("analysis_result",analysis_result_json)
-                    requirements_missing = analysis_result_json["analysis"]["requirements_missing"]
-                    # analysis_result_json = json.loads(analysis_result)
-                    mandatory_skills_missing = analysis_result_json.get('mandatory_skills_missing')
-                    print("mandatory_skills_missing:-", mandatory_skills_missing)
-                    
-                    if mandatory_skills_missing == "Yes":
-                        print(f"mandatory Requirements is missing so actual score was {overall_matching_score} now making it to 60")
-                        overall_matching_score = 60
-
-                        prompt = (
-                            f"Analyze why this candidate scored low against job mandatory requirements. Return response in exact JSON format:\n"
-                            f"JSON must contain exactly two top-level keys: feedback_Recruiter and feedback_Candidate\n"
-                            f"{{\n"
-                            f"  \"feedback_Recruiter\": {{\n"
-                            f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
-                            f"    \"Strengths\": [\n"
-                            f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                            f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                            f"    ],\n"
-                            f"    \"AreasOfConcern\": [\n"
-                            f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                            f"    ]\n"
-                            f"  }},\n"
-                            f"  \"feedback_Candidate\": {{\n"
-                            f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
-                            f"    \"Strengths\": [\n"
-                            f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
-                            f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
-                            f"    ],\n"
-                            f"    \"AreasOfConcern\": [\n"
-                            f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
-                            f"    ]\n"
-                            f"  }}\n"
-                            f"}}\n"
-                            f"Strict Rule 1 :\n"
-                            f"1. RecruiterNote → Concise 3–5 line factual summary of candidate fit and readiness.\n"
-                            f"2. Every point in Strengths and AreasOfConcern must be a direct Job Description vs Candidate comparison only.\n"
-                            f"   - If requirement not present in JD or Candidate Profile → do not mention.\n"
-                            f"   - If requirement in JD but missing in Candidate Profile → flag under AreasOfConcern.\n"
-                            f"   - If requirement in JD and fully/over met → include under Strengths.\n"
-                            f"3. Limit: max 3 strengths and 2 concerns (5 points total).\n"
-                            f"4. Each point must be 15–25 words, sharp, factual, recruiter-ready.\n"
-                            f"5. Treat missing info as missing — never assume.\n"
-                            f"6. Apply Special Mentions only if explicitly visible in Candidate Profile:\n"
-                            f"   - Unemployed 12+ months.\n"
-                            f"   - Frequent job changes (<1 year).\n"
-                            f"   - Experience significantly above requirement (mark as strength).\n"
-                            f"Strict Rule 2 :\n"
-                            f"In RecruiterNote → Never use speculative phrases like 'resume shows' or 'appears to have'. State facts directly.with calling candidate. [name of candidate] have 15+ experience in...\n"
-                            f"Strict Rule 3 :\n"
-                            f"In CandidateNote → Never use speculative phrases like 'your resume shows' or 'appears to have'. State facts directly with 'you...'\n"
-                            f"Requirements:\n"
-                            f"- Each detail must be a direct 15–25 word statement starting with 'Candidate has no...' or 'Candidate lacks...'\n"
-                            f"- Focus only on missing mandatory requirements from the JD.\n"
-                            f"- Flag: Educational gaps, experience above requirement, missing technical skills, insufficient industry experience, absent certifications, lacking leadership/management, career inconsistencies.\n"
-                            f"- Special Mentions: Extended unemployment 12+ months, frequent short tenure roles <1 year.\n"
-                            f"- Location: Only mention if candidate explicitly states inability to work in required location.\n"
-                            f"- Language: Only mention if candidate explicitly lacks required language skills.\n"
-                            f"- Tone: Objective, professional, decision-focused.\n"
-                            f"- There must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
-                            f" - In entire feedback never talk about number of years experience in AreasOfConcern. you can talk about domain experience if needed"
-                            f"- Omit detail field if heading itself is self-explanatory.\n"
-                            f"candidate profile : {processed_text}, job requirements : {jdItem_extracted}\n"
-                            f"these are some of missing requirements in this candidate focus on these while generating feedback {requirements_missing}"
-                            f"- **Last check** In entire feedback there must not be contracdiction if finds any correct it."
-                        )
-
-
-
-                        completion_text_rejection =  invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection when amndatory Not met")
-                        # content = invoke_model_with_backoff_OpenAI(prompt)
-                        # completion_text_rejection = clean_json_response(content)
-                        # try:
-                        #     completion_text_rejection = json.loads(completion_text_rejection)
-                        # except Exception as e:
-                        #     print("can't load this feed back json in 1-70 rejection")
-
-                        completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
-                        completion_text_rejection= completion_text_rejection.get("feedback_Recruiter")
-                        
-
-                        completion_text_rejection = json.dumps(completion_text_rejection)        ### make it string again to store in db
-                        completion_text_rejection_for_candidate = json.dumps(completion_text_rejection_for_candidate)  ### make it string again to store in db
-
-                        print_completion_text(f"rejection feedback for Recruiter {completion_text_rejection}")
-                        print_completion_text(f"rejection feedback for Candidate {completion_text_rejection_for_candidate}")
-                        
-                        rejection_feedback = completion_text_rejection
-                        rejectionFeedbackBySystemForApplicant = completion_text_rejection_for_candidate
-
-                        print_completion_text(f"Score feedback for Recruiter {scoreDetails}")
-                        print_completion_text(f"Score feedback for Candidate {scoreDetailsForApplicant}")
-
-
-            elif overall_matching_score == 0:
-                rejection_feedback = "We encountered an error while processing. Please try again after some time"
             
-            if overall_matching_score > 90:
-                print("******Potential Issue******:", overall_matching_score)
-                overall_matching_score = 90
 
-                # update_sqs_queue(email, userId, referralId, job_ref_type)
-                print("overall_matching_score", overall_matching_score)
+            
+        elif overall_matching_score >= 70:
+            prompt = (f"You are an expert recruiter. Your only task is to compare the candidate profile against the job description."
+                        f"Only use details explicitly stated in the provided text. Do not infer, assume, or invent information."
+                        f"Input:"
+                        f"- Candidate Profile: {processed_text}"
+                        f"- Job Description: {job_desc}"
+                        f"- Extra Analysis: {overall_Analysis}"
+                        f"Output:"
+                        f"Provide recruiter feedback in JSON format with two keys: feedback_Recruiter, feedback_Candidate"
+                        f"Each feedback will have three keys: \"Note\", \"Strengths\", and \"Areas of Concern\"."
+                        f"Format Example:"
+                        f"{{\n"
+                        f"  \"feedback_Recruiter\": {{\n"
+                        f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
+                        f"    \"Strengths\": [\n"
+                        f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
+                        f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
+                        f"    ],\n"
+                        f"    \"AreasOfConcern\": [\n"
+                        f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
+                        f"    ]\n"
+                        f"  }},\n"
+                        f"  \"feedback_Candidate\": {{\n"
+                        f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
+                        f"    \"Strengths\": [\n"
+                        f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
+                        f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
+                        f"    ],\n"
+                        f"    \"AreasOfConcern\": [\n"
+                        f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
+                        f"    ]\n"
+                        f"  }}\n"
+                        f"}}\n"
+                        f"Strict Rules:"  
+                        f"1. **RecruiterNote or CandidateNote ** → A concise 3–5 line summary of candidate fit, overall impression, and readiness for the role."  
+                        f"2. Every point in \"Strengths\" and \"Areas of Concern\" must be a **direct Job Description vs Candidate comparison** only."  
+                        f"   - If requirement is not present in Job Description or Candidate Profile, do not mention it."  
+                        f"   - If requirement is in Job Description but missing in Candidate Profile, flag it under concerns."  
+                        f"   - If requirement is in Job Description and fully/over met in Candidate Profile, add it under strengths."  
+                        f"3. Limit to maximum **3 strengths** and **2 concerns** (total 5 points)."  
+                        f"4. Each point must be **15–25 words**, sharp, factual, and recruiter-ready."  
+                        f"5. Treat missing info as missing — never assume or generalize."  
+                        f"6. Apply Special Mentions only if explicitly visible in Candidate Profile:"  
+                        f"   - Unemployed for 12+ months."  
+                        f"   - Frequent job changes (<1 year)."  
+                        f"   - Experience significantly above requirement (mark as strength)." 
+                        f"7.Use natural, direct language that sounds human-written, not AI-generated\n"
+                        f"- Flag: Educational qualification gaps\n"
+                        f"- Flag: Experience is higher than the required experience for the job\n"
+                        f"- Flag: Critical technical skills missing\n"
+                        f"- Flag: Industry experience insufficient\n"
+                        f"- Flag: Required certifications absent\n"
+                        f"- Flag: Leadership/management experience lacking when required\n"
+                        f"- Flag: Career progression inconsistencies\n"
+                        f"- SPECIAL MENTION: Extended unemployment periods (12+ months)\n"
+                        f"- SPECIAL MENTION: Pattern of short tenure roles (<1 year)\n"
+                        f"- LOCATION RULE: Only mention location concerns if candidate explicitly states inability to work from required location in resume. If location not mentioned, assume candidate is willing to work from any location.\n"
+                        f"- LANGUAGE RULE: Only mention language deficiency if candidate explicitly lacks required languages in resume. If languages not mentioned, assume candidate has required language skills.\n"
+                        f"- Tone should be objective, professional, and decision-focused for HR evaluation\n" 
+                        
+                        f"8. Focus only on **Job Description requirements matched with candidate evidence** — highlight why candidate deserves shortlist."  
+                        f"9. Keep summary **crisp, keyword-heavy**, pulling exact terms from Job Description and Job Description."  
+                        f"10. if you say skills matches tell which particular skill which is direct from Candidate Profile and Job Description, if you say experience matches then tell which particular experience matches."
+                        f"11. Never say anything in a broad perspective just porvide all the exact reasons from Candidate Profile that why this is a ideal candidate."
+                        f"12. Do not mention communication skills, cultural fit, or location unless explicitly present in both Job Description and Resume."  
+                        f"13. -For RecruiterNote never use speculative phrases like 'resume shows' or 'appears to have' — state facts directly with calling candidate name."
+                        f"    -For CandidateNote never use speculative phrases like 'your resume shows' or 'appears to have' — talk dierectly with candidate. state facts directly with calling candidate name."
+                        f"15. **EXACT WORDING RULE**: Only use terminology explicitly stated in the resume/Job Description. Never generalize specific implementations into broader industry terms."
+                        f"16. **NO DOMAIN INFERENCE**: Do not infer industry expertise from individual projects or features. State only the specific technologies/projects mentioned."
+                        f"17. **FACT-CHECK REQUIREMENT**: Before including any point, verify the exact phrase exists in either the Job Description or Candidate Profile text."
+                        f"18. there must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
+                        f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
+                        f"19. **GRANULAR SPECIFICITY**: When mentioning experience, reference the exact role/company where it was gained, not as broad industry background."  
+                        f"20. Output format must be **valid JSON only**, no text outside JSON."   
+    
+                    )
+
+
+            completion_text_approval = gpt_models[0].invoke_model_with_backoff(prompt, Task="Score feedback for >=70")
+            # content = invoke_model_with_backoff_OpenAI(prompt)
+            # completion_text_approval = clean_json_response(content)
+
+            ###########################################
+            print_completion_text(completion_text_approval)
+            # try:
+            #     completion_text_approval = json.loads(completion_text_approval)
+            # except Exception as e:
+            #     print("can't load this feed back json in >=70 scoreDetails")
+
+            print_completion_text(completion_text_approval)
+            scoreDetails = completion_text_approval.get("feedback_Recruiter")
+            scoreDetailsForApplicant = completion_text_approval.get("feedback_Candidate")
+
+            scoreDetails = json.dumps(scoreDetails)        ### make it string again to store in db
+            scoreDetailsForApplicant = json.dumps(scoreDetailsForApplicant)        ### make it string again to store in db
+            ###########################################
+
+
+            # scoreDetails = completion_text_approval
+
+            prompt = (f"{completion_text_approval}\n"
+                    f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
+                    f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
+
+            emailFeedback  = gpt_models[0].invoke_model_with_backoff(prompt, Task="Get email feedback", want_json=False) 
+            print("feedback_for_email:-", emailFeedback)
+            
+
+            print("otherRequirements:-", otherRequirements)
+            if otherRequirements:
+                # otherRequirements  = str(otherRequirements) + "candidate must have experience working in zomato"  #test
+
+    
+                
+                prompt = (f"You are a precise resume analysis assistant. Your task is to determine if a candidate meets ALL mandatory requirements.\n\n"
+                            f"**Resume Content:**\n"
+                            f"{processed_text}\n\n"
+                            f"**Mandatory Requirements:**\n"
+                            f"{otherRequirements}\n\n"
+                            f"**Critical Parsing Instructions:**\n"
+                            f"You need to check Resume Content whether the Mandatory Requirements are met by candidate or not. Be very strict and do not over-evaluate candidate. Say yes or no."
+                            f"All Mandatory Requirements should strictly match with Resume then only say No, otherwise if any one Mandatory Requirement is not met say directly Yes"
+                            f"1. FIRST, carefully parse the requirements text to identify individual requirements\n"
+                            f"2. Look for conjunctions like 'and', semicolons, bullet points, or numbered lists that separate requirements\n"
+                            f"3. Pay attention to negations like 'not necessary', 'not required' - these typically indicate something is NOT a requirement\n"
+                            f"4. If a sentence contains multiple clauses, break them down logically\n"
+                            f"5. Example: 'Must have X and Y is not necessary' = Two items: 'Must have X' (required) + 'Y is not necessary' (Y is NOT required)\n\n"
+                            f" If Mandatory Requirements is NA or Null then it means there are no Mandatory Requirements provided in job description. In this case say No "
+                            f"**Analysis Instructions:**\n"
+                            f"1. For each identified requirement, look for clear, explicit evidence in the resume\n"
+                            f"2. A requirement is 'met' only if there is direct evidence or reasonable inference from resume content\n"
+                            f"3. For work authorization: Look for explicit statements, citizenship mentions, or work history patterns that indicate legal work status\n"
+                            f"4. For location/relocation: Consider current location and any mobility statements\n"
+                            f"5. For skills/experience: Look for direct mentions, project descriptions, or work history that demonstrates the skill\n"
+                            f"6. If ANY mandatory requirement lacks sufficient evidence, flag as missing\n"
+                            f"7. Be reasonably conservative but not overly strict - use professional judgment\n\n"
+                            f"Example: Must have a tier 1 college degree Output --> Yes"
+                            f"**Required JSON Response Format:**\n"
+                            f"{{\n"
+                            f'    "mandatory_skills_missing": "Yes" or "No",\n'
+                            f'    "analysis": {{\n'
+                            f'        "parsed_requirements": ["list each individual requirement you identified"],\n'
+                            f'        "requirements_met": ["requirements with sufficient evidence"],\n'
+                            f'        "requirements_missing": ["requirements lacking evidence"],\n'
+                            f'        "evidence_summary": {{\n'
+                            f'            "requirement_1": "evidence found or reason for missing",\n'
+                            f'            "requirement_2": "evidence found or reason for missing"\n'
+                            f"        }},\n"
+                            f'        "confidence_level": "High" or "Medium" or "Low"\n'
+                            f"    }}\n"
+                            f"}}\n\n"
+                            f"**Important Guidelines:**\n"
+                            f"- Use professional judgment to parse complex requirement strings\n"
+                            f"- Look for explicit evidence but allow reasonable inferences from work history\n"
+                            f"- If requirements are unclear or contradictory, note this in your analysis\n"
+                            f"- Respond with valid JSON only, no additional text")
+                    
+
+                analysis_result_json  = gpt_models[0].invoke_model_with_backoff(prompt, Task="Checking mandatory requirements") 
+                print("analysis_result",analysis_result_json)
+                requirements_missing = analysis_result_json["analysis"]["requirements_missing"]
+                mandatory_skills_missing = analysis_result_json.get('mandatory_skills_missing')
+                print("mandatory_skills_missing:-", mandatory_skills_missing)
+                
+                if mandatory_skills_missing == "Yes":
+                    print(f"mandatory Requirements is missing so actual score was {overall_matching_score} now making it to 60")
+                    overall_matching_score = 60
+
+                    prompt = (
+                        f"Analyze why this candidate scored low against job mandatory requirements. Return response in exact JSON format:\n"
+                        f"JSON must contain exactly two top-level keys: feedback_Recruiter and feedback_Candidate\n"
+                        f"{{\n"
+                        f"  \"feedback_Recruiter\": {{\n"
+                        f"    \"RecruiterNote\": \"3–5 sentence recruiter-friendly summary of candidate fit, overall impression, and readiness for the role.\",\n"
+                        f"    \"Strengths\": [\n"
+                        f"      \"[name of candidate] Has X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
+                        f"      \"Demonstrates proven skills in A and B, which match the mandatory requirement for this role.\"\n"
+                        f"    ],\n"
+                        f"    \"AreasOfConcern\": [\n"
+                        f"      \"Lacks explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
+                        f"    ]\n"
+                        f"  }},\n"
+                        f"  \"feedback_Candidate\": {{\n"
+                        f"    \"CandidateNote\": \"3–5 sentence candidate-friendly summary of fit, strengths, and shortfalls written in direct and clear language.\",\n"
+                        f"    \"Strengths\": [\n"
+                        f"      \"You bring X years of Y experience in Z industry, directly meeting the required N years in the job description.\",\n"
+                        f"      \"You demonstrate proven skills in A and B, which match the mandatory requirement for this role.\"\n"
+                        f"    ],\n"
+                        f"    \"AreasOfConcern\": [\n"
+                        f"      \"You lack explicit experience in required skill/tool X, which is mandatory in the job description.\"\n"
+                        f"    ]\n"
+                        f"  }}\n"
+                        f"}}\n"
+                        f"Strict Rule 1 :\n"
+                        f"1. RecruiterNote → Concise 3–5 line factual summary of candidate fit and readiness.\n"
+                        f"2. Every point in Strengths and AreasOfConcern must be a direct Job Description vs Candidate comparison only.\n"
+                        f"   - If requirement not present in JD or Candidate Profile → do not mention.\n"
+                        f"   - If requirement in JD but missing in Candidate Profile → flag under AreasOfConcern.\n"
+                        f"   - If requirement in JD and fully/over met → include under Strengths.\n"
+                        f"3. Limit: max 3 strengths and 2 concerns (5 points total).\n"
+                        f"4. Each point must be 15–25 words, sharp, factual, recruiter-ready.\n"
+                        f"5. Treat missing info as missing — never assume.\n"
+                        f"6. Apply Special Mentions only if explicitly visible in Candidate Profile:\n"
+                        f"   - Unemployed 12+ months.\n"
+                        f"   - Frequent job changes (<1 year).\n"
+                        f"   - Experience significantly above requirement (mark as strength).\n"
+                        f"Strict Rule 2 :\n"
+                        f"In RecruiterNote → Never use speculative phrases like 'resume shows' or 'appears to have'. State facts directly.with calling candidate. [name of candidate] have 15+ experience in...\n"
+                        f"Strict Rule 3 :\n"
+                        f"In CandidateNote → Never use speculative phrases like 'your resume shows' or 'appears to have'. State facts directly with 'you...'\n"
+                        f"Requirements:\n"
+                        f"- Each detail must be a direct 15–25 word statement starting with 'Candidate has no...' or 'Candidate lacks...'\n"
+                        f"- Focus only on missing mandatory requirements from the JD.\n"
+                        f"- Flag: Educational gaps, experience above requirement, missing technical skills, insufficient industry experience, absent certifications, lacking leadership/management, career inconsistencies.\n"
+                        f"- Special Mentions: Extended unemployment 12+ months, frequent short tenure roles <1 year.\n"
+                        f"- Location: Only mention if candidate explicitly states inability to work in required location.\n"
+                        f"- Language: Only mention if candidate explicitly lacks required language skills.\n"
+                        f"- Tone: Objective, professional, decision-focused.\n"
+                        f"- There must be only 2 points in AreasOfConcern and 2-3 points in Strengths"
+                        f" - In entire feedback never talk about number of years experience in AreasOfConcern. you can talk about domain experience if needed"
+                        f"- Omit detail field if heading itself is self-explanatory.\n"
+                        f"candidate profile : {processed_text}, job requirements : {jdItem_extracted}\n"
+                        f"these are some of missing requirements in this candidate focus on these while generating feedback {requirements_missing}"
+                        f"- **Last check** In entire feedback there must not be contracdiction if finds any correct it."
+                    )
+
+
+
+                    completion_text_rejection =  gpt_models[0].invoke_model_with_backoff(prompt, Task="Rejection when mandatory not met")
+                    # content = invoke_model_with_backoff_OpenAI(prompt)
+                    # completion_text_rejection = clean_json_response(content)
+                    # try:
+                    #     completion_text_rejection = json.loads(completion_text_rejection)
+                    # except Exception as e:
+                    #     print("can't load this feed back json in 1-70 rejection")
+
+                    completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
+                    completion_text_rejection= completion_text_rejection.get("feedback_Recruiter")
+                    
+
+                    completion_text_rejection = json.dumps(completion_text_rejection)        ### make it string again to store in db
+                    completion_text_rejection_for_candidate = json.dumps(completion_text_rejection_for_candidate)  ### make it string again to store in db
+
+                    print_completion_text(f"rejection feedback for Recruiter {completion_text_rejection}")
+                    print_completion_text(f"rejection feedback for Candidate {completion_text_rejection_for_candidate}")
+                    
+                    rejection_feedback = completion_text_rejection
+                    rejectionFeedbackBySystemForApplicant = completion_text_rejection_for_candidate
+
+                    print_completion_text(f"Score feedback for Recruiter {scoreDetails}")
+                    print_completion_text(f"Score feedback for Candidate {scoreDetailsForApplicant}")
+
+
+        elif overall_matching_score == 0:
+            rejection_feedback = "We encountered an error while processing. Please try again after some time"
+        
+        if overall_matching_score > 90:
+            print("******Potential Issue******:", overall_matching_score)
+            overall_matching_score = 90
+
+            # update_sqs_queue(email, userId, referralId, job_ref_type)
+            print("overall_matching_score", overall_matching_score)
 
         Rejection_object=False
         
@@ -1780,7 +1447,7 @@ def lambda_handler(event, context):
             "body": json.dumps({"score": float(overall_matching_score), "rejection_feedback": rejection_feedback, "scoreDetails": scoreDetails, "scoreDetailsForApplicant": scoreDetailsForApplicant, "rejectionFeedbackBySystemForApplicant": rejectionFeedbackBySystemForApplicant})
         }
     except Exception as e:
-        print("Erroe occured :-  ",e )
+        print("Error occurred: ",e )
         updated_data = { "cvExtract":"",
         "jdMatchErrorCode": 400,
         "jdMatchErrorDesc": e,
@@ -1800,23 +1467,14 @@ def lambda_handler(event, context):
 
 
 # if __name__ == "__main__":
-#     import time
-#     start = time.time()
-#     # event = {
-#     # "jobId":"01KADHFA1DH6ANCMYYAM1T11B5",
-#     # "cvAwsS3BucketName": "worko-app-dev",
-#     # "cvAwsS3FilePath": "agencies/5HWCYGNW71E32A5GY6133TFH8Q/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K99Y99X89H2DC588AZJ2J6RV/user-profiles/",
-#     # "cvAwsS3FileName":"01K9VHKJS36RQ3P39BZPW2E43Z.pdf"}
-#     # event = {
-#     # "jobId":"01KADHFA1DH6ANCMYYAM1T11B5",
-#     # "cvAwsS3BucketName": "worko-corporate-dev",
-#     # "cvAwsS3FilePath": "companies/01HZM77Q7XWBW58CH8NF3WFWT2/bulk-cvs/01JJE6VEEGAPH1QNCC7E22118A/",
-#     # "cvAwsS3FileName":"01JJE6VEV1JRQ424RMJNXYVEN3.pdf"}
-#     event = {
-#     "cvAwsS3BucketName": "worko-app-dev",
-#     "cvAwsS3FilePath": "users/01038d8a-80c1-7018-fd41-bf83638314b4/resumes/",
-#     "cvAwsS3FileName":"01JW1CW2XX2N4THW5376VDX6EB.pdf",
-#     "jobId":"01KADHFA1DH6ANCMYYAM1T11B5"
-#     ,"USER_PK": "USR#EML#shaukt1998+27@gmail.com"}
+#     #admin
+#     # event = {"candidateJobMatchingId": "f7cba5dfe11b4a43fedd", "cvAwsS3ResourceType": "AGENCY_SUBMIT_USER_CV", "actionByUserId": "01b3adda-b0d1-7043-6a1e-6c833d4e8933", "jobId": "01K4MXX01Z4PP99PQTTF7DEBM9", "cvAwsS3BucketName": "worko-app-dev", "cvAwsS3FilePath": "agencies/71WFYNMG3HE02CK2EE0TAF04MX/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01KD2Q23T7VMVHEEJZKT8TNTC5/user-profiles", "cvAwsS3FileName": "01KD8593V19MPKTYQF5QH18YCR.pdf"}
+
+
+
+#     # corp
+#     event = {"candidateJobMatchingId": "e0752a3208b2b951614a", "cvAwsS3ResourceType": "CORP_CAND_BULK_CV_UPLOAD", "actionByCorporateUserId": "21PDYKMG11E1BK5V4762NN2KVQ", "jobId": "01K7Z7RM97J7V8E4059KQ1D2Z6", "cvAwsS3BucketName": "worko-corporate-cand-profile-dev", "cvAwsS3FilePath": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs", "cvAwsS3FileName": "01KF0H931TBG3S5SYH9WG5M9BM.pdf"}
+
+
   
-#     main(event)
+#     lambda_handler(event,None)
