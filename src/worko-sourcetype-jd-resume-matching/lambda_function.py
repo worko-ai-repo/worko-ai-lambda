@@ -901,7 +901,7 @@ def lambda_handler(event, context):
             print("final score: ---",overall_matching_score)
         except Exception as e:
             print("final score: ---","Error occurred in scoring")
-        overall_matching_score = 80 #testing
+        
         if 1 <= overall_matching_score < 70:
             prompt = (f"candidate profile : {processed_text}, job requirements : {jdItem_extracted}\n"
                 f"Analyze why this candidate scored low against job requirements highlight. Return response in exact JSON format:\n"
