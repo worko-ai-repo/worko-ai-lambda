@@ -40,22 +40,39 @@ Events: All object create events
 
 
 commands to run
-# step 1: SSO (Recommended)
-export AWS_PROFILE=your-profile-name
-aws configure sso
 
-# step 2
+## Quick Deploy
+```bash
+chmod +x deploy.sh
+./deploy.sh dev   # for dev environment
+./deploy.sh prod  # for prod environment
+```
+
+## Manual Deploy
+```bash
+# step 1: Set AWS Profile
+export AWS_PROFILE=worko-d  # for dev
+export AWS_PROFILE=worko-p  # for prod
+
+# step 2: Build
 sam build
 
-
-
-# step 3
+# step 3: Deploy to prod
 sam deploy \
-  --stack-name worko-agency-bulk-jd-resume-matching-prod-stack \ ##your lambda name with suffix stack
+  --stack-name worko-agency-bulk-jd-resume-matching-stack-prod \
   --region ap-south-1 \
-  --capabilities CAPABILITY_IAM \ 
-  --parameter-overrides Environment=prod \ ## put prod here
-  --s3-bucket aws-sam-cli-managed-default-samclisourcebucket-mpwvaft0yfqx \  ## put one s3 bucket name which willl be used by sam
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides Environment=prod \
+  --s3-bucket worko-aws-sam-cli-deployment-prod \
+  --no-confirm-changeset
+
+# step 3: Deploy to dev
+sam deploy \
+  --stack-name worko-agency-bulk-jd-resume-matching-stack-dev \
+  --region ap-south-1 \
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides Environment=dev \
+  --s3-bucket worko-aws-sam-cli-deployment-dev \
   --no-confirm-changeset
 ```
 

@@ -74,15 +74,6 @@ Resources:
           ENVIRONMENT: !Ref Environment
 
 
-  LambdaInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref AgencyBulkJdResumeMatchingFunction
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub "arn:aws:s3:::worko-app-${Environment}"
-
 Outputs:
   AgencyBulkJdResumeMatchingFunctionArn:
     Description: Agency Bulk JD Resume Matching Lambda Function ARN
