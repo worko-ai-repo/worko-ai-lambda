@@ -780,9 +780,9 @@ def process_cv(metadata,retry_queue_name, processed_text, gpt_models, object_key
         # error_traceback = traceback.format_exc()# Check if this is a throttling error
         if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
             print("Errore of {execution_error} now sending sqs for startuing again in next 60 seconds")
-             
+            delay_seconds = 90*retry_counter
             body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error","retry_counter":retry_counter ,"metadata":metadata}
-            send_sqs_for_throttling_error(retry_queue_name,body) #send sqs for throttled error
+            send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds) #send sqs for throttled error
             return None 
         else:
             # For all other errors, just log and continue
@@ -799,7 +799,7 @@ def decimal_default(obj):
         return float(obj)
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
-def send_sqs_for_throttling_error(retry_queue_name,body):
+def send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds):
     try:
         retry_counter = body.get("retry_counter", "retry_counter not found")
         from datetime import datetime, timedelta
@@ -1147,7 +1147,7 @@ def lambda_handler(event, context):
             object_key = body.get("object_key","")
             file_name = object_key.split("/")[-1]
             
-            if retry_counter >= 3:
+            if retry_counter >= 5:
                 print(f"Message received {retry_counter} times, sending to DLQ")
                 dlq_name = f"worko-cand-profile-parser-dlq-{env}"
                 dlq_url = get_queue_url(dlq_name)
