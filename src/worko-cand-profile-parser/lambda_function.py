@@ -20,6 +20,7 @@ from google.oauth2 import service_account
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud.firestore_v1 import Or, And
 import uuid
+from urllib.parse import unquote_plus
 # second deployment11
 start_time = time.time()
 # Initialize Bedrock clients
@@ -1120,14 +1121,21 @@ def lambda_handler(event, context):
             record = event['Records'][0]
             try:
                 body = json.loads(record['body'])
+                print(f"[DEBUG] Parsed body type: {type(body)}")
+                print(f"[DEBUG] Body keys: {body.keys() if isinstance(body, dict) else 'Not a dict'}")
             except Exception as e:
                 body = record['body']
                 print(f"message body direct loaded: {e}")
             
             ### customise with meta data you will receive from s3 event or sqs event
-            metadata = body.get('Metadata', {})
+            metadata = body.get('metadata', {})
             company_id = metadata.get("company_id", "")
             bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid","")
+            
+            if not bulksourcetyperesumeid:
+                print(f"Missing bulksourcetyperesumeid in SQS message. Skipping processing.")
+                return {'statusCode': 400, 'body': json.dumps('Missing bulksourcetyperesumeid')}
+            
             doc = get_counts(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
 
         
@@ -1152,7 +1160,7 @@ def lambda_handler(event, context):
                 return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
             
             elif processed_text:
-                cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key,retry_counter)
+                cvExtractedParsed = process_cv(metadata,retry_queue_name,processed_text,gpt_models,object_key,retry_counter)
                 if cvExtractedParsed:
                     # send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
                     dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
@@ -1199,6 +1207,7 @@ def lambda_handler(event, context):
             s3_event = event['Records'][0]['s3']
             bucket_name = s3_event['bucket']['name']
             object_key = unquote_plus(s3_event['object']['key'])
+            object_key = unquote_plus(object_key)
             file_name = object_key.split("/")[-1]
             print(" file_name,", file_name)
             response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
@@ -1262,14 +1271,6 @@ def lambda_handler(event, context):
         this_is_last_resume = if_last_cv(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
         # this_is_last_resume=True  #$$$
         if this_is_last_resume:
-            
-            print(f"""This is the last resume being processed for bulkSourceTypeResumeId:{bulksourcetyperesumeid}
-                   totalResumesUploaded : {doc.get("totalResumesUploaded",0)},
-                   totalResumesSucceeded : {doc.get("totalResumesSucceeded",0)},
-                   totalResumesFailed : {doc.get("totalResumesFailed",0)},
-                    totalResumesDuplicate : {doc.get("totalResumesDuplicate",0)},
-                    """)
-        
             Data_of_cv  = DBManager.get_documents_by_bulkSourceTypeResumeId("bulkSourceTypeParseResumes",bulksourcetyperesumeid     )
             print("all parsed cv data in bulk collection",Data_of_cv)
             all_cv_parsing_summary =build_status_summary(Data_of_cv)
@@ -1288,127 +1289,14 @@ if __name__ == "__main__":
     event ={'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'ap-south-1', 'eventTime': '2026-02-13T10:54:41.817Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp'}, 'requestParameters': {'sourceIPAddress': '103.176.210.127'}, 'responseElements': {'x-amz-request-id': 'A1ZX01WYQJ2Y5JH6', 'x-amz-id-2': 'wnmtopZYMlwdUUFEXUaSsPUXlfUOrsb3JKWieIvgG+zU+Hph9o1vtOaooaRN2iInFw8mWnp2dHqT/iRGvosQet9Nbvr5t1qpjWBXU656KVw='}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': 'a6c870b0-fd5d-4747-ac88-27e26b7ecba5', 'bucket': {'name': 'worko-admin-cand-profile-dev', 'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 'arn': 'arn:aws:s3:::worko-admin-cand-profile-dev'}, 'object': {'key': 'bulk-cvs/01KHBA6ZW2MDQWJN4WE2YJXFDV.pdf', 'size': 58816, 'eTag': 'ecdcfaabc0c96728a65b559256cc68f6', 'sequencer': '00698F02F1C38704BF'}}}]}  
 #     event = {"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-02-13T05:21:25.288Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"103.176.210.127"},"responseElements":{"x-amz-request-id":"A7DP139505J83HYT","x-amz-id-2":"7qLalj01knes4BpKEg5sLH1PjcL91s9OGs69//2J775bV3sZLPXHSwrmOd1NLv3T0+tMFZQL58bR0lLKCVHtJFEc5LKEe1zZmU5N5y6A+Q4="},"s3":{"s3SchemaVersion":"1.0","configurationId":"a6c870b0-fd5d-4747-ac88-27e26b7ecba5","bucket":{"name":"worko-admin-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-admin-cand-profile-dev"},"object":{"key":"bulk-cvs/01KHAQ4QXFP0HW6BSFRK926JH1.pdf","size":225212,"eTag":"296eeb83abfe1d84d866db9a55621a78","sequencer":"00698EB4D53FB3565C"}}}]}
     lambda_handler(event, None)
-    # "Records": [
-    #     {
-    #     "eventVersion": "2.1",
-    #     "eventSource": "aws:s3",
-    #     "awsRegion": "ap-south-1",
-    #     "eventTime": "2026-01-12T08:49:37.805Z",
-    #     "eventName": "ObjectCreated:Put",
-    #     "userIdentity": {
-    #         "principalId": "AWS:AROATCKANHWVTQO36WAQQ:shaukat.shaikh@worko.ai"
-    #     },
-    #     "requestParameters": {
-    #         "sourceIPAddress": "103.176.210.144"
-    #     },
-    #     "responseElements": {
-    #         "x-amz-request-id": "F031QF2YBESZRM4Q",
-    #         "x-amz-id-2": "3J8llYeAiPZz/RPXfu1ash0wyQxRs9Ch5m//4X3bN8qS7v4IuEQgdwL68QkrVMItmHqWkssdEzS6jOjKZ7u0rsNz2DD+dF/6"
-    #     },
-    #     "s3": {
-    #         "s3SchemaVersion": "1.0",
-    #         "configurationId": "2391fd04-1e04-41f3-9a68-3c5d8a728a02",
-    #         "bucket": {
-    #         "name": "worko-corporate-cand-profile-dev",
-    #         "ownerIdentity": {
-    #             "principalId": "A1V0APDMR493SG"
-    #         },
-    #         "arn": "arn:aws:s3:::worko-corporate-cand-profile-dev"
-    #         },
-    #         "object": {
-    #         "key": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-    #         "size": 225212,
-    #         "eTag": "296eeb83abfe1d84d866db9a55621a78",
-    #         "sequencer": "006964B5A1B7FA55DF"
-    #         }
-    #     }
-    #     }
-    # ]
-    # }
-
-    # event= {'Records':[{"eventSource":"aws:sqs","body":{"retry_counter":0,"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-    #                                                     "processed_text":"""SHAUKAT SHAIKH
-    #     7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
-    #     github.com/Shaukat-Shaikh
-    #     Summary
-    #     linkedin.com/in/ShaukatShaikh71/
-    #     Data Science profess
-    #     ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
-    #     Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
-    #     LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
-    #     in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
-    #     complex business problems.
-    #     Work Experience
-    #     Al Engineer Intern, Worko.ai, Bangalore. Remote
-    #     •
-    #     Improved an Al-driven resume-job matching system using LLMs by 30% adding 
-    #     more structured logic and inserting feedback received from recruiter.
-    #     •
-    #     Implemented rag based job listing for job board using Aws Lambda Vector Store 
-    #     Opensearch.
-    #     •
-    #     Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
-    #     specific data to enhance semantic matching and candidate scoring.
-    #     Collaborated with fullstack team to build Ai driven a video interview product.
-    #     •
-    #     GenAl Trainer, Kalp Academy Remote
-    #     •
-    #     Delivering training programs on Generative AI, LLMs, and practical AI applications 
-    #     to aspiring professionals and developers.
-    #     •
-    #     Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
-    #     chain-of-thought prompting for optimal LLM performance.
-    #     •
-    #     Conducting hands-on sessions on LangChain framework for building production
-    #     grade LLM applications, agents, and memory systems.
-    #     •
-    #     Training on RAG pipelines, vector databases, embedding models, and semantic 
-    #     search optimization.
-    #     •
-    #     Developing course materials, assignments, and real-world projects for practical 
-    #     implementation.
-    #     •
-    #     Mentoring on GenAI deployment best practices, model selection, cost 
-    #     optimization, and ethical AI considerations.
-    #     Data science Engineer, Renew Instruments Wadala, Mumbai
-    #     •
-    #     Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
-    #     quantitative finance techniques to enhance predictive analytics and risk 
-    #     modelling.
-    #     •
-    #     Applied financial modelling expertise to equity options and futures, contributing 
-    #     to data-driven decision-making.
-    #     •
-    #     Utilized MS Office tools to document findings, create reports, and communicate 
-    #     financial insights effectively.
-    #     06/2025 – Present
-    #     11/2025 – Present
-    #     04/2024 – 03/2025
-    #     Technical Skills
-    #     Analytics
-    #     Programming Language
-    #     Python. Database Language: SQL MLOPS: CICD, 
-    #     GitHub Action. DockerHub
-    #     Al
-    #     GenAl, LangChain, LangGraph,
-    #     PROFESSIONAL COURSES
-    #     Numpy and Pandas Tools: Power BI, Advance Fixcel 
-    #     Cloud: AWS
-    #     Machin Learning
-    #     Data Pre-processing, Regression, Naive Bayes, 
-    #     Decision Trees, Support Vector Machines, K-Nearest 
-    #     Neighbors, Clustering, Principal Component 
-    #     Analysis, Boosting, Pytorch, Deep Learning (ANN, 
-    #     NLP, CNN)
-    #     MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
-    #     EDUCATION
-    #     2022 – 2023
-    #     MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
-    #     MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
-    #     2019 – 2022
-    #     2018 – 2019"""}}]}
+    # event= {'Records': 
+    #         [{'messageId': '200dbd50-972f-4e1f-b649-e08fe263ea26', 'receiptHandle': 'AQEBx+TZ+WFSQcByKvLWnm0JsiPozA1SR65NOIzdGwoCbxABRC0mrB2Uvfy7KHkxaYF0f+USJtXnAv8aZx11XFWdUzXtbv/9820o1PP527vRnQ83pIHwzaKDwNnlJ6Ys1+NKwsgY7XTA4WYXg+uhNMEhCd4V9zWMvQSKGvObghkzaMiHbUDaRAQz614VhthKjHoNvccaKnhhd5a14K1L1q2u/7vs+/9cVF9yam0Boft5Z22dRl3ITbv8A0SAZMJcznSRerL0g4xl4ri/ZYTtrwKVlUwWo8+rSbXvf/wixo8pw339oD9g61YrE3oERfhees9OSstfaDM5UGg+EdOpHvdsxPrVLv+GcHiWPOJzOAN8QoqajpnRuRmG7gtoxvC7fAXCxhPby0Ld2Esiko+MLMV1iR7SEAAo1DklnoPsEHxZ2Z5fVvzZMz2JTqDt2XdQ1IvT', 
+    #           'body': '{"processed_text": "Shatakshi Mishra LinkedIn | +91 6386311282 | mishrashatakshi009@gmail.com WORK EXPERIENCE Zulu Club (0\\u21921 Hyperlocal Fashion & Lifestyle Startup) Gurugram Founding Member & Chief of Staff May 2025- Present Strategy & Growth \\u2022 Acted as Chief of Staff to Founder & CEO, managing strategic initiatives and freeing 15\\u201320% CEO bandwidth for fundraising and external partnerships. \\u2022 Supported pre-seed fundraising, preparing investor materials and analyses that helped secure \\u20b92 crore from early investors \\u2022 Built multi-functional operations from scratch, handling 5+ verticals (partnerships, category management, inventory, marketing, tech, fund-raise, hiring, etc) 0\\u21921 Business Building & GTM \\u2022 Launched \\u201cTry at Home\\u201d model from 0\\u21921 \\u2014 curated assortments across Men\\u2019s, Women\\u2019s, Home D\\u00e9cor, and Beauty (2000+ SKUs), set up dark store operations, and operationalised GTM strategies \\u2022 Built outlet partnerships function from 0\\u21921 \\u2014 identified, pitched, and onboarded 100+ outlets across fashion, lifestyle, and accessories, creating the marketplace\\u2019s initial partner network and contributing 85% of early GMV \\u2022 Piloted AI-based cataloguing (image isolation, upscaling), reducing manual listing effort by 30% and cutting onboarding turnaround from 4 days \\u2192 2 days Marketing & Customer Acquisition \\u2022 Orchestrated gamified Instagram ad campaigns, increasing engagement 2.3x and improving CTR from 0.1% \\u2192 3%, driving 1000+ incremental sign- ups \\u2022 Ran Instagram performance marketing campaigns with \\u20b91 lakh budget, lowering CAC by 75% and scaling reach to 10,000+ users in 2 months \\u2022 Coordinated 30+ content shoots, delivering outlet storytelling campaigns that improved brand discovery and boosted engagement by 30% \\u2022 Planned and executed 45+ BTL activations (pop-ups, offline events), generating 90% uplift in downloads and 25% increase in sales Product \\u2022 Zulu Club App- Collaborated with product & tech teams to execute multiple versions of Zulu Club app, delivering improved content curation and aesthetics, which led to 28% higher session times and 7.5% increase in order conversion rates \\u2022 Zulu Club Website- Conceptualised and executed end-to-end website redesign \\u2014 from user research and content curation to UI/UX design and rollout \\u2014 improving discoverability, boosting average session times, raising lead-to-order conversion \\u2022 Developed Outlet/Seller page product flow on web platform, aligning catalogue design with buyer journeys Samagra Transforming Governance New Delhi Management Consultant, Strategy & Ops for President of India Nov 2023 \\u2013 Oct 2024 Project & Stakeholder Management \\u2022 Identified, conceptualized & led complex projects, played advocate to the President of India; Secretaries, Addl Secretaries and Directors of various Govt Ministries, PSUs \\u2022 Developed a strategic roadmap for administrative reforms for President of India\\u2019s Secretariat, streamlining recruitment, services, transitions, impacting 500+ personnel \\u2022 Reimagined the role of the President of India in Viksit Bharat, crafting a strategic framework for events at Rashtrapati Bhavan, Presidential tours- international and domestic, driving 33% increased public engagement through enhanced outreach \\u2022 Spearheaded the end-to-end planning and management of the 2024 Swearing-in Ceremony for the Union Council of Ministers, Bhartiya Kala Mahotsav, ensuring flawless execution for an audience of 8k+ and 1 lakh+ respectively \\u2022 Designed a blitzkrieg outreach strategy with partners like EaseMyTrip, Tripadvisor, Paytm Insider, increasing footfall at Rashtrapati Bhavan attractions by 45% YoY \\u2022 Contributed to the creation of Goods & Services Procurement Playbook, improving vendor onboarding, reducing turnaround time for critical tenders by 30% \\u2022 Collaborated with the GoI ministries to drive the decolonization and Indianization of 150+ artifacts across Presidential estates, modernizing the historical narrative\\\\ \\u2022 Continuously engaged in creating timelines, milestones, project plans, manage project teams, track success through measurable KPIs & delivering executive reports/ presentations to Govt stakeholders and C-Suite of collaborating private companies Customer Experience and Digital Engagement \\u2022 Led the overhaul of 6 Rashtrapati Bhavan websites optimizing customer journey by conducting user research, A/B Testing, revamp of SEO strategy, intuitiveness and accessibility features of UI/UX, leveraging Google Analytics, Microsoft Clarity, Figma, etc, Boosted Y-O-Y website visitor numbers by 50% and funnel optimization of bookings from 8% to 16% conversion, reducing bounce rate by 20% \\u2022 Optimized digital touchpoints by launching the Rashtrapati Bhavan app through pan-India rollout to all Android and iOS users \\u2022 Data Driven Improvements: Implemented target-based performance management, fostering ownership among junior officers, reviving 20+ languishing projects \\u2022 Process Automation: Strategized and implemented 10+ E-Governance initiatives, optimized process turnaround, reducing bottlenecks between departments by 25% \\u2022 Created strategy for improving product and CX at Rashtrapati Bhavan Main Building, Museum, Amrit Udyan, Rashtrapati Estates-Shimla & Hyderabad Increasing NPS score by 18%, reducing complaints by 24% and increasing self-service adoption rates by 15% Achievements \\u2022 Received Spot Award of Excellence for outstanding project management in finalizing the upcoming Tribal Museum\'s content and curation Ministry of Skill Development & Entrepreneurship New Delhi Consultant, Strategy & Ops for SANKALP Scheme Oct 2021 Oct 2023 \\u2022 Spearheaded the formation and enhancement of District Skill Committees in coordination with district administrations, aligning efforts with line departments to strengthen skill development across the region, leading to a 30% increase in skill training participation \\u2022 Pioneered first-ever Skill Gap Analysis and made District Skill Development Plan \\u201922 for East Delhi, focusing on local demand and supply of skills \\u2022 Mapped tourist potential areas in the district and made plan for drawing more tourists with Tourism & Hospitality Sector Skill Council \\u2022 Facilitated apprenticeship promotion through NAPS, organizing PMNAM at ITIs around Delhi providing apprenticeship offers to 700+ candidates \\u2022 Strengthened National Education Policy (NEP) 2020 through demand aggregation of job roles and institutional mapping in the district, formulated and launched Adult Education Project for educating 140 people of slum areas in the district, in tandem with NIOS \\u2022 Conceptualized and executed marketing strategies for Self-Help Group (SHG) products, leading to the successful Mahila Hunar Haat at Akshardham Metro Station \\u2022 Negotiated and onboarded key CSR partnerships with organizations like Xiaomi, TATA Motors, IBM, and NGOs like Mahindra Pride, Quest Alliance resulting in 22,000+ candidates skilled in a year, driving economic upliftment \\u2022 Orchestrated disaster response efforts during the Delhi Floods 2023, managing the evacuation of 1,500+ individuals and ensuring effective crisis management in flood-prone areas \\u2022 Designed and deployed Project Rahnuma, providing 2500+ individuals with personalized counselling and skilling support to enhance livelihood opportunities. \\u2022 Conceptualised and implemented Project Mohini: Skill Development and 100% Placement of 60+ transgender persons Achievements \\u2022 Handpicked (9/650) by. Secretary, MSDE for developing a Model District Skill Development Plan for the country, by leading a team of 9 to draft the plan based on insights from RDSDE and SANKALP teams \\u2022 Selected (7/650) to be part of Core Team to organise Akhil Bhartiya Shiksha Samagam \\u201823 having a footfall of 1 lakh+ people Certificate of Recognition from CEO, National Skill Development Corporation for contribution in making the event a success LegalXGen Bengaluru Senior Analyst, CEO\\u2019s Office Sep 2017 Dec 2019 \\u2022 Reduced time-to-market of releases by a month through targeted process enhancements, elevating operational efficiency and productivity \\u2022 Elevated SLAs by actively engaging with leadership, configuring new feature requirements and ensuring precise sprint scope \\u2022 Cut revenue leakage by 30% through implementation of billing automation and unpaid invoices reminder features \\u2022 Collaborated with presales, sales and marketing teams in solutioning, drafting sales and marketing pitch to triple the client base Ericsson Noida Engineer, Operations-Service Requirement Fulfillment Jul 2016 Aug 2017 \\u2022 Sprint, USA | Trunk Management Testing: Handled execution of T1 Provisioning, Testing, Install & Disconnect of Normal and 911 calls \\u2022 Digicel, PNG | Back Office: Overhauled the network mapping directory, reducing troubleshooting time by 30% in critical network failures, impacting 2.5mn users LEADERSHIP \\u2022 Chief of Staff to Founder & CEO of Zulu Club, managed 20+ people of 3 verticals- Business, Tech/Product and Marketing \\u2022 Identified, conceptualized & led complex projects, played advocate to the President of India; Secretaries, Addl Secretaries and Directors of various Govt Ministries & PSUs \\u2022 Continuously engaged in creating timelines, milestones, project plans, manage project teams, track success through measurable KPIs & delivering executive reports/presentations to Govt stakeholders and C-Suite of collaborating private companies EDUCATION Indian Institute of Management, Kozhikode 2021-2023 Public Policy & Management Indira Gandhi Delhi Technical University 2012-2016 B.Tech, Information Technology", '
+    #           '"object_key": "bulk-cvs/01KHBG74CP2BRYG94V236S8WT0.pdf", '
+    #           '"from": "throttling error", "retry_counter": 1, '
+    #           '"metadata": {"bulksourcetyperesumeid": "01KHBG70MXK0BEWBQ5AMGW3TCX", '
+    #           '"workoadminuseremail": "raj.ghosh@worko.ai"}}',
+    #            'attributes': {'ApproximateReceiveCount': '1', 'AWSTraceHeader': 'Root=1-698f1b8b-04a0bf1f422269094319ee89;Parent=48e3c2fe9aae6204;Sampled=0;Lineage=1:3a1bb061:0', 'SentTimestamp': '1770986390226',
+    #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        'SenderId': 'AROATCKANHWVU3UAPBTQ2:worko-cand-profile-parser-dev', 'ApproximateFirstReceiveTimestamp': '1770986455912'}, 
+    #           'messageAttributes': {}, 'md5OfBody': '30f2f4eb84e8973f7ee78c6be6db1c2b', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-retry-queue-dev', 'awsRegion': 'ap-south-1'}]}
     # lambda_handler(event, None)
-
-
-
-
