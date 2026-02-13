@@ -43,8 +43,17 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
         "degree": "[DEGREE_NAME]",
         "startedYear": "[STARTED_YEAR]",
         "passingYear": "[GRADUATION_YEAR]",  
-        }}             
-        ],
+        }},   
+        "multipleCandidateExperience": [
+        {{
+         "companyName: [COMPANY_NAME]
+         "designation: [JOB_TITLE]
+         "department: [DEPARTMENT]
+         "YOE": 0,
+         "startDate: [START_DATE]
+          "endDate: [END_DATE or empty string if ongoing]
+         }}   
+            ],
         "currentCompany": "",
         "currentDesignation": "",
         "totalYOE": 0,
