@@ -996,7 +996,7 @@ def if_last_cv(collection_name_for_firstore_updating_counts,bulkSourceTypeResume
     totalResumesSucceeded = doc.get("totalResumesSucceeded","")
     totalResumesFailed = doc.get("totalResumesFailed","")
     totalResumesDuplicate = doc.get("totalResumesDuplicate","")
-    if (totalResumesUploaded  - 1) == totalResumesSucceeded+totalResumesFailed +totalResumesDuplicate:
+    if totalResumesUploaded == totalResumesSucceeded+totalResumesFailed +totalResumesDuplicate:
         this_is_last_resume = True
     else:
         this_is_last_resume = False

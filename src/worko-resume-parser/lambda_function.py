@@ -21,7 +21,135 @@ import uuid
 sqs = boto3.client('sqs')
 # iac deploy 13
 
+def process_cv_for_agency(processed_text,model,current_timestamp):
+    prompt = """you are a Expert in Extracting data from Resume. do detailed analysis of below given resume text and extract
+    the data return null if data is str or 0 if its number when you don't any data in resume.
+    strict instructions: 
+    1) provide only below given json as output no other comments or explanations are allowd.
+    2) if noticePeriod is not mentioned in resume text return null for noticePeriod.
+    3) startedYear and passingYear must be number or null not str eg, 2014, 2020 or null if not mentioned in resume text.
 
+    {{
+        "name": "",
+        "email": "",
+        "about":"extract about me or summary or profile or objective from resume",
+        "phoneNumberDetails": {{
+            "number": 9666308100,
+            "countryCode": 91
+        }},
+        "education":[
+        {{
+        "collage": "[INSTITUTION_NAME or COLLEGE_NAME]",
+        "degree": "[DEGREE_NAME]",
+        "startedYear": "[STARTED_YEAR]",
+        "passingYear": "[GRADUATION_YEAR]",  
+        }}             
+        ],
+        "currentCompany": "",
+        "currentDesignation": "",
+        "totalYOE": 0,
+        "relevantYOE": 0,
+
+        "noticePeriod": 0,
+        "location": "",
+        "readyToRelocate": false
+        
+    }}
+
+    Resume Text : {}
+    """.format(processed_text)
+
+    # response = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing")
+
+    response = model[0].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing " )
+    
+    response = process_parsed_cv_json(response)
+
+
+    prompt = (
+        f"**Extract the following details from the resume extract:**\n"
+        f"- Core Skills (max 30 chars each)\n"
+        f"- Soft Skills (max 30 chars each)\n"
+        f"- Preferred departments (0–5, based on experience & skills)\n"
+        f"- Years of Experience (YOE)\n\n"
+
+        f"**Instructions**:\n"
+        f"- Use ONLY information explicitly written in the resume.\n"
+        f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
+        f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
+        f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
+        f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
+        f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
+        f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
+        f"- Add YOE for Core Skills if mentioned, else 0.\n"
+        f"- Calculate total YOE from roles or dates.\n\n"
+
+        f"**Mandatory Rules**:\n"
+        f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
+        f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
+        f"- Core Skills must NOT include:\n"
+        f"  • Job titles (Project Manager)\n"
+        f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
+        f"  • Interpersonal traits (Leadership, Mentoring)\n"
+        f"  • Tools/software (Excel, SAP, Salesforce)\n"
+        f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
+
+        f"**STRICT Example**:\n"
+        f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
+        f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
+        f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
+        f"technicalSkills: CRM tools\n\n"
+
+        f"**STRICT RULES**:\n"
+        f"- If more than 20 skills exist, pick the 20 most relevant.\n"
+        f"- Do NOT invent skills.\n"
+        f"- A skill MUST appear only once across all categories.\n"
+        f"- Never include responsibilities/duties as skills.\n"
+        f"- Skills must be concise names.\n"
+        f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
+        f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
+
+        f"Resume extract:\n\n{processed_text}\n\n"
+
+        f"Return JSON only:\n"
+        f"{{{{\n"
+        f"  \"coreSkills\": [\n"
+        f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+        f"  ],\n"
+        f"  \"technicalSkills\": [\n"
+        f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+        f"  ],\n"
+        f"  \"softSkills\": [\n"
+        f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
+        f"  ],\n"
+        f"  \"userPreferredDepartments\": [\n"
+        f"    \"List the department names based on resume designations and core skills\"\n"
+        f"  ],\n"
+        f"  \"userPreferredIndustries\": [\n"
+        f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
+        f"  ],\n"
+        f"  \"userPreferredlocations\": [\n"
+        f"    \"Extract if mentioned; else return empty list\"\n"
+        f"  ],\n"
+        f"  \"userPreferredRoles\": [\n"
+        f"    \"Extract roles/designations from resume\"\n"
+        f"  ]\n"
+        f"}}}}\n"
+    )
+
+    # content2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
+
+    
+    content2 = model[1].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing for skills and pref" )
+    # candidateParsedCvAwsS3File =candidateParsedCvAwsS3FileName.split(".")[-1]
+    # addded_details = {
+    #                 "jobId":jobId,
+    #                 "agencyUserId":agencyUserId,
+    #                 "candidateParsedCvAwsS3FileName":candidateParsedCvAwsS3File,
+    #                 "agencyUserId":companyId}
+    merged = {**response, **content2}  # , **addded_details}
+    merged = process_parsed_cv_json(merged)
+    return merged
 # Initialize the AWS service clients
 dynamodb = boto3.resource('dynamodb')
 s3_client = boto3.client('s3')
@@ -37,10 +165,79 @@ def lambda_handler(event, context):
     models_available = ["gpt-4o","gpt-4.1-mini"]
     current_timestamp = datetime.now().isoformat()
 
+    gpt_4o_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+    gpt_4_1_mini_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
+    gpt_models = [gpt_4o_model,gpt_4_1_mini_model]
+
     agencyUserId = event.get('agencyUserId',"")
     cvAwsS3ResourceType = event.get("cvAwsS3ResourceType","")
+    if event.get("event") == "SOURCE_TYPE_REFRESH_CV":
+        print("SOURCE_TYPE_REFRESH_CV event received.")
+        cvAwsS3FilePath = event.get("cvAwsS3FilePath")
+        cvAwsS3ResourceType = event.get("cvAwsS3ResourceType")
+        s3_bucket_name = event.get("cvAwsS3BucketName")
+        FileName = event.get("candidateParsedCvAwsS3FileName")
+        key = f"{cvAwsS3FilePath}/{FileName}"
+        print("key:",key,"s3_bucket_name",s3_bucket_name)
+        try:
 
-    if agencyUserId or cvAwsS3ResourceType == "CAND_SUBMIT_CV_JOB":
+            # Attempt to fetch the PDF file from S3
+            response = s3_client.get_object(Bucket=s3_bucket_name, Key=key)
+            data = response['Body'].read()
+
+        except botocore.exceptions.ClientError as error:
+            # Check the specific error code
+            error_code = error.response['Error']['Code']
+            if error_code == 'AccessDenied':
+                print("Access denied to the S3 object.")
+                return {
+                    'statusCode': 403,
+                    'body': json.dumps({'message': 'Access denied to the specified S3 object'})
+                }
+            elif error_code == 'NoSuchKey':
+                print("The specified key does not exist.")
+                return {
+                    'statusCode': 404,
+                    'body': json.dumps({'message': 'The specified key does not exist'})
+                }
+            else:
+                # Handle other possible exceptions
+                print(f"Unexpected error: {error_code}")
+                return {
+                    'statusCode': 500,
+                    'body': json.dumps({'message': 'Internal server error'})
+                }
+        
+        if ".pdf" in key:
+            processed_text,links_from_pdf = extract_text_from_pdf(data)
+            if not processed_text : 
+                print('image Based cv processing..')                        ###
+                base64_images = extract_images_from_pdf(data)
+                processed_text = invoke_claude_with_image(base64_images)   
+                print('image Based cv process completed')   
+        elif ".docx" in key:
+            processed_text = extract_text_from_docx(data)
+        else:
+            print("The file format is not supported.")
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'message': 'Unsupported file format. Please upload a PDF or DOCX file.'})
+            }
+
+        print("processed_text", processed_text)
+
+        merged = process_cv_for_agency(processed_text,gpt_models,current_timestamp)
+            
+            # "currentCTC": 0,
+            # "expectedCTC": 0,
+
+        print("final response for refresh cv", merged)
+        return {
+            'statusCode': 200,
+            'body': json.dumps(merged)
+        }
+
+    elif agencyUserId or cvAwsS3ResourceType == "CAND_SUBMIT_CV_JOB":
         S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME',"worko-app-dev")
         s3_bucket_name = S3_BUCKET_NAME
         if cvAwsS3ResourceType == "CAND_SUBMIT_CV_JOB":
@@ -106,138 +303,12 @@ def lambda_handler(event, context):
                 'body': json.dumps({'message': 'Unsupported file format. Please upload a PDF or DOCX file.'})
             }
 
-            print("processed_text", processed_text)
+        print("processed_text", processed_text)
+        merged = process_cv_for_agency(processed_text,gpt_models,current_timestamp)
+            
             # "currentCTC": 0,
             # "expectedCTC": 0,
 
-        prompt = """you are a Expert in Extracting data from Resume. do detailed analysis of below given resume text and extract
-        the data return null if data is str or 0 if its number when you don't any data in resume.
-        strict instructions: 
-        1) provide only below given json as output no other comments or explanations are allowd.
-        2) if noticePeriod is not mentioned in resume text return null for noticePeriod.
-        3) startedYear and passingYear must be number or null not str eg, 2014, 2020 or null if not mentioned in resume text.
-
-        {{
-            "name": "",
-            "email": "",
-            "about":"extract about me or summary or profile or objective from resume",
-            "phoneNumberDetails": {{
-                "number": 9666308100,
-                "countryCode": 91
-            }},
-            "education":[
-            {{
-            "collage": "[INSTITUTION_NAME or COLLEGE_NAME]",
-            "degree": "[DEGREE_NAME]",
-            "startedYear": "[STARTED_YEAR]",
-            "passingYear": "[GRADUATION_YEAR]",  
-            }}             
-            ],
-            "currentCompany": "",
-            "currentDesignation": "",
-            "totalYOE": 0,
-            "relevantYOE": 0,
-
-            "noticePeriod": 0,
-            "location": "",
-            "readyToRelocate": false
-            
-        }}
-
-        Resume Text : {}
-        """.format(processed_text)
-
-        # response = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing")
-        gpt_4o_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
-        gpt_4_1_mini_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
-        response = gpt_4_1_mini_model.invoke_model_with_backoff(prompt,Task= "Agency Resume parsing " )
-        
-        response = process_parsed_cv_json(response)
-
-
-        prompt = (
-            f"**Extract the following details from the resume extract:**\n"
-            f"- Core Skills (max 30 chars each)\n"
-            f"- Soft Skills (max 30 chars each)\n"
-            f"- Preferred departments (0–5, based on experience & skills)\n"
-            f"- Years of Experience (YOE)\n\n"
-
-            f"**Instructions**:\n"
-            f"- Use ONLY information explicitly written in the resume.\n"
-            f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
-            f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
-            f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
-            f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
-            f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
-            f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
-            f"- Add YOE for Core Skills if mentioned, else 0.\n"
-            f"- Calculate total YOE from roles or dates.\n\n"
-
-            f"**Mandatory Rules**:\n"
-            f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
-            f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
-            f"- Core Skills must NOT include:\n"
-            f"  • Job titles (Project Manager)\n"
-            f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
-            f"  • Interpersonal traits (Leadership, Mentoring)\n"
-            f"  • Tools/software (Excel, SAP, Salesforce)\n"
-            f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
-
-            f"**STRICT Example**:\n"
-            f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
-            f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
-            f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
-            f"technicalSkills: CRM tools\n\n"
-
-            f"**STRICT RULES**:\n"
-            f"- If more than 20 skills exist, pick the 20 most relevant.\n"
-            f"- Do NOT invent skills.\n"
-            f"- A skill MUST appear only once across all categories.\n"
-            f"- Never include responsibilities/duties as skills.\n"
-            f"- Skills must be concise names.\n"
-            f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
-            f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
-
-            f"Resume extract:\n\n{processed_text}\n\n"
-
-            f"Return JSON only:\n"
-            f"{{{{\n"
-            f"  \"coreSkills\": [\n"
-            f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-            f"  ],\n"
-            f"  \"technicalSkills\": [\n"
-            f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-            f"  ],\n"
-            f"  \"softSkills\": [\n"
-            f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
-            f"  ],\n"
-            f"  \"userPreferredDepartments\": [\n"
-            f"    \"List the department names based on resume designations and core skills\"\n"
-            f"  ],\n"
-            f"  \"userPreferredIndustries\": [\n"
-            f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
-            f"  ],\n"
-            f"  \"userPreferredlocations\": [\n"
-            f"    \"Extract if mentioned; else return empty list\"\n"
-            f"  ],\n"
-            f"  \"userPreferredRoles\": [\n"
-            f"    \"Extract roles/designations from resume\"\n"
-            f"  ]\n"
-            f"}}}}\n"
-        )
-
-        # content2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
-
-        
-        content2 = gpt_4o_model.invoke_model_with_backoff(prompt,Task= "Agency Resume parsing for skills and pref" )
-        # candidateParsedCvAwsS3File =candidateParsedCvAwsS3FileName.split(".")[-1]
-        # addded_details = {
-        #                 "jobId":jobId,
-        #                 "agencyUserId":agencyUserId,
-        #                 "candidateParsedCvAwsS3FileName":candidateParsedCvAwsS3File,
-        #                 "agencyUserId":companyId}
-        merged = {**response, **content2}  # , **addded_details}
-        merged = process_parsed_cv_json(merged)
         print("final response for agency", merged)
         return {
             'statusCode': 200,
@@ -626,11 +697,13 @@ if __name__ == "__main__":
     # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
     # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
     # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
-    event = {
-    "companyId": "01JWAQF1G96E0SE9XHXSFGHNWW",
-    "jobId": "01K7Z7RM97J7V8E4059KQ1D2Z6",
-    "candidateParsedCvAwsS3FileName": "01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf",
-    "cvAwsS3ResourceType": "CAND_SUBMIT_CV_JOB"
-        }
+    event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW.pdf", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
+
+    # event = {
+    # "companyId": "01JWAQF1G96E0SE9XHXSFGHNWW",
+    # "jobId": "01K7Z7RM97J7V8E4059KQ1D2Z6",
+    # "candidateParsedCvAwsS3FileName": "01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf",
+    # "cvAwsS3ResourceType": "CAND_SUBMIT_CV_JOB"
+    #     }
     # # example_path = "s3://worko-app-dev/candidate-submit-cvs/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K7Z7RM97J7V8E4059KQ1D2Z6/cvs/01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf"
     lambda_handler(event, None)
