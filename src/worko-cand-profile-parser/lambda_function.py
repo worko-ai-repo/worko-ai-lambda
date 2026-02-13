@@ -20,7 +20,7 @@ from google.oauth2 import service_account
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud.firestore_v1 import Or, And
 import uuid
-
+# second deployment11
 start_time = time.time()
 # Initialize Bedrock clients
 region = 'ap-south-1'
