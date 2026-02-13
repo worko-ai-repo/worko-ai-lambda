@@ -695,7 +695,7 @@ def process_cv(metadata,retry_queue_name, processed_text, gpt_models, object_key
             f"  \"isNoticePeriodNegotiable\": false\n"
             f"}}}}\n"
         )
-        cv_extracted_parsed = gpt_models[0].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 ")
+        cv_extracted_parsed = gpt_models[1].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 ")
         # cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
         current_timestamp = datetime.now().isoformat()
         prompt = (
@@ -807,7 +807,7 @@ def send_sqs_for_throttling_error(retry_queue_name,body):
         sqs = boto3.client('sqs')
         
         # body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
-        delay_seconds = 60
+        delay_seconds = 90
         
         print(f"Sending message to SQS with retry_counter: {retry_counter}")
         print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
@@ -1112,7 +1112,8 @@ def lambda_handler(event, context):
     azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
     azure_openai_secret = get_secret(azure_openai_secret_name)
     gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
-    gpt_models = [gpt4]
+    gpt4_1_mini = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
+    gpt_models = [gpt4,gpt4_1_mini]
     retry_queue_name = "worko-cand-profile-parser-retry-queue-"+env
     
     try:
