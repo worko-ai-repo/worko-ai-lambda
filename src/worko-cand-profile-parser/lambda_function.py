@@ -1013,11 +1013,12 @@ def if_last_cv(collection_name_for_firstore_updating_counts,bulkSourceTypeResume
 def send_cv_summary_email(all_cv_parsing_summary, metadata):
     import csv
     from io import StringIO
-    to_address = metadata.get("corporateUserEmail") or metadata.get("workoadminuseremail")
-    print("dending email summary to",to_address)
+
+    to_address = metadata.get("corporateuseremail") or metadata.get("workoadminuseremail")
+    print("sending email summary to",to_address)
     
     ses = boto3.client('ses', region_name='ap-south-1')
-    source = "no-reply@worko.work"
+    source = "no-reply@worko.ai"
     
     summary, total_count = all_cv_parsing_summary
     
@@ -1066,12 +1067,15 @@ Worko Team"""
     
     raw_message = f"From: {source}\nTo: {to_address}\nSubject: {subject}\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary=\"boundary\"\n\n--boundary\nContent-Type: text/plain\n\n{body_text}\n\n--boundary\nContent-Type: text/csv; name=\"cv_processing_summary.csv\"\nContent-Disposition: attachment; filename=\"cv_processing_summary.csv\"\n\n{csv_content}\n--boundary--"
     
-    ses.send_raw_email(
-        Source=source,
-        Destinations=[to_address],
-        RawMessage={"Data": raw_message}
-    )
-    print(f"Email sent to {to_address}")
+    try:
+        ses.send_raw_email(
+            Source=source,
+            Destinations=[to_address],
+            RawMessage={"Data": raw_message}
+        )
+        print(f"Email sent to {to_address}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 def build_status_summary(all_docs: list):
     summary = {
@@ -1132,7 +1136,7 @@ def lambda_handler(event, context):
             
             processed_text = body.get("processed_text","")
             object_key = body.get("object_key","")
-            file_name = object_key.split("/")[-1].split(".")[0]
+            file_name = object_key.split("/")[-1]
             
             if retry_counter >= 3:
                 print(f"Message received {retry_counter} times, sending to DLQ")
@@ -1196,6 +1200,7 @@ def lambda_handler(event, context):
             bucket_name = s3_event['bucket']['name']
             object_key = unquote_plus(s3_event['object']['key'])
             file_name = object_key.split("/")[-1]
+            print(" file_name,", file_name)
             response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
             data = response['Body'].read()
             
@@ -1255,6 +1260,7 @@ def lambda_handler(event, context):
                 print(f"Error sending final CV to SQS: {e}" )
 
         this_is_last_resume = if_last_cv(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
+        # this_is_last_resume=True  #$$$
         if this_is_last_resume:
             
             print(f"""This is the last resume being processed for bulkSourceTypeResumeId:{bulksourcetyperesumeid}
@@ -1278,10 +1284,10 @@ def lambda_handler(event, context):
         return {'statusCode': 500, 'body': json.dumps(f'Error: {e}')}
 
 
-# if __name__ == "__main__":
-        
+if __name__ == "__main__":
+    event ={'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'ap-south-1', 'eventTime': '2026-02-13T10:54:41.817Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp'}, 'requestParameters': {'sourceIPAddress': '103.176.210.127'}, 'responseElements': {'x-amz-request-id': 'A1ZX01WYQJ2Y5JH6', 'x-amz-id-2': 'wnmtopZYMlwdUUFEXUaSsPUXlfUOrsb3JKWieIvgG+zU+Hph9o1vtOaooaRN2iInFw8mWnp2dHqT/iRGvosQet9Nbvr5t1qpjWBXU656KVw='}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': 'a6c870b0-fd5d-4747-ac88-27e26b7ecba5', 'bucket': {'name': 'worko-admin-cand-profile-dev', 'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 'arn': 'arn:aws:s3:::worko-admin-cand-profile-dev'}, 'object': {'key': 'bulk-cvs/01KHBA6ZW2MDQWJN4WE2YJXFDV.pdf', 'size': 58816, 'eTag': 'ecdcfaabc0c96728a65b559256cc68f6', 'sequencer': '00698F02F1C38704BF'}}}]}  
 #     event = {"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-02-13T05:21:25.288Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"103.176.210.127"},"responseElements":{"x-amz-request-id":"A7DP139505J83HYT","x-amz-id-2":"7qLalj01knes4BpKEg5sLH1PjcL91s9OGs69//2J775bV3sZLPXHSwrmOd1NLv3T0+tMFZQL58bR0lLKCVHtJFEc5LKEe1zZmU5N5y6A+Q4="},"s3":{"s3SchemaVersion":"1.0","configurationId":"a6c870b0-fd5d-4747-ac88-27e26b7ecba5","bucket":{"name":"worko-admin-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-admin-cand-profile-dev"},"object":{"key":"bulk-cvs/01KHAQ4QXFP0HW6BSFRK926JH1.pdf","size":225212,"eTag":"296eeb83abfe1d84d866db9a55621a78","sequencer":"00698EB4D53FB3565C"}}}]}
-#     lambda_handler(event, None)
+    lambda_handler(event, None)
     # "Records": [
     #     {
     #     "eventVersion": "2.1",
