@@ -807,7 +807,7 @@ def send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds):
         sqs = boto3.client('sqs')
         
         # body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
-        delay_seconds = 90
+      
         
         print(f"Sending message to SQS with retry_counter: {retry_counter}")
         print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
