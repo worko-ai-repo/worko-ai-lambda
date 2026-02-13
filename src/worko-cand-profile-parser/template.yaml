@@ -54,6 +54,10 @@ Resources:
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
                 Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ses:SendRawEmail
+                Resource: "*"
 
   PythonDependenciesLayer:
     Type: AWS::Serverless::LayerVersion

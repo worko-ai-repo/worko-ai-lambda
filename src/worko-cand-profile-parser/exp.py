@@ -580,3 +580,51 @@ print(get_meta_data(event))
 # # Usage
 # download_lambda_logs('worko-bulk-jd-resume-matching-dev', 'lambda_logs.txt', 200)
 
+
+
+def check_duplicate_with_cv_age(cvExtractedParsed, object_key, DBManager):
+    from datetime import datetime, timedelta
+    
+    email = cvExtractedParsed.get("candidateEmail", "")
+    phone_number = cvExtractedParsed.get("candidateNumber", "")
+    country_code = cvExtractedParsed.get("candidatePhoneCountryCode", "")
+    
+    is_corporate = "companies" in object_key
+    collection = "corporateCandidateProfiles" if is_corporate else "centralCandidateProfiles"
+    company_id = object_key.split("/")[1] if is_corporate else None
+    resource_type = "CORP_CAND_BULK_CV_UPLOAD" if is_corporate else "ADMIN_CAND_BULK_CV_UPLOAD"
+    
+    candidate_profiles = DBManager.get_candidate_profiles(collection, company_id, email, phone_number, country_code)
+    
+    if not candidate_profiles:
+        return None, None
+    
+    candidate_profile = candidate_profiles[0]
+    parsed_cv_id = candidate_profile.get("candidateParsedCvId" if is_corporate else "latestCandidateParsedCvId")
+    
+    if not parsed_cv_id:
+        return None, None
+    
+    parsed_cv_doc = DBManager.get_document_firstore("candidateParsedCvs", parsed_cv_id)
+    
+    if not parsed_cv_doc:
+        return None, None
+    
+    cv_tracker = parsed_cv_doc.get("cvAwsS3FileTracker", [])
+    matching_cv = next((cv for cv in cv_tracker if cv.get("resourceType") == resource_type), None)
+    
+    if not matching_cv:
+        return None, None
+    
+    action_date_str = matching_cv.get("actionDate")
+    if not action_date_str:
+        return None, None
+    
+    action_date = datetime.fromisoformat(action_date_str.replace("+00:00", ""))
+    three_months_ago = datetime.now() - timedelta(days=90)
+    
+    if action_date >= three_months_ago:
+        return "DUPLICATE", None
+    else:
+        event_name = "OLDER_CV_CORPORATE_CAND_PROFILE_BULK_UPLOAD" if is_corporate else "OLDER_CV_ADMIN_CAND_PROFILE_BULK_UPLOAD"
+        return "OLDER_CV", event_name
