@@ -19,6 +19,7 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud.firestore_v1 import Or, And
+import uuid
 
 start_time = time.time()
 # Initialize Bedrock clients
@@ -38,7 +39,21 @@ def get_account_id():
     # Extract account ID
     return response['Account']
 
-def update_sqs_queue(message_body):
+def send_final_sqs_for_cvExtractparsed(body):
+    file_name = body.get("file_name","")
+    cvExtractedParsed = body.get("cvExtractedParsed","")
+
+    if not body.get("companyId",""):
+        message_body = {"event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
+                    "candidateCvAwsS3FileName":file_name,
+                    "cvExtractedParsed":cvExtractedParsed
+                }
+    else:
+        message_body = {"event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
+            "companyId": body.get("companyId"),
+            "candidateCvAwsS3FileName":file_name,
+            "cvExtractedParsed":cvExtractedParsed}
+        
     try:
         region = os.environ.get("SQS_REGION", "ap-south-1")
         eventQueueName = os.environ.get("EVENT_QUEUE_NAME", "worko-corp-app-event-queue")
@@ -412,22 +427,23 @@ class FirestoreManager:
         print(f"Firestore initialized successfully for project: {FIRESTORE_PROJECT_ID}, database: {self.GCP_DATABASE_NAME}")
         return db
 
-    def update_firestore_document_with_scoring_data(self,collection_name: str, doc_id: str,update_data,status:str ):
+    def update_firestore_document_with_scoring_data(self,collection_name_for_firstore_updating: str, doc_id: str,update_data,status:str ):
 
-        if update_data and status == "COMPLETED":
+        if status:
             try:
-                doc_ref = self.db.collection(collection_name).document(doc_id)
+                print(f"updating data in firsstore with id {doc_id}")
+                doc_ref = self.db.collection(collection_name_for_firstore_updating).document(doc_id)
                 doc_ref.update(update_data)
                 print(f"Updated Firestore document {doc_id} status : completed and update_data : {update_data}")
                 return True
             except Exception as e:
-                print("failed to updated 2ed step (score details) data in collection_name :-- ",collection_name,"doc_id :--",doc_id,"error is", e)
+                print("failed to updated 2ed step (score details) data in collection_name_for_firstore_updating :-- ",collection_name_for_firstore_updating,"doc_id :--",doc_id,"error is", e)
                 return False
 
 
         else:
             try:
-                doc_ref = self.db.collection(collection_name).document(doc_id)
+                doc_ref = self.db.collection(collection_name_for_firstore_updating).document(doc_id)
                 doc_ref.update({
                     "matchingScore" : 0,
                     "cvExtractedParsed":update_data,
@@ -436,11 +452,11 @@ class FirestoreManager:
                 })
                 print(f"Updated Firestore document {doc_id} with  status :IN PROGRESS")
             except Exception as e:
-                print("failed to updated 1st step (cvExtractparsed) data in collection_name :-- ",collection_name,"doc_id :--",doc_id,"error is", e)
+                print("failed to updated 1st step (cvExtractparsed) data in collection_name_for_firstore_updating :-- ",collection_name_for_firstore_updating,"doc_id :--",doc_id,"error is", e)
                 return False
 
-    def get_document_firstore(self,collection_name,doc_id):
-        doc_ref = self.db.collection(collection_name).document(doc_id)
+    def get_document_firstore(self,collection_name_for_firstore_updating,doc_id):
+        doc_ref = self.db.collection(collection_name_for_firstore_updating).document(doc_id)
         return doc_ref.get().to_dict()
 
     # Example usage for your specific case:
@@ -474,6 +490,15 @@ class FirestoreManager:
             return [doc.to_dict() for doc in docs]
         else:
             return None
+
+    def update_firestore_document_data(self, collection_name, doc_id, update_data, status):
+        doc_ref = self.db.collection(collection_name).document(doc_id)
+        doc_ref.set(update_data)
+        print(f"Created document {doc_id} in {collection_name} with status {status}")
+
+    def get_documents_by_bulkSourceTypeResumeId(self, collection_name, bulkSourceTypeResumeId):
+        docs = self.db.collection(collection_name).where(filter=FieldFilter("bulkSourceTypeResumeId", "==", bulkSourceTypeResumeId)).get()
+        return [doc.to_dict() for doc in docs]
 
 def process_parsed_cv_json(cv_obj):
     try:
@@ -577,7 +602,7 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
-def process_cv(retry_queue_name, processed_text, gpt_models, object_key,retry_counter) -> Tuple[str, Dict[str, str]]:
+def process_cv(metadata,retry_queue_name, processed_text, gpt_models, object_key,retry_counter) -> Tuple[str, Dict[str, str]]:
     retry_counter +=1
     print("Processing cv for cvexractparesed with retry_counter:", retry_counter)
     try:
@@ -642,6 +667,16 @@ def process_cv(retry_queue_name, processed_text, gpt_models, object_key,retry_co
             f"      \"degree\": \"[DEGREE_NAME]\",\n"
             f"      \"startedYear\": \"[STARTED_YEAR]\",\n"
             f"      \"passingYear\": \"[GRADUATION_YEAR]\"\n"
+            f"    }}\n"
+            f"  ],\n"
+            f"  \"multipleCandidateExperience\": [\n"
+            f"    {{\n"
+            f"      \"companyName\": \"[COMPANY_NAME]\",\n"
+            f"      \"designation\": \"[JOB_TITLE]\",\n"
+            f"      \"department\": \"[DEPARTMENT]\",\n"
+            f"      \"YOE\": 0,\n"
+            f"      \"startDate\": \"[START_DATE]\",\n"
+            f"      \"endDate\": \"[END_DATE or empty string if ongoing]\"\n"
             f"    }}\n"
             f"  ],\n"
             f"  \"candidateEmail\": \"\",\n"
@@ -745,8 +780,8 @@ def process_cv(retry_queue_name, processed_text, gpt_models, object_key,retry_co
         if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
             print("Errore of {execution_error} now sending sqs for startuing again in next 60 seconds")
              
-            message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error","retry_counter":retry_counter }
-            send_sqs_for_throttling_error(retry_queue_name,message_body) #send sqs for throttled error
+            body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error","retry_counter":retry_counter ,"metadata":metadata}
+            send_sqs_for_throttling_error(retry_queue_name,body) #send sqs for throttled error
             return None 
         else:
             # For all other errors, just log and continue
@@ -763,23 +798,23 @@ def decimal_default(obj):
         return float(obj)
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
-def send_sqs_for_throttling_error(retry_queue_name,message_body):
+def send_sqs_for_throttling_error(retry_queue_name,body):
     try:
-        retry_counter = message_body.get("retry_counter", "retry_counter not found")
+        retry_counter = body.get("retry_counter", "retry_counter not found")
         from datetime import datetime, timedelta
         queue_url = get_queue_url(retry_queue_name)
         sqs = boto3.client('sqs')
         
-        # message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
+        # body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
         delay_seconds = 60
         
         print(f"Sending message to SQS with retry_counter: {retry_counter}")
         print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
-        print(f"SQS message body for throttled steps: {json.dumps(str(message_body)[:100])}")
+        print(f"SQS message body for throttled steps: {json.dumps(str(body)[:100])}")
         
         response = sqs.send_message(
             QueueUrl=queue_url,
-            MessageBody=json.dumps(message_body, default=decimal_default),
+            MessageBody=json.dumps(body, default=decimal_default),
             DelaySeconds=delay_seconds
         )
         
@@ -789,56 +824,285 @@ def send_sqs_for_throttling_error(retry_queue_name,message_body):
     except Exception as sqs_error:
         print(f"Error sending send_sqs_for_throttling_error step to SQS: {sqs_error}")
         print(f"Queue URL attempted: {queue_url}")
-        print(f"Message body: {message_body}")
+        print(f"Message body: {body}")
 
-def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
+def check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager):
     email = cvExtractedParsed.get("candidateEmail","")
     phone_number = cvExtractedParsed.get("candidatePhoneNumber","") 
     country_code = cvExtractedParsed.get("candidateCountryCode","")
-
-    if "companies" in object_key: #example_path1:
+    if "companies" in object_key: 
         # query data and check it present or not
         collection = "corporateCandidateProfiles"
         company_id = object_key.split("/")[1]
         
-        data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
-        print("Data.......",data)
-
-        if data is not None:
-            print(f"Not trigring sqs as found dublicate record in collection corporateCandidateProfiles : - {data}")
-
-        else:
-            sqs_send_data = {"event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
-            "companyId": company_id,
-            "candidateCvAwsS3FileName":file_name,
-            "cvExtractedParsed":cvExtractedParsed}
-            update_sqs_queue(sqs_send_data)
-
-            print(f"trigring sqs, as found no dublicate record in collection corporateCandidateProfiles :- {cvExtractedParsed}")
-            #trigre sqs
+        data_got_from_firstore_data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
+        
+        if data_got_from_firstore_data is not None:
+            print("Dublicate data from firstore..",data_got_from_firstore_data)
+            return data_got_from_firstore_data
+    
     else:
 
         collection = "centralCandidateProfiles"
         company_id = None
-        data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
+        data_got_from_firstore_data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
         
-        if data is not None:
-            print(f"Not trigring sqs as found dublicate record in collection centralCandidateProfiles : - {data}")
+        if data_got_from_firstore_data is not None:
+            print("Dublicate data from firstore..",data_got_from_firstore_data)
+            return data_got_from_firstore_data
 
-        else:
-            #triger sqs
-            print(f"trigring sqs as  do not found any dublicate record in collectoin centralCandidateProfiles {cvExtractedParsed}")
-            sqs_send_data = {
-                "candidateCvAwsS3FileName":file_name,
-                "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
-                "cvExtractedParsed":cvExtractedParsed
-            }
-            update_sqs_queue(sqs_send_data)
+
+# def send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager):
+#     email = cvExtractedParsed.get("candidateEmail","")
+#     phone_number = cvExtractedParsed.get("candidatePhoneNumber","") 
+#     country_code = cvExtractedParsed.get("candidateCountryCode","")
+
+#     if "companies" in object_key: #example_path1:
+#         company_id = object_key.split("/")[1]
+#         # query data and check it present or not
+#         collection = "corporateCandidateProfiles"
+        
+        
+#         dat_got_from_firstore_data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
+#         print("Data.......",dat_got_from_firstore_data)
+
+#         if dat_got_from_firstore_data is not None:
+#             print(f"Not trigring sqs as found dublicate record in collection corporateCandidateProfiles : - {dat_got_from_firstore_data}")
+#         else:
+#             sqs_send_data = {"event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
+#             "companyId": company_id,
+#             "candidateCvAwsS3FileName":file_name,
+#             "cvExtractedParsed":cvExtractedParsed}
+#             send_final_sqs_for_cvExtractparsed(sqs_send_data)
+
+#             print(f"trigring sqs, as found no dublicate record in collection corporateCandidateProfiles :- {cvExtractedParsed}")
+#             #trigre sqs
+#     else:
+
+#         collection = "centralCandidateProfiles"
+#         company_id = None
+#         data = DBManager.get_candidate_profiles( collection,company_id, email, phone_number, country_code)
+        
+#         if data is not None:
+#             print(f"Not trigring sqs as found dublicate record in collection centralCandidateProfiles : - {data}")
+
+#         else:
+#             #triger sqs
+#             print(f"trigring sqs as  do not found any dublicate record in collectoin centralCandidateProfiles {cvExtractedParsed}")
+#             # sqs_send_data = {"event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
+#             #     "candidateCvAwsS3FileName":file_name,
+#             #     "cvExtractedParsed":cvExtractedParsed
+#             # }
+#             send_final_sqs_for_cvExtractparsed(sqs_send_data)
+
+
+def updated_firstore_resume_status(processingStatus,bulkSourceTypeResumeId,update_data,DBManager):
+    """this function will update firestore document if a resume is processed successfully with cvExtractedParsed data and also update status of that resume in firestore document"""
+    print("updating firestore document with cvExtractedParsed data and status of that resume in firestore document")
+    
+    doc_id = str(uuid.uuid4())
+    update_data["id"] = doc_id
+    update_data["bulkSourceTypeResumeId"] = bulkSourceTypeResumeId
+    
+    # Create document in bulkSourceTypeParseResumes collection with correct data and bulkSourceTypeResumeId
+    collection_name_to_send_doc = "bulkSourceTypeParseResumes"
+    DBManager.update_firestore_document_data(collection_name_to_send_doc, doc_id, update_data, processingStatus)
+
+    count_collection_name = "bulkSourceTypeResumes"
+    # Increment totalResumesProcessed in bulkSourceTypeResumes collection if COMPLETED
+    if processingStatus == "SUCCESS":
+        print(f"Incrementing totalResumesSucceeded : {processingStatus} of bulkSourceTypeResumeId {bulkSourceTypeResumeId}")
+        parent_doc_ref = DBManager.db.collection(count_collection_name).document(bulkSourceTypeResumeId)
+        parent_doc_ref.update({"totalResumesSucceeded": firestore.Increment(1)})
+        print(f"Incremented totalResumesSucceeded for {bulkSourceTypeResumeId}")
+    
+    elif processingStatus == "FAILED":
+        print(f"Incrementing totalResumesFailed : {processingStatus} of bulkSourceTypeResumeId {bulkSourceTypeResumeId}")
+        parent_doc_ref = DBManager.db.collection(count_collection_name).document(bulkSourceTypeResumeId)
+        parent_doc_ref.update({"totalResumesFailed": firestore.Increment(1)})
+        print(f"Incremented totalResumesFailed for {bulkSourceTypeResumeId}")
+        
+        
+    elif processingStatus == "DUPLICATE":
+        print(f"Incrementing totalResumesDuplicate : {processingStatus} of bulkSourceTypeResumeId {bulkSourceTypeResumeId}")
+        parent_doc_ref = DBManager.db.collection(count_collection_name).document(bulkSourceTypeResumeId)
+        parent_doc_ref.update({"totalResumesDuplicate": firestore.Increment(1)})
+        print(f"Incremented totalResumesDuplicate for {bulkSourceTypeResumeId}")
+        
+    else:
+        print(f"Unknown processingStatus: {processingStatus} for bulkSourceTypeResumeId {bulkSourceTypeResumeId}. No increment performed in totalResumesProcessed.")
+
+def get_data_to_update_in_firstore(cvExtractedParsed,status):
+
+    candidateName = cvExtractedParsed.get("candidateName","")
+    candidate_email = cvExtractedParsed.get("candidateEmail","")
+    candidatePhoneNumber = cvExtractedParsed.get("candidatePhoneNumber","")
+    candidateNumber = cvExtractedParsed.get("candidateNumber",0)
+    candidatePhoneCountryCode = cvExtractedParsed.get("candidatePhoneCountryCode",0)
+    phoneNumberDetails ={"candidatePhoneNumber":candidatePhoneNumber,"candidateNumber":candidateNumber,"candidatePhoneCountryCode":candidatePhoneCountryCode}
+    createdAt = datetime.now().isoformat()
+    updatedAt = datetime.now().isoformat()
+    return {
+        "candidateName": candidateName,
+        "candidateEmail": candidate_email,
+        "phoneNumberDetails": phoneNumberDetails,
+        "createdAt": createdAt,
+        "updatedAt": updatedAt,
+        "status":status
+    }
+
+def get_meta_data(event):
+    s3_client = boto3.client('s3')
+
+    # Extract bucket and key from event
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    # key = "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KH8PX3GBW8N6RP1SBRSXN79P.pdf"
+    # bucket = "worko-corporate-cand-profile-dev"
+    # Get object metadata
+    response = s3_client.head_object(Bucket=bucket, Key=key)
+    metadata = response.get('Metadata', {})
+    return metadata
+
+def get_counts(collection_name_for_firstore_updating_counts,bulkSourceTypeResumeId,DBManager):
+#get the document from firestore with bulkSourceTypeResumeId 
+    doc = DBManager.get_document_firstore(collection_name_for_firstore_updating_counts,bulkSourceTypeResumeId) 
+
+    totalResumesUploaded = doc.get("totalResumesUploaded","")
+    totalResumesSucceeded = doc.get("totalResumesSucceeded","")
+    totalResumesFailed = doc.get("totalResumesFailed","")
+    totalResumesDuplicate = doc.get("totalResumesDuplicate","")
+    if (totalResumesUploaded  - 1) == totalResumesSucceeded+totalResumesFailed +totalResumesDuplicate:
+        this_is_last_resume = True
+    else:
+        this_is_last_resume = False
+
+    if any([totalResumesSucceeded, totalResumesFailed, totalResumesDuplicate,totalResumesUploaded]) is not None:
+        print("totalResumesUploaded",totalResumesUploaded)
+        print("totalResumesSucceeded",totalResumesSucceeded)
+        print("totalResumesFailed",totalResumesFailed)
+        print("totalResumesDuplicate",totalResumesDuplicate)
+       
+    else:
+        print(f"totalResumesSucceeded field == {totalResumesSucceeded} in Firestore document for bulkSourceTypeResumeId:",bulkSourceTypeResumeId)
+    return doc
+
+def if_last_cv(collection_name_for_firstore_updating_counts,bulkSourceTypeResumeId,DBManager):
+#get the document from firestore with bulkSourceTypeResumeId 
+    doc = DBManager.get_document_firstore(collection_name_for_firstore_updating_counts,bulkSourceTypeResumeId) 
+
+    totalResumesUploaded = doc.get("totalResumesUploaded","")
+    totalResumesSucceeded = doc.get("totalResumesSucceeded","")
+    totalResumesFailed = doc.get("totalResumesFailed","")
+    totalResumesDuplicate = doc.get("totalResumesDuplicate","")
+    if (totalResumesUploaded  - 1) == totalResumesSucceeded+totalResumesFailed +totalResumesDuplicate:
+        this_is_last_resume = True
+    else:
+        this_is_last_resume = False
+
+    if any([totalResumesSucceeded, totalResumesFailed, totalResumesDuplicate,totalResumesUploaded]) is not None:
+        print("totalResumesUploaded",totalResumesUploaded)
+        print("totalResumesSucceeded",totalResumesSucceeded)
+        print("totalResumesFailed",totalResumesFailed)
+        print("totalResumesDuplicate",totalResumesDuplicate)
+       
+    else:
+        print(f"totalResumesSucceeded field == {totalResumesSucceeded} in Firestore document for bulkSourceTypeResumeId:",bulkSourceTypeResumeId)
+    return this_is_last_resume
+
+def send_cv_summary_email(all_cv_parsing_summary, metadata):
+    import csv
+    from io import StringIO
+    to_address = metadata.get("corporateUserEmail") or metadata.get("workoadminuseremail")
+    print("dending email summary to",to_address)
+    
+    ses = boto3.client('ses', region_name='ap-south-1')
+    source = "no-reply@worko.work"
+    
+    summary, total_count = all_cv_parsing_summary
+    
+    csv_buffer = StringIO()
+    writer = csv.writer(csv_buffer)
+    
+    # SUCCESS section
+    writer.writerow(["SUCCESS", f"Count: {summary['SUCCESS']['count']}", ""])
+    writer.writerow(["Candidate Name", "Candidate Email", ""])
+    for candidate in summary['SUCCESS']['candidates']:
+        writer.writerow([candidate["candidateName"], candidate["candidateEmail"], ""])
+    writer.writerow(["", "", ""])
+    
+    # FAILED section
+    writer.writerow(["FAILED", f"Count: {summary['FAILED']['count']}", ""])
+    writer.writerow(["Candidate Name", "Candidate Email", ""])
+    for candidate in summary['FAILED']['candidates']:
+        writer.writerow([candidate["candidateName"], candidate["candidateEmail"], ""])
+    writer.writerow(["", "", ""])
+    
+    # DUPLICATE section
+    writer.writerow(["DUPLICATE", f"Count: {summary['DUPLICATE']['count']}", ""])
+    writer.writerow(["Candidate Name", "Candidate Email", ""])
+    for candidate in summary['DUPLICATE']['candidates']:
+        writer.writerow([candidate["candidateName"], candidate["candidateEmail"], ""])
+    
+    csv_content = csv_buffer.getvalue()
+    
+    subject = "Bulk CV Processing Complete - Summary Report"
+    body_text = f"""Dear User,
+
+Your bulk CV upload has been successfully processed.
+
+Processing Summary:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total CVs Uploaded: {total_count}
+Successfully Processed: {summary['SUCCESS']['count']}
+Failed: {summary['FAILED']['count']}
+Duplicates Detected: {summary['DUPLICATE']['count']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please find the detailed report attached as a CSV file.
+
+Best regards,
+Worko Team"""
+    
+    raw_message = f"From: {source}\nTo: {to_address}\nSubject: {subject}\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary=\"boundary\"\n\n--boundary\nContent-Type: text/plain\n\n{body_text}\n\n--boundary\nContent-Type: text/csv; name=\"cv_processing_summary.csv\"\nContent-Disposition: attachment; filename=\"cv_processing_summary.csv\"\n\n{csv_content}\n--boundary--"
+    
+    ses.send_raw_email(
+        Source=source,
+        Destinations=[to_address],
+        RawMessage={"Data": raw_message}
+    )
+    print(f"Email sent to {to_address}")
+
+def build_status_summary(all_docs: list):
+    summary = {
+        "SUCCESS": {"count": 0, "candidates": []},
+        "FAILED": {"count": 0, "candidates": []},
+        "DUPLICATE": {"count": 0, "candidates": []},
+    }
+
+    for data in all_docs:
+        status = data.get("status")
+        name = data.get("candidateName", "")
+        email = data.get("candidateEmail", "")
+
+        if status in summary:
+            summary[status]["count"] += 1
+            summary[status]["candidates"].append({
+                "candidateName": name,
+                "candidateEmail": email
+            })
+
+    return summary, len(all_docs)
 
 def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
     # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
     print("got event:",event)
+    env = os.environ.get("ENVIRONMENT", "dev")
+    GCP_DATABASE_NAME = "worko-corp-db-"+env
+    GCP_secret_name = "GCP-firestore-secret-"+env
+    DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+    collection_name_for_firstore_updating_counts = "bulkSourceTypeResumes"
     env=os.environ.get("ENVIRONMENT", "dev")
     azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
     azure_openai_secret = get_secret(azure_openai_secret_name)
@@ -846,97 +1110,178 @@ def lambda_handler(event, context):
     gpt_models = [gpt4]
     retry_queue_name = "worko-cand-profile-parser-retry-queue-"+env
     
-    GCP_DATABASE_NAME = "worko-corp-db-"+env
-    GCP_secret_name = "GCP-firestore-secret-"+env
-    DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
-
-
-    if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
-        print("This Event is triggered by SQS...")
-        record = event['Records'][0]
-        try:
-            message_body = json.loads(record['body'])
-        except Exception as e:
-            message_body = record['body']
-            print(f"message body direct loaded: {e}")
-        retry_counter = message_body.get("retry_counter", 0)
-        print(f"Message receved with retry counter: {retry_counter}")
-        
-        processed_text = message_body.get("processed_text","")
-        object_key = message_body.get("object_key","")
-        file_name = object_key.split("/")[-1].split(".")[0]
-        
-        if retry_counter >= 3:
-            print(f"Message received {retry_counter} times, sending to DLQ")
-            dlq_name = f"worko-cand-profile-parser-dlq-{env}"
-            dlq_url = get_queue_url(dlq_name)
-            sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(message_body))
-            return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
-        
-        if processed_text:
-            cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key,retry_counter)
-            if cvExtractedParsed:
-                send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
-        else:
-            print(f"Missing processed_text in SQS message body. Message: {message_body}")
-
-        return {
-            'statusCode': 200,
-            'body': json.dumps('Lambda successful for sqs event')
-        }
-
-    else:
-        print("This Event is triggered by S3...")
-        s3_client = boto3.client('s3')
-        s3_event = event['Records'][0]['s3']
-        bucket_name = s3_event['bucket']['name']
-        object_key = unquote_plus(s3_event['object']['key'])
-        file_name = object_key.split("/")[-1]
-        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
-        data = response['Body'].read()
-
-        
-        # Extract text from the PDF or DOCX file
-        if object_key.lower().endswith('.pdf'):
-            processed_text = extract_text_from_pdf(data)
-            processed_text = clean_text(processed_text)
-            print("Fetched_cv_text",processed_text)
-            if not processed_text:
-                print('Image Based Resume Processing..')    ######
-                base64_images = extract_images_from_pdf(data)
-                processed_text = invoke_claude_with_image(base64_images)   
-                print('image Based cv process completed')  
+    try:
+        if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:sqs':
+            print("This Event is triggered by SQS...")
+            record = event['Records'][0]
+            try:
+                body = json.loads(record['body'])
+            except Exception as e:
+                body = record['body']
+                print(f"message body direct loaded: {e}")
             
-        elif object_key.lower().endswith('.docx'):
-            processed_text = extract_text_from_docx(data)
-            processed_text = clean_text(processed_text)
-            print("Fetched_cv_text",processed_text)
+            ### customise with meta data you will receive from s3 event or sqs event
+            metadata = body.get('Metadata', {})
+            company_id = metadata.get("company_id", "")
+            bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid","")
+            doc = get_counts(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
+
+        
+            retry_counter = body.get("retry_counter", 0)
+            print(f"Message receved with retry counter: {retry_counter}")
+            
+            processed_text = body.get("processed_text","")
+            object_key = body.get("object_key","")
+            file_name = object_key.split("/")[-1].split(".")[0]
+            
+            if retry_counter >= 3:
+                print(f"Message received {retry_counter} times, sending to DLQ")
+                dlq_name = f"worko-cand-profile-parser-dlq-{env}"
+                dlq_url = get_queue_url(dlq_name)
+                body["bulksourcetyperesumeid"] =bulksourcetyperesumeid
+                sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(body))
+
+                cand_data = {"status": "FAILED"}  # send staus failed in ase of max retry>3
+                processingStatus = "FAILED"
+                updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager) 
+
+                return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
+            
+            elif processed_text:
+                cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key,retry_counter)
+                if cvExtractedParsed:
+                    # send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
+                    dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
+
+                    
+                    if dublicat_data is None:
+                        print(f"this is a unique resume, so trigring sqs for this resume and updasting as SUCCESS in firestore")
+                        sqs_send_data = {"companyId": company_id,
+                                "candidateCvAwsS3FileName":file_name,
+                                "cvExtractedParsed":cvExtractedParsed}
+                        send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                        status = "SUCCESS"
+                        cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                        updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
+
+                    elif dublicat_data is not None:
+                        print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
+                        status = "DUPLICATE"
+                        cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                        updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
+
+                        # if company_id:
+                        #     sqs_send_data = {"event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
+                        #         "companyId": company_id,
+                        #         "candidateCvAwsS3FileName":file_name,
+                        #         "cvExtractedParsed":cvExtractedParsed}
+                            
+
+                        # else:
+                        #     sqs_send_data = {
+                        #         "candidateCvAwsS3FileName":file_name,
+                        #         "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
+                        #         "cvExtractedParsed":cvExtractedParsed
+                        #     }
+                    else:
+                        print(f"Error in checking dublicacy in firstore for this resume with email {cvExtractedParsed.get('candidateEmail','')} and phone number {cvExtractedParsed.get('candidatePhoneNumber','')}")    
+
+            else:
+                print(f"Missing processed_text in SQS message body. Message: {body}")
+
         else:
-            print(f"Unsupported file format: {object_key}")
+            print("This Event is triggered by S3...")
+            s3_client = boto3.client('s3')
+            s3_event = event['Records'][0]['s3']
+            bucket_name = s3_event['bucket']['name']
+            object_key = unquote_plus(s3_event['object']['key'])
+            file_name = object_key.split("/")[-1]
+            response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+            data = response['Body'].read()
+            
+            metadata = get_meta_data(event)
+            bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid","")
+            doc = get_counts(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
+
+            # Extract text from the PDF or DOCX file
+            if object_key.lower().endswith('.pdf'):
+                processed_text = extract_text_from_pdf(data)
+                processed_text = clean_text(processed_text)
+                print("Fetched_cv_text",processed_text)
+                if not processed_text:
+                    print('Image Based Resume Processing..')    ######
+                    base64_images = extract_images_from_pdf(data)
+                    processed_text = invoke_claude_with_image(base64_images)   
+                    print('image Based cv process completed')  
+                
+            elif object_key.lower().endswith('.docx'):
+                processed_text = extract_text_from_docx(data)
+                processed_text = clean_text(processed_text)
+                print("Fetched_cv_text",processed_text)
+            else:
+                print(f"Unsupported file format: {object_key}")
+            
+
+            if "companies" in object_key: #example_path1:
+                company_id = object_key.split("/")[1]
+                metadata["company_id"] = company_id
+            else:
+                company_id = ""  #check once this work in all cases
+            cvExtractedParsed = process_cv(metadata,retry_queue_name,processed_text,gpt_models,object_key,0)
+
+            try:
+                if cvExtractedParsed:
+                    print("cvExtractedParsed",cvExtractedParsed)
+                    dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
+                    if dublicat_data is not None:
+                        
+                        print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
+                        status = "DUPLICATE"
+                        cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                        updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
+                    elif dublicat_data is None:    
+                        
+                        
+                        sqs_send_data = {"companyId": company_id,
+                                    "candidateCvAwsS3FileName":file_name,
+                                    "cvExtractedParsed":cvExtractedParsed}
+                        send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                        status = "SUCCESS"
+                        cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                        updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
+
+                            
+            except Exception as e:
+                print(f"Error sending final CV to SQS: {e}" )
+
+        this_is_last_resume = if_last_cv(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
+        if this_is_last_resume:
+            
+            print(f"""This is the last resume being processed for bulkSourceTypeResumeId:{bulksourcetyperesumeid}
+                   totalResumesUploaded : {doc.get("totalResumesUploaded",0)},
+                   totalResumesSucceeded : {doc.get("totalResumesSucceeded",0)},
+                   totalResumesFailed : {doc.get("totalResumesFailed",0)},
+                    totalResumesDuplicate : {doc.get("totalResumesDuplicate",0)},
+                    """)
         
-
-        
-        
-        cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,object_key,0)
-
-        try:
-            if cvExtractedParsed:
-                print("cvExtractedParsed",cvExtractedParsed)
-                send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
-        except Exception as e:
-            print(f"Error sending final CV to SQS: {e}" )
+            Data_of_cv  = DBManager.get_documents_by_bulkSourceTypeResumeId("bulkSourceTypeParseResumes",bulksourcetyperesumeid     )
+            print("all parsed cv data in bulk collection",Data_of_cv)
+            all_cv_parsing_summary =build_status_summary(Data_of_cv)
+            send_cv_summary_email(all_cv_parsing_summary, metadata)
 
 
-        return {
-            'statusCode': 200,
-            'body': json.dumps('Lambda successful for s3 event')
-        }
+    except Exception as e:
+        print(f"Error in lambda_handler: {e}")
+        cand_data = {"status": "FAILED"}  # send staus failed in ase of max retry>3
+        processingStatus = "FAILED"
+        updated_firstore_resume_status(processingStatus,cand_data,DBManager) 
+        return {'statusCode': 500, 'body': json.dumps(f'Error: {e}')}
+
 
 if __name__ == "__main__":
         
-        
-    # event = {
-    
+    event = {"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-02-13T05:21:25.288Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"103.176.210.127"},"responseElements":{"x-amz-request-id":"A7DP139505J83HYT","x-amz-id-2":"7qLalj01knes4BpKEg5sLH1PjcL91s9OGs69//2J775bV3sZLPXHSwrmOd1NLv3T0+tMFZQL58bR0lLKCVHtJFEc5LKEe1zZmU5N5y6A+Q4="},"s3":{"s3SchemaVersion":"1.0","configurationId":"a6c870b0-fd5d-4747-ac88-27e26b7ecba5","bucket":{"name":"worko-admin-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-admin-cand-profile-dev"},"object":{"key":"bulk-cvs/01KHAQ4QXFP0HW6BSFRK926JH1.pdf","size":225212,"eTag":"296eeb83abfe1d84d866db9a55621a78","sequencer":"00698EB4D53FB3565C"}}}]}
+    lambda_handler(event, None)
     # "Records": [
     #     {
     #     "eventVersion": "2.1",
@@ -975,88 +1320,88 @@ if __name__ == "__main__":
     # ]
     # }
 
-    event= {'Records':[{"eventSource":"aws:sqs","body":{"retry_counter":0,"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
-                                                        "processed_text":"""SHAUKAT SHAIKH
-        7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
-        github.com/Shaukat-Shaikh
-        Summary
-        linkedin.com/in/ShaukatShaikh71/
-        Data Science profess
-        ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
-        Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
-        LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
-        in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
-        complex business problems.
-        Work Experience
-        Al Engineer Intern, Worko.ai, Bangalore. Remote
-        •
-        Improved an Al-driven resume-job matching system using LLMs by 30% adding 
-        more structured logic and inserting feedback received from recruiter.
-        •
-        Implemented rag based job listing for job board using Aws Lambda Vector Store 
-        Opensearch.
-        •
-        Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
-        specific data to enhance semantic matching and candidate scoring.
-        Collaborated with fullstack team to build Ai driven a video interview product.
-        •
-        GenAl Trainer, Kalp Academy Remote
-        •
-        Delivering training programs on Generative AI, LLMs, and practical AI applications 
-        to aspiring professionals and developers.
-        •
-        Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
-        chain-of-thought prompting for optimal LLM performance.
-        •
-        Conducting hands-on sessions on LangChain framework for building production
-        grade LLM applications, agents, and memory systems.
-        •
-        Training on RAG pipelines, vector databases, embedding models, and semantic 
-        search optimization.
-        •
-        Developing course materials, assignments, and real-world projects for practical 
-        implementation.
-        •
-        Mentoring on GenAI deployment best practices, model selection, cost 
-        optimization, and ethical AI considerations.
-        Data science Engineer, Renew Instruments Wadala, Mumbai
-        •
-        Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
-        quantitative finance techniques to enhance predictive analytics and risk 
-        modelling.
-        •
-        Applied financial modelling expertise to equity options and futures, contributing 
-        to data-driven decision-making.
-        •
-        Utilized MS Office tools to document findings, create reports, and communicate 
-        financial insights effectively.
-        06/2025 – Present
-        11/2025 – Present
-        04/2024 – 03/2025
-        Technical Skills
-        Analytics
-        Programming Language
-        Python. Database Language: SQL MLOPS: CICD, 
-        GitHub Action. DockerHub
-        Al
-        GenAl, LangChain, LangGraph,
-        PROFESSIONAL COURSES
-        Numpy and Pandas Tools: Power BI, Advance Fixcel 
-        Cloud: AWS
-        Machin Learning
-        Data Pre-processing, Regression, Naive Bayes, 
-        Decision Trees, Support Vector Machines, K-Nearest 
-        Neighbors, Clustering, Principal Component 
-        Analysis, Boosting, Pytorch, Deep Learning (ANN, 
-        NLP, CNN)
-        MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
-        EDUCATION
-        2022 – 2023
-        MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
-        MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
-        2019 – 2022
-        2018 – 2019"""}}]}
-    lambda_handler(event, None)
+    # event= {'Records':[{"eventSource":"aws:sqs","body":{"retry_counter":0,"object_key":"companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/Shubham+prinicipal+engineer.pdf",
+    #                                                     "processed_text":"""SHAUKAT SHAIKH
+    #     7757852171 Mumbai, Maharashtra, India shaukatdatascience@gmail.com
+    #     github.com/Shaukat-Shaikh
+    #     Summary
+    #     linkedin.com/in/ShaukatShaikh71/
+    #     Data Science profess
+    #     ional with 1.5+ years building production ML/ DL solutions and LLM applications. 
+    #     Specialized in Generative AI, RAG pipelines, and transformers using cloud platforms, Crew AI, n8n, and 
+    #     LangChain. Currently working in the hiring industry while training AI professionals in GenAI. Proven expertise 
+    #     in model optimization, financial analytics, and AI automation. Passionate about leveraging cutting-edge AI for 
+    #     complex business problems.
+    #     Work Experience
+    #     Al Engineer Intern, Worko.ai, Bangalore. Remote
+    #     •
+    #     Improved an Al-driven resume-job matching system using LLMs by 30% adding 
+    #     more structured logic and inserting feedback received from recruiter.
+    #     •
+    #     Implemented rag based job listing for job board using Aws Lambda Vector Store 
+    #     Opensearch.
+    #     •
+    #     Fine-tuned transformer models (e.g., MiniLM, sentence-transformers) on domain
+    #     specific data to enhance semantic matching and candidate scoring.
+    #     Collaborated with fullstack team to build Ai driven a video interview product.
+    #     •
+    #     GenAl Trainer, Kalp Academy Remote
+    #     •
+    #     Delivering training programs on Generative AI, LLMs, and practical AI applications 
+    #     to aspiring professionals and developers.
+    #     •
+    #     Teaching Prompt Engineering techniques including zero-shot, few-shot, and 
+    #     chain-of-thought prompting for optimal LLM performance.
+    #     •
+    #     Conducting hands-on sessions on LangChain framework for building production
+    #     grade LLM applications, agents, and memory systems.
+    #     •
+    #     Training on RAG pipelines, vector databases, embedding models, and semantic 
+    #     search optimization.
+    #     •
+    #     Developing course materials, assignments, and real-world projects for practical 
+    #     implementation.
+    #     •
+    #     Mentoring on GenAI deployment best practices, model selection, cost 
+    #     optimization, and ethical AI considerations.
+    #     Data science Engineer, Renew Instruments Wadala, Mumbai
+    #     •
+    #     Developed ML/ DL models using Scikit-learn and Tensorflow, incorporating 
+    #     quantitative finance techniques to enhance predictive analytics and risk 
+    #     modelling.
+    #     •
+    #     Applied financial modelling expertise to equity options and futures, contributing 
+    #     to data-driven decision-making.
+    #     •
+    #     Utilized MS Office tools to document findings, create reports, and communicate 
+    #     financial insights effectively.
+    #     06/2025 – Present
+    #     11/2025 – Present
+    #     04/2024 – 03/2025
+    #     Technical Skills
+    #     Analytics
+    #     Programming Language
+    #     Python. Database Language: SQL MLOPS: CICD, 
+    #     GitHub Action. DockerHub
+    #     Al
+    #     GenAl, LangChain, LangGraph,
+    #     PROFESSIONAL COURSES
+    #     Numpy and Pandas Tools: Power BI, Advance Fixcel 
+    #     Cloud: AWS
+    #     Machin Learning
+    #     Data Pre-processing, Regression, Naive Bayes, 
+    #     Decision Trees, Support Vector Machines, K-Nearest 
+    #     Neighbors, Clustering, Principal Component 
+    #     Analysis, Boosting, Pytorch, Deep Learning (ANN, 
+    #     NLP, CNN)
+    #     MASTERS IN DATA SCIENCE WITH AI AND AWS, IT VEDANT, THANE
+    #     EDUCATION
+    #     2022 – 2023
+    #     MUMBAIUNIVERSITY, BSC (SMT.CHM COLLEGE ULHASNAGAR)
+    #     MUMBAIUNIVERSITY, HSC (ST.MERRY'S JR COLLEGE THANE)
+    #     2019 – 2022
+    #     2018 – 2019"""}}]}
+    # lambda_handler(event, None)
 
 
 
