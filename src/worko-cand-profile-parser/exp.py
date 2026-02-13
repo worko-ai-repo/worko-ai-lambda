@@ -1,4 +1,5 @@
 # gpt-4.1-mini confugrations
+from importlib import metadata
 import requests
 import json
 from typing import Tuple, Dict, Any, Optional, Union
@@ -6,9 +7,236 @@ import boto3
 import time
 import json
 from typing import Callable, Any
+from lambda_function import *
+from google.cloud import firestore
+import uuid
+
+def updated_firstore_resume_status(processingStatus,bulkSourceTypeResumeId,update_data,DBManager):
+    """this function will update firestore document if a resume is processed successfully with cvExtractedParsed data and also update status of that resume in firestore document"""
+    print("updating firestore document with cvExtractedParsed data and status of that resume in firestore document")
+    
+    doc_id = str(uuid.uuid4())
+    update_data["id"] = doc_id
+    update_data["bulkSourceTypeResumeId"] = bulkSourceTypeResumeId
+    
+    # Create document in bulkSourceTypeParseResumes collection
+    child_collection_name = "bulkSourceTypeParseResumes"
+    DBManager.update_firestore_document_data(child_collection_name, doc_id, update_data, processingStatus)
+    
+    # Increment totalResumesProcessed in bulkSourceTypeResumes collection if COMPLETED
+    if processingStatus == "SUCCESS":
+        print(f"Incrementing totalResumesProcessed : {processingStatus} of bulkSourceTypeResumeId {bulkSourceTypeResumeId}")
+        
+        parent_collection_name = "bulkSourceTypeResumes"
+        parent_doc_ref = DBManager.db.collection(parent_collection_name).document(bulkSourceTypeResumeId)
+        parent_doc_ref.update({"totalResumesProcessed": firestore.Increment(1)})
+        print(f"Incremented totalResumesProcessed for {bulkSourceTypeResumeId}")
+    elif processingStatus == "FAILED":
+        print(f"Incrementing totalResumesFailed : {processingStatus} of bulkSourceTypeResumeId {bulkSourceTypeResumeId}")
+        
+        parent_collection_name = "bulkSourceTypeResumes"
+        parent_doc_ref = DBManager.db.collection(parent_collection_name).document(bulkSourceTypeResumeId)
+        parent_doc_ref.update({"totalResumesFailed": firestore.Increment(1)})
+        print(f"Incremented totalResumesFailed for {bulkSourceTypeResumeId}")
+        
+        
+    elif processingStatus == "DUPLICATE":
+        print(f"Incrementing totalResumesDuplicate : {processingStatus} of bulkSourceTypeResumeId {bulkSourceTypeResumeId}")
+        
+        parent_collection_name = "bulkSourceTypeResumes"
+        parent_doc_ref = DBManager.db.collection(parent_collection_name).document(bulkSourceTypeResumeId)
+        parent_doc_ref.update({"totalResumesDuplicate": firestore.Increment(1)})
+        print(f"Incremented totalResumesDuplicate for {bulkSourceTypeResumeId}")
+        
+    else:
+        print(f"Unknown processingStatus: {processingStatus} for bulkSourceTypeResumeId {bulkSourceTypeResumeId}. No increment performed in totalResumesProcessed.")
+
+def get_data_to_update_in_firstore(cvExtractedParsed,bulkSourceTypeResumeId,status):
+
+    # send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
+    candidateName = cvExtractedParsed.get("candidateName","")
+    candidate_email = cvExtractedParsed.get("candidateEmail","")
+    candidatePhoneNumber = cvExtractedParsed.get("candidatePhoneNumber","")
+    candidateNumber = cvExtractedParsed.get("candidateNumber",0)
+    candidatePhoneCountryCode = cvExtractedParsed.get("candidatePhoneCountryCode",0)
+    phoneNumberDetails ={"candidatePhoneNumber":candidatePhoneNumber,"candidateNumber":candidateNumber,"candidatePhoneCountryCode":candidatePhoneCountryCode}
+    createdAt = datetime.now().isoformat()
+    updatedAt = datetime.now().isoformat()
+    return {"bulkSourceTypeResumeId":bulkSourceTypeResumeId,
+        "candidateName": candidateName,
+        "candidateEmail": candidate_email,
+        "phoneNumberDetails": phoneNumberDetails,
+        "createdAt": createdAt,
+        "updatedAt": updatedAt,
+        "status":status
+    }
+
+def build_status_summary(all_docs: list):
+    summary = {
+        "SUCCESS": {"count": 0, "candidates": []},
+        "FAILED": {"count": 0, "candidates": []},
+        "DUPLICATE": {"count": 0, "candidates": []},
+    }
+
+    for data in all_docs:
+        status = data.get("status")
+        name = data.get("candidateName", "")
+        email = data.get("candidateEmail", "")
+
+        if status in summary:
+            summary[status]["count"] += 1
+            summary[status]["candidates"].append({
+                "candidateName": name,
+                "candidateEmail": email
+            })
+
+    return summary
+
+def get_meta_data(event, context):
+    s3_client = boto3.client('s3')
+
+    # Extract bucket and key from event
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    # key = "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KH8PX3GBW8N6RP1SBRSXN79P.pdf"
+    # bucket = "worko-corporate-cand-profile-dev"
+    # Get object metadata
+    response = s3_client.head_object(Bucket=bucket, Key=key)
+    metadata = response.get('Metadata', {})
+    return metadata
+    # Extract your values
+    # bulk_source_type_resume_id = metadata.get('bulksourcetyperesumeid')
+    # company_id = metadata.get('companyid')
 
 
+def send_cv_summary_email(all_cv_parsing_summary, to_address):
+    import csv
+    from io import StringIO
+    
+    ses = boto3.client('ses', region_name='ap-south-1')
+    source = "no-reply@worko.work"
+    
+    summary, total_count = all_cv_parsing_summary
+    
+    csv_buffer = StringIO()
+    writer = csv.writer(csv_buffer)
+    
+    # SUCCESS section
+    writer.writerow(["SUCCESS", f"Count: {summary['SUCCESS']['count']}", ""])
+    writer.writerow(["Candidate Name", "Candidate Email", ""])
+    for candidate in summary['SUCCESS']['candidates']:
+        writer.writerow([candidate["candidateName"], candidate["candidateEmail"], ""])
+    writer.writerow(["", "", ""])
+    
+    # FAILED section
+    writer.writerow(["FAILED", f"Count: {summary['FAILED']['count']}", ""])
+    writer.writerow(["Candidate Name", "Candidate Email", ""])
+    for candidate in summary['FAILED']['candidates']:
+        writer.writerow([candidate["candidateName"], candidate["candidateEmail"], ""])
+    writer.writerow(["", "", ""])
+    
+    # DUPLICATE section
+    writer.writerow(["DUPLICATE", f"Count: {summary['DUPLICATE']['count']}", ""])
+    writer.writerow(["Candidate Name", "Candidate Email", ""])
+    for candidate in summary['DUPLICATE']['candidates']:
+        writer.writerow([candidate["candidateName"], candidate["candidateEmail"], ""])
+    
+    csv_content = csv_buffer.getvalue()
+    
+    subject = "Bulk CV Processing Complete - Summary Report"
+    body_text = f"""Dear User,
 
+Your bulk CV upload has been successfully processed.
+
+Processing Summary:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total CVs Uploaded: {total_count}
+Successfully Processed: {summary['SUCCESS']['count']}
+Failed: {summary['FAILED']['count']}
+Duplicates Detected: {summary['DUPLICATE']['count']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please find the detailed report attached as a CSV file.
+
+Best regards,
+Worko Team"""
+    
+    raw_message = f"From: {source}\nTo: {to_address}\nSubject: {subject}\nMIME-Version: 1.0\nContent-Type: multipart/mixed; boundary=\"boundary\"\n\n--boundary\nContent-Type: text/plain\n\n{body_text}\n\n--boundary\nContent-Type: text/csv; name=\"cv_processing_summary.csv\"\nContent-Disposition: attachment; filename=\"cv_processing_summary.csv\"\n\n{csv_content}\n--boundary--"
+    
+    ses.send_raw_email(
+        Source=source,
+        Destinations=[to_address],
+        RawMessage={"Data": raw_message}
+    )
+    print(f"Email sent to {to_address}")
+
+
+cvExtractedParsed  = {
+    "candidateName": "Shaukat Shaikh",
+    "candidateEmail": "shaukatdatascience@gmail.com",
+    "candidatePhoneNumber": "+91-9876543210",
+    "candidateNumber": 9876543210,
+    "candidatePhoneCountryCode": 91
+}
+parent_doc_id = "01KH8DQ92Z7PDCQ0QCG83ZN1PS"
+# processingStatus ="SUCCESS"
+processingStatus ="FAILED"
+update_data = get_data_to_update_in_firstore(cvExtractedParsed,parent_doc_id,processingStatus)
+
+
+parent_collection_name_for_firstore_updating="bulkSourceTypeResumes"
+GCP_DATABASE_NAME = "worko-corp-db-dev"
+GCP_secret_name = "GCP-firestore-secret-dev"
+DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+
+
+# updated_firstore_resume_status(processingStatus,parent_doc_id,update_data,DBManager)
+# get_doc ="2cf5b8fd-9192-4e3a-8e06-470d2a90318c"
+# result = DBManager.get_document_firstore("bulkSourceTypeResumes","01KH8PX2NX9J5SQAV80A8769FF")
+# result = DBManager.get_all_documents_from_collection("bulkSourceTypeParseResumes")
+# result = DBManager.get_document_firstore("bulkSourceTypeResumes",parent_doc_id)
+# result  = DBManager.get_documents_by_bulkSourceTypeResumeId("bulkSourceTypeParseResumes",parent_doc_id)
+# all_cv_parsing_summary =build_status_summary(result)
+# # result = get_meta_data(None,None)
+# subject = "cv parsing reuslt summary"
+# body_text = "see the below csv"
+# to_address = "shaukatdatascience@gmail.com"
+# send_cv_summary_email(all_cv_parsing_summary, to_address)
+
+# with open(r"output.json", "w") as f:
+#     json.dump(result, f, indent=4)
+# print("Status summary:", build_status_summary(result))
+# print(result)
+
+
+# import requests
+
+# url = "https://bdwmxdaqll.execute-api.ap-south-1.amazonaws.com/dev/bulk-source-type-resume/01KH8DQ92Z7PDCQ0QCG83ZN1PS"
+
+# response = requests.get(url)
+
+# print("Status Code:", response.status_code)
+# print("Response:", response.json())
+
+def get_meta_data(event):
+    try:
+        s3_client = boto3.client('s3')
+        bucket = event['Records'][0]['s3']['bucket']['name']
+        key = event['Records'][0]['s3']['object']['key']
+        response = s3_client.head_object(Bucket=bucket, Key=key)
+        metadata = response.get('Metadata', {})
+        
+        if not metadata:
+            print(f"Warning: No metadata found for s3://{bucket}/{key}")
+            return {}
+        return metadata
+    except Exception as e:
+        print(f"Error retrieving metadata: {e}")
+        return {}
+
+
+event = {"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-02-13T05:21:25.288Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"103.176.210.127"},"responseElements":{"x-amz-request-id":"A7DP139505J83HYT","x-amz-id-2":"7qLalj01knes4BpKEg5sLH1PjcL91s9OGs69//2J775bV3sZLPXHSwrmOd1NLv3T0+tMFZQL58bR0lLKCVHtJFEc5LKEe1zZmU5N5y6A+Q4="},"s3":{"s3SchemaVersion":"1.0","configurationId":"a6c870b0-fd5d-4747-ac88-27e26b7ecba5","bucket":{"name":"worko-admin-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-admin-cand-profile-dev"},"object":{"key":"bulk-cvs/01KHAQ4QXFP0HW6BSFRK926JH1.pdf","size":225212,"eTag":"296eeb83abfe1d84d866db9a55621a78","sequencer":"00698EB4D53FB3565C"}}}]}
+print(get_meta_data(event))
 #     ############################################################################
 # def get_queue_url(queue_name):
 #     sqs = boto3.client('sqs')
@@ -293,61 +521,62 @@ from typing import Callable, Any
 # print(output)
 
 
-import boto3
-from datetime import datetime
+# import boto3
+# from datetime import datetime
 
-def download_lambda_logs(function_name, output_file='lambda_logs.txt', max_events=200):
-    """Download last N CloudWatch logs for a Lambda function."""
-    logs_client = boto3.client('logs', region_name='ap-south-1')
-    log_group_name = f'/aws/lambda/{function_name}'
+# def download_lambda_logs(function_name, output_file='lambda_logs.txt', max_events=200):
+#     """Download last N CloudWatch logs for a Lambda function."""
+#     logs_client = boto3.client('logs', region_name='ap-south-1')
+#     log_group_name = f'/aws/lambda/{function_name}'
     
-    try:
-        # Get log streams sorted by last event time
-        streams_response = logs_client.describe_log_streams(
-            logGroupName=log_group_name,
-            orderBy='LastEventTime',
-            descending=True,
-            limit=5
-        )
+#     try:
+#         # Get log streams sorted by last event time
+#         streams_response = logs_client.describe_log_streams(
+#             logGroupName=log_group_name,
+#             orderBy='LastEventTime',
+#             descending=True,
+#             limit=5
+#         )
         
-        all_events = []
+#         all_events = []
         
-        # Fetch events from recent streams
-        for stream in streams_response['logStreams']:
-            stream_name = stream['logStreamName']
+#         # Fetch events from recent streams
+#         for stream in streams_response['logStreams']:
+#             stream_name = stream['logStreamName']
             
-            events_response = logs_client.get_log_events(
-                logGroupName=log_group_name,
-                logStreamName=stream_name,
-                limit=max_events,
-                startFromHead=False
-            )
+#             events_response = logs_client.get_log_events(
+#                 logGroupName=log_group_name,
+#                 logStreamName=stream_name,
+#                 limit=max_events,
+#                 startFromHead=False
+#             )
             
-            all_events.extend(events_response['events'])
+#             all_events.extend(events_response['events'])
             
-            if len(all_events) >= max_events:
-                break
+#             if len(all_events) >= max_events:
+#                 break
         
-        # Sort by timestamp and take last N
-        all_events.sort(key=lambda x: x['timestamp'])
-        recent_events = all_events[-max_events:]
+#         # Sort by timestamp and take last N
+#         all_events.sort(key=lambda x: x['timestamp'])
+#         recent_events = all_events[-max_events:]
         
-        # Write to file
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(f"Lambda Function: {function_name}\n")
-            f.write(f"Log Group: {log_group_name}\n")
-            f.write(f"Downloaded: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Total Events: {len(recent_events)}\n")
-            f.write("="*80 + "\n\n")
+#         # Write to file
+#         with open(output_file, 'w', encoding='utf-8') as f:
+#             f.write(f"Lambda Function: {function_name}\n")
+#             f.write(f"Log Group: {log_group_name}\n")
+#             f.write(f"Downloaded: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+#             f.write(f"Total Events: {len(recent_events)}\n")
+#             f.write("="*80 + "\n\n")
             
-            for event in recent_events:
-                timestamp = datetime.fromtimestamp(event['timestamp']/1000).strftime('%Y-%m-%d %H:%M:%S')
-                f.write(f"[{timestamp}] {event['message']}\n")
+#             for event in recent_events:
+#                 timestamp = datetime.fromtimestamp(event['timestamp']/1000).strftime('%Y-%m-%d %H:%M:%S')
+#                 f.write(f"[{timestamp}] {event['message']}\n")
         
-        print(f"Downloaded {len(recent_events)} log events to {output_file}")
+#         print(f"Downloaded {len(recent_events)} log events to {output_file}")
         
-    except Exception as e:
-        print(f"Error downloading logs: {e}")
+#     except Exception as e:
+#         print(f"Error downloading logs: {e}")
 
-# Usage
-download_lambda_logs('worko-bulk-jd-resume-matching-dev', 'lambda_logs.txt', 200)
+# # Usage
+# download_lambda_logs('worko-bulk-jd-resume-matching-dev', 'lambda_logs.txt', 200)
+
