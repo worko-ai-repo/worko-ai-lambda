@@ -29,7 +29,8 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
     2) if noticePeriod is not mentioned in resume text return null for noticePeriod.
     3) startedYear and passingYear must be number or null not str eg, 2014, 2020 or null if not mentioned in resume text.
     4) -In multipleCandidateExperience if anything is not present jut don't retrun the key never give null or empty string.
-       - give startDate and endDate in iso date formate only exaple 2026-02-14 if moth and date is not mentioned just take 01-01
+       - give startDate and endDate in iso date formate only exaple 2026-02-14 if moth and date is not mentioned just take 01-01.
+       - if enddate is not there just do not return the key itself do not give "" .
     {{
         "name": "",
         "email": "",
@@ -160,7 +161,7 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
     merged = {**response, **content2}  # , **addded_details}
     merged = process_parsed_cv_json(merged)
     return merged
-# Initialize the AWS service clients
+# Initialize the AWS service clientsend
 dynamodb = boto3.resource('dynamodb')
 s3_client = boto3.client('s3')
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
