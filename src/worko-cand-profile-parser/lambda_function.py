@@ -41,7 +41,7 @@ def get_account_id():
     return response['Account']
 
 def send_final_sqs_for_cvExtractparsed(body):
-    file_name = body.get("file_name","")
+    file_name = body.get("candidateCvAwsS3FileName","")
     cvExtractedParsed = body.get("cvExtractedParsed","")
 
     if not body.get("companyId",""):
@@ -1208,8 +1208,8 @@ def lambda_handler(event, context):
             s3_event = event['Records'][0]['s3']
             bucket_name = s3_event['bucket']['name']
             object_key = unquote_plus(s3_event['object']['key'])
-            object_key = unquote_plus(object_key)
-            file_name = object_key.split("/")[-1]
+            # object_key = unquote_plus(object_key)
+            file_name = object_key.split("/")[-1]  # we need to sent it eith .pdf it will be used for view cv
             print(" file_name,", file_name)
             response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
             data = response['Body'].read()
