@@ -1,27 +1,31 @@
-# gpt-4.1-mini confugrations
-from importlib import metadata
-import requests
-import json
-from typing import Tuple, Dict, Any, Optional, Union
-import boto3
-import time
-import json
-from typing import Callable, Any
-from lambda_function import *
-from google.cloud import firestore
-import uuid
+# # gpt-4.1-mini confugrations
+# from importlib import metadata
+# import requests
+# import json
+# from typing import Tuple, Dict, Any, Optional, Union
+# import boto3
+# import time
+# import json
+# from typing import Callable, Any
+# from lambda_function import *
+# from google.cloud import firestore
+# import uuid
+from datetime import date, datetime, timezone
 
-def send_ses_email(to_address, subject, body_text):
-    ses = boto3.client('ses', region_name='ap-south-1')
-    source = os.environ.get("SES_SOURCE_EMAIL", "no-reply@worko.ai")
-    print("msg gone")
-    return ses.send_email(
-        Source=source,
-        Destination={"ToAddresses": [to_address]},
-        Message={"Subject": {"Data": subject}, "Body": {"Text": {"Data": body_text}}}
-    )
-to_address = "shaukat.shaikh@worko.ai"
-send_ses_email(to_address, "hii", "This is a test email.")
+# Get today's date in ISO format (YYYY-MM-DD)
+today_iso = date.today()
+print(f"ISO Date: {today_iso}") 
+# def send_ses_email(to_address, subject, body_text):
+#     ses = boto3.client('ses', region_name='ap-south-1')
+#     source = os.environ.get("SES_SOURCE_EMAIL", "no-reply@worko.ai")
+#     print("msg gone")
+#     return ses.send_email(
+#         Source=source,
+#         Destination={"ToAddresses": [to_address]},
+#         Message={"Subject": {"Data": subject}, "Body": {"Text": {"Data": body_text}}}
+#     )
+# to_address = "shaukat.shaikh@worko.ai"
+# send_ses_email(to_address, "hii", "This is a test email.")
 
 
 # def check_duplicate_with_cv_age(cvExtractedParsed, object_key, DBManager):

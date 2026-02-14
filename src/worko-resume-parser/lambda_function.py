@@ -28,7 +28,8 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
     1) provide only below given json as output no other comments or explanations are allowd.
     2) if noticePeriod is not mentioned in resume text return null for noticePeriod.
     3) startedYear and passingYear must be number or null not str eg, 2014, 2020 or null if not mentioned in resume text.
-
+    4) -In multipleCandidateExperience if anything is not present jut don't retrun the key never give null or empty string.
+       - give startDate and endDate in iso date formate only exaple 2026-02-14 if moth and date is not mentioned just take 01-01
     {{
         "name": "",
         "email": "",
