@@ -73,7 +73,8 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
     # response = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing")
 
     response = model[0].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing " )
-    
+    response["multipleCandidateExperience"]=process_parsed_cv_json(response["multipleCandidateExperience"])
+    # merged = process_parsed_cv_json(merged)
     response = process_parsed_cv_json(response)
 
 
@@ -703,7 +704,9 @@ def lambda_handler(event, context):
             }
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", "jobId": "01K8SZ21FPB7TD10YQQAJ22KN0", "agencyUserId": "21YCYSMG5HE2PMZ0459J0VPCG9", "candidateParsedCvAwsS3FileName": "01KHDGVAE3WTNES3HYVQ2W056C.pdf"}
+
     # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
     # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
     # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
@@ -717,4 +720,4 @@ def lambda_handler(event, context):
     # "cvAwsS3ResourceType": "CAND_SUBMIT_CV_JOB"
     #     }
     # # example_path = "s3://worko-app-dev/candidate-submit-cvs/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K7Z7RM97J7V8E4059KQ1D2Z6/cvs/01KH1XG7Y8JJHZ65CAX8ZPERCQ.pdf"
-    # lambda_handler(event, None)
+    lambda_handler(event, None)
