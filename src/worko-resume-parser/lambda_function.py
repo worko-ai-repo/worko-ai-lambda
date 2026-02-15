@@ -707,13 +707,13 @@ def lambda_handler(event, context):
 
 
 # if __name__ == "__main__":
-    # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", "jobId": "01K8SZ21FPB7TD10YQQAJ22KN0", "agencyUserId": "21YCYSMG5HE2PMZ0459J0VPCG9", "candidateParsedCvAwsS3FileName": "01KHDGVAE3WTNES3HYVQ2W056C.pdf"}
+    event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", "jobId": "01K8SZ21FPB7TD10YQQAJ22KN0", "agencyUserId": "21YCYSMG5HE2PMZ0459J0VPCG9", "candidateParsedCvAwsS3FileName": "01KHDGVAE3WTNES3HYVQ2W056C.pdf"}
 
     # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
     # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
     # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
     # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
-    # event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW.pdf", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
+    event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW.pdf", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
 
     #prod
     # event = {'event': 'SOURCE_TYPE_REFRESH_CV', 'candidateParsedCvAwsS3FileName': '01KHBKEBFF6P3WJK3YMRZQY9WK.pdf', 'cvAwsS3FilePath': 'bulk-cvs', 'cvAwsS3ResourceType': 'ADMIN_CAND_BULK_CV_UPLOAD', 'cvAwsS3BucketName': 'worko-admin-cand-profile-prod'}
