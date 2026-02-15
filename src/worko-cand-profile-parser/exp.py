@@ -7,14 +7,23 @@
 # import time
 # import json
 # from typing import Callable, Any
-# from lambda_function import *
+from lambda_function import *
 # from google.cloud import firestore
 # import uuid
 from datetime import date, datetime, timezone
+env=os.environ.get("ENVIRONMENT", "dev")
+azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+azure_openai_secret = get_secret(azure_openai_secret_name)
+# azure_openai_secret["AZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini"] #=azure_openai_secret["ZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini"]
+gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+gpt4_1_mini = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
+print("azure_openai_secret",azure_openai_secret,len(azure_openai_secret))
+with open(r"logs/secrect-dev", 'w') as f:
+    json.dump(azure_openai_secret, f, indent=4)
 
 # Get today's date in ISO format (YYYY-MM-DD)
-today_iso = date.today()
-print(f"ISO Date: {today_iso}") 
+# today_iso = date.today()
+# print(f"ISO Date: {today_iso}") 
 # def send_ses_email(to_address, subject, body_text):
 #     ses = boto3.client('ses', region_name='ap-south-1')
 #     source = os.environ.get("SES_SOURCE_EMAIL", "no-reply@worko.ai")
