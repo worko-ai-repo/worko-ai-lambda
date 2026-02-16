@@ -75,7 +75,7 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
     response = model[0].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing " )
     response["multipleCandidateExperience"]=process_parsed_cv_json(response["multipleCandidateExperience"])
     # merged = process_parsed_cv_json(merged)
-    response = process_parsed_cv_json(response)
+    # response = process_parsed_cv_json(response)
 
 
     prompt = (
@@ -148,20 +148,12 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
         f"  ]\n"
         f"}}}}\n"
     )
-
-    # content2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
-
-    
     content2 = model[1].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing for skills and pref" )
-    # candidateParsedCvAwsS3File =candidateParsedCvAwsS3FileName.split(".")[-1]
-    # addded_details = {
-    #                 "jobId":jobId,
-    #                 "agencyUserId":agencyUserId,
-    #                 "candidateParsedCvAwsS3FileName":candidateParsedCvAwsS3File,
-    #                 "agencyUserId":companyId}
+
     merged = {**response, **content2}  # , **addded_details}
     merged = process_parsed_cv_json(merged)
     return merged
+
 # Initialize the AWS service clientsend
 dynamodb = boto3.resource('dynamodb')
 s3_client = boto3.client('s3')
@@ -191,6 +183,12 @@ def lambda_handler(event, context):
         cvAwsS3ResourceType = event.get("cvAwsS3ResourceType")
         s3_bucket_name = event.get("cvAwsS3BucketName")
         FileName = event.get("candidateParsedCvAwsS3FileName")
+        try:
+            if ".pdf" not in FileName:
+                FileName = FileName+".pdf"
+        except Exception as e:
+            print( " faild to add .pdf in s3 file name in case if its not there")
+
         key = f"{cvAwsS3FilePath}/{FileName}"
         print("key:",key,"s3_bucket_name",s3_bucket_name)
         try:
@@ -626,8 +624,11 @@ def lambda_handler(event, context):
             # Update the DynamoDB item with the cvExytractparsed json
             update_response = update_cv_extract_parsed_in_dynamodb(table_name, partition_key_value, sort_key_value, completion_text)
             
-
-
+            try:
+                completion_text["personalDetails"]["name"] = completion_text["personalDetails"]["name"].lower()
+                completion_text["personalDetails"]["email"] = completion_text["personalDetails"]["email"].lower()
+            except Exception as e:
+                print("error in wile lower casing in sign up or update cv flow name and email", e)
             multipleCandidateExperience = completion_text['multipleCandidateExperience']
             about = completion_text['about']
             otherSocialPlatForms= completion_text['otherSocialPlatForms']
@@ -706,17 +707,20 @@ def lambda_handler(event, context):
             }
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", "jobId": "01K8SZ21FPB7TD10YQQAJ22KN0", "agencyUserId": "21YCYSMG5HE2PMZ0459J0VPCG9", "candidateParsedCvAwsS3FileName": "01KHDGVAE3WTNES3HYVQ2W056C.pdf"}
 
     # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
     # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
     # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
     # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
-    # event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW.pdf", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
+
+
+    event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
 
     #prod
     # event = {'event': 'SOURCE_TYPE_REFRESH_CV', 'candidateParsedCvAwsS3FileName': '01KHBKEBFF6P3WJK3YMRZQY9WK.pdf', 'cvAwsS3FilePath': 'bulk-cvs', 'cvAwsS3ResourceType': 'ADMIN_CAND_BULK_CV_UPLOAD', 'cvAwsS3BucketName': 'worko-admin-cand-profile-prod'}
+    
     # event = {
     # "companyId": "01JWAQF1G96E0SE9XHXSFGHNWW",
     # "jobId": "01K7Z7RM97J7V8E4059KQ1D2Z6",

@@ -47,6 +47,12 @@ def process_parsed_cv_json(cv_obj):
         # Add back cleaned education if it has items
         if education:
             cv_obj["education"] = education
+        try:
+            cv_obj["name"] = cv_obj["name"].lower()
+            cv_obj["email"] = cv_obj["email"].lower()
+        except Exception as e:
+            print("Error in lowercasing name and email",e)
+
         
         return cv_obj
     except Exception as e:

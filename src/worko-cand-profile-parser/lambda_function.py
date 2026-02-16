@@ -522,6 +522,13 @@ def process_parsed_cv_json(cv_obj):
         if education:
             cv_obj["education"] = education
         
+        try:
+            cv_obj["candidateName"] = cv_obj["candidateName"].lower()
+            cv_obj["candidateEmail"] = cv_obj["candidateEmail"].lower()
+            cv_obj["candidateLocation"] = cv_obj["candidateLocation"].lower()
+        except Exception as e:
+            print("Error: - failed to lowercase name and email or Location of cv parsed results")
+        
         return cv_obj
     except Exception as e:
         print(f"Error processing parsed CV JSON: {e}")
