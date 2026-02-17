@@ -1,0 +1,5 @@
+ {
+   "ENVIRONMENT": "dev",
+   "AWS_REGION": "ap-south-1",
+   "S3_BUCKET_MANAGED": "aws-sam-cli-managed-default-samclisourcebucket-mpwvaft0yfqx"
+ }

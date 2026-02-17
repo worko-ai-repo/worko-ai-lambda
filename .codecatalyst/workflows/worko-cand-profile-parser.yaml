@@ -17,11 +17,15 @@ Actions:
         - Run: |
             echo "=== Candidate Profile Parser Lambda Deployment ===" 
             
-            # Load environment configuration
+            # Load environment configuration from root
             ENV=$(cat env-config.json | jq -r '.ENVIRONMENT')
             export AWS_REGION=$(cat env-config.json | jq -r '.AWS_REGION')
             export AWS_DEFAULT_REGION=$AWS_REGION
             S3_BUCKET_MANAGED=$(cat env-config.json | jq -r '.S3_BUCKET_MANAGED')
+            
+            echo "Environment: $ENV"
+            echo "Region: $AWS_REGION"
+            echo "S3 Bucket: $S3_BUCKET_MANAGED"
             
             STACK_NAME="worko-cand-profile-parser-${ENV}-stack"
             FUNCTION_NAME="worko-cand-profile-parser-${ENV}"
