@@ -147,7 +147,7 @@ def invoke_claude_with_image(base64_images):
     # Add resume parsing instructions
     messages[0]["content"].append({
         "type": "text",
-        "text": ('Carefully analyze the entire resume shown in the image. Extract all visible information and present it in plain text format, organized topic-wise never miss name and year of experience.\n\n'
+        "text": ('Carefully analyze the entire resume shown in the image. Extract all visible information and present it in plain text format, organized topic-wise never miss name, email, mobile number and year of experience as this will be prsent alwasy in the data.\n\n'
             'Name:\nEmail:\nExperience in year:\nAchievements:\nTechnical skills:'
             '\nSoft skills:\nCore skills:\nEducation:\nIndustry experience:\nResponsibilities:'
             '\nAchievements against responsibility:\nCertifications:\nStrength:\n'
