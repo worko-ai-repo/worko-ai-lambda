@@ -68,27 +68,10 @@ Actions:
             echo "Deploying to CloudFormation..."
             if [ "$LAMBDA_EXISTS" = true ]; then
               echo "Updating existing Lambda function"
-              sam deploy \
-                --template-file .aws-sam/build/template.yaml \
-                --stack-name $STACK_NAME \
-                --region $AWS_REGION \
-                --capabilities CAPABILITY_IAM \
-                --parameter-overrides Environment=$ENV \
-                --s3-bucket $S3_BUCKET_MANAGED \
-                --no-confirm-changeset \
-                --no-fail-on-empty-changeset
+              sam deploy --template-file .aws-sam/build/template.yaml --stack-name $STACK_NAME --region $AWS_REGION --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENV --s3-bucket $S3_BUCKET_MANAGED --no-confirm-changeset --no-fail-on-empty-changeset
             else
               echo "Creating new Lambda function"
-              sam deploy \
-                --template-file .aws-sam/build/template.yaml \
-                --stack-name $STACK_NAME \
-                --region $AWS_REGION \
-                --capabilities CAPABILITY_IAM \
-                --parameter-overrides Environment=$ENV \
-                --s3-bucket $S3_BUCKET_MANAGED \
-                --on-failure DELETE \
-                --no-confirm-changeset \
-                --no-fail-on-empty-changeset
+              sam deploy --template-file .aws-sam/build/template.yaml --stack-name $STACK_NAME --region $AWS_REGION --capabilities CAPABILITY_IAM --parameter-overrides Environment=$ENV --s3-bucket $S3_BUCKET_MANAGED --on-failure DELETE --no-confirm-changeset --no-fail-on-empty-changeset
             fi
             
             DEPLOY_EXIT_CODE=$?
