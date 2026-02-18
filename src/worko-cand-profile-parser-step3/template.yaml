@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Worko Candidate Profile Parser Step3 Lambda Function
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment name (dev, staging, prod)
+
+Resources:
+  WorkoCandProfileParserStep3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'worko-cand-profile-parser-step3-${Environment}'
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.11
+      CodeUri: .
+      MemorySize: 512
+      Timeout: 300
+      Layers:
+        - !Ref WorkoCandProfileParserStep3DepsLayer
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Sub 'worko-app-${Environment}'
+        - S3WritePolicy:
+            BucketName: !Sub 'worko-app-${Environment}'
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  WorkoCandProfileParserStep3DepsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'worko-cand-profile-parser-step3-deps-${Environment}'
+      Description: Dependencies for Worko Candidate Profile Parser Step3
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.11
+    Metadata:
+      BuildMethod: python3.11
+
+Outputs:
+  WorkoCandProfileParserStep3FunctionArn:
+    Description: "Worko Candidate Profile Parser Step3 Lambda Function ARN"
+    Value: !GetAtt WorkoCandProfileParserStep3Function.Arn

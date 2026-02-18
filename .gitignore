@@ -33,6 +33,6 @@ Recent_changes_asked_by_rohit.md
 lambda_logs.txt
 src/worko-cand-profile-parser/download_logs.py
 src/worko-jd-resume-matching
-
+exp
 # Exclude sourcetype lambda template.yaml from push
 # src/worko-sourcetype-jd-resume-matching/template.y
