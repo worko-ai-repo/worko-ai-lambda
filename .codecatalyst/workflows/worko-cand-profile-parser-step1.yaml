@@ -79,5 +79,8 @@ Actions:
             echo "New version deployed: $NEW_VERSION"
     Environment:
       Name: dev
+      Connections:
+        - Name: "123456789012"
+          Role: CodeCatalystWorkflowDevelopmentRole-worko-ai
     Compute:
       Type: EC2

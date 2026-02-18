@@ -29,7 +29,7 @@ Actions:
         - Run: sam build --use-container
         - Run: sam deploy --stack-name worko-cand-profile-parser-step3-${ENVIRONMENT}-stack --region ${AWS_REGION} --capabilities CAPABILITY_IAM --parameter-overrides Environment=${ENVIRONMENT} --no-fail-on-empty-changeset --resolve-s3
     Environment:
-      Name: worko-dev
+      Name: dev
       Connections:
         - Name: "123456789012"
           Role: CodeCatalystWorkflowDevelopmentRole-worko-ai
