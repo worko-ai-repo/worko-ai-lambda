@@ -2,10 +2,10 @@ import json
 import boto3
 import os
 import base64
-import fitz
 from io import BytesIO
 from urllib.parse import unquote_plus
 from botocore.exceptions import ClientError
+from PyPDF2 import PdfReader
 
 s3 = boto3.client('s3')
 sqs = boto3.client('sqs')
@@ -13,19 +13,22 @@ bedrock_runtime = boto3.client('bedrock-runtime', region_name='ap-south-1')
 
 def extract_text_from_pdf(pdf_data):
     text = ""
-    pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
-    for page in pdf_document:
-        text += page.get_text()
+    pdf = PdfReader(BytesIO(pdf_data))
+    for page in pdf.pages:
+        text += page.extract_text()
     return text
 
 def extract_images_from_pdf(pdf_bytes):
     images_base64 = []
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    for page in doc:
-        pix = page.get_pixmap(dpi=150)
-        image_bytes = pix.tobytes("png")
-        img_str = base64.b64encode(image_bytes).decode("utf-8")
-        images_base64.append(img_str)
+    pdf = PdfReader(BytesIO(pdf_bytes))
+    for page in pdf.pages:
+        if '/XObject' in page['/Resources']:
+            xObject = page['/Resources']['/XObject'].get_object()
+            for obj in xObject:
+                if xObject[obj]['/Subtype'] == '/Image':
+                    data = xObject[obj].get_data()
+                    img_str = base64.b64encode(data).decode("utf-8")
+                    images_base64.append(img_str)
     return images_base64
 
 def invoke_claude_with_image(base64_images):
