@@ -1304,9 +1304,9 @@ def lambda_handler(event, context):
                     cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
                     updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
             else:
-                print(f"CV parsing returned None from S3, sending to retry queue")
-                body = {"bucket_name": bucket_name,"object_key": object_key,"from":"S3 process_cv failed","retry_counter":0,"metadata":metadata}
-                send_sqs_for_throttling_error(retry_queue_name,body,30)
+                print(f"sent the SQS : from s3 event")
+                
+                
 
         this_is_last_resume = if_last_cv(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
         # this_is_last_resume=True  #$$$
