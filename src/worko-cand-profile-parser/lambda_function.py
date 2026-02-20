@@ -1118,41 +1118,36 @@ def get_text_from_cv(s3_bucket_name,key):
         error_code = error.response['Error']['Code']
         if error_code == 'AccessDenied':
             print("Access denied to the S3 object.")
-            return {
-                'statusCode': 403,
-                'body': json.dumps({'message': 'Access denied to the specified S3 object'})
-            }
+            return None
         elif error_code == 'NoSuchKey':
             print("The specified key does not exist.")
-            return {
-                'statusCode': 404,
-                'body': json.dumps({'message': 'The specified key does not exist'})
-            }
+            return None
         else:
             # Handle other possible exceptions
             print(f"Unexpected error: {error_code}")
-            return {
-                'statusCode': 500,
-                'body': json.dumps({'message': 'Internal server error'})
-            }
+            return None
+    except Exception as e:
+        print(f"Error reading from S3: {e}")
+        return None
     
-    if ".pdf" in key:
-        processed_text = extract_text_from_pdf(data)
-        if not processed_text : 
-            print('image Based cv processing..')                        ###
-            base64_images = extract_images_from_pdf(data)
-            processed_text = invoke_claude_with_image(base64_images)   
-            print('image Based cv process completed')   
-        return processed_text
-    elif ".docx" in key:
-        processed_text = extract_text_from_docx(data)
-        return processed_text
-    else:
-        print("The file format is not supported.")
-        return {
-            'statusCode': 400,
-            'body': json.dumps({'message': 'Unsupported file format. Please upload a PDF or DOCX file.'})
-        }
+    try:
+        if ".pdf" in key:
+            processed_text = extract_text_from_pdf(data)
+            if not processed_text : 
+                print('image Based cv processing..')                        ###
+                base64_images = extract_images_from_pdf(data)
+                processed_text = invoke_claude_with_image(base64_images)   
+                print('image Based cv process completed')   
+            return processed_text
+        elif ".docx" in key:
+            processed_text = extract_text_from_docx(data)
+            return processed_text
+        else:
+            print("The file format is not supported.")
+            return None
+    except Exception as e:
+        print(f"Error extracting text from CV: {e}")
+        return None
 
 def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
@@ -1259,7 +1254,10 @@ def lambda_handler(event, context):
                         print(f"Error in checking dublicacy in firstore for this resume with email {cvExtractedParsed.get('candidateEmail','')} and phone number {cvExtractedParsed.get('candidatePhoneNumber','')}")    
 
             else:
-                print(f"Missing processed_text in SQS message body. Message: {body}")
+                print(f"Missing processed_text in SQS message body. Marking as FAILED.")
+                cand_data = {"status": "FAILED"}
+                processingStatus = "FAILED"
+                updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager)
 
         else:
             print("This Event is triggered by S3...")
@@ -1281,32 +1279,34 @@ def lambda_handler(event, context):
                 metadata["company_id"] = company_id
             else:
                 company_id = ""  #check once this work in all cases
+            if not processed_text:
+                print(f"Failed to extract text from S3, sending to retry queue")
+                body = {"bucket_name": bucket_name,"object_key": object_key,"from":"S3 text extraction failed","retry_counter":0,"metadata":metadata}
+                send_sqs_for_throttling_error(retry_queue_name,body,30)
+                return {'statusCode': 200, 'body': 'Sent to retry queue'}
+            
             cvExtractedParsed = process_cv(metadata,retry_queue_name,processed_text,gpt_models,bucket_name,object_key,0)
 
-            try:
-                if cvExtractedParsed:
-                    print("cvExtractedParsed",str(cvExtractedParsed)[:100],"...")
-                    dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
-                    if dublicat_data is not None:
-                        
-                        print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
-                        status = "DUPLICATE"
-                        cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-                        updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
-                    elif dublicat_data is None:    
-                        
-                        
-                        sqs_send_data = {"companyId": company_id,
-                                    "candidateCvAwsS3FileName":file_name,
-                                    "cvExtractedParsed":cvExtractedParsed}
-                        send_final_sqs_for_cvExtractparsed(sqs_send_data)
-                        status = "SUCCESS"
-                        cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-                        updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
-
-                            
-            except Exception as e:
-                print(f"Error sending final CV to SQS: {e}" )
+            if cvExtractedParsed:
+                print("cvExtractedParsed",str(cvExtractedParsed)[:100],"...")
+                dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
+                if dublicat_data is not None:
+                    print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
+                    status = "DUPLICATE"
+                    cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
+                elif dublicat_data is None:    
+                    sqs_send_data = {"companyId": company_id,
+                                "candidateCvAwsS3FileName":file_name,
+                                "cvExtractedParsed":cvExtractedParsed}
+                    send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                    status = "SUCCESS"
+                    cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
+            else:
+                print(f"CV parsing returned None from S3, sending to retry queue")
+                body = {"bucket_name": bucket_name,"object_key": object_key,"from":"S3 process_cv failed","retry_counter":0,"metadata":metadata}
+                send_sqs_for_throttling_error(retry_queue_name,body,30)
 
         this_is_last_resume = if_last_cv(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
         # this_is_last_resume=True  #$$$
