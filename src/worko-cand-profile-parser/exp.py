@@ -1,12 +1,29 @@
 import json
+import ast
 import boto3
+import re
 import os
+import base64
+from datetime import datetime
+from decimal import Decimal
+import time
+from docx import Document
+import fitz
+from io import BytesIO
+from urllib.parse import unquote_plus
+from botocore.exceptions import ClientError
+import requests
+import random
+from typing import Tuple, Dict, Any, Optional, Union
 from google.cloud import firestore
 from google.oauth2 import service_account
-from botocore.exceptions import ClientError
+from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore_v1 import Or, And
+import uuid
+from urllib.parse import unquote_plus
 
-event = {'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'ap-south-1', 'eventTime': '2026-02-20T01:24:11.222Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp'}, 'requestParameters': {'sourceIPAddress': '103.176.210.4'}, 'responseElements': {'x-amz-request-id': '1WYCTB49F0SMNXB7', 'x-amz-id-2': 'u35TkJBAXmfj8KW8tq3impvi9Znl3MtbS99GPbnVoqRxzlZGh02cNfakBp+3v08nHZBHJtuVhWh+U8XJzLEqv/4GLHtRPjMg'}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': '2391fd04-1e04-41f3-9a68-3c5d8a728a02', 'bucket': {'name': 'worko-corporate-cand-profile-dev', 'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 'arn': 'arn:aws:s3:::worko-corporate-cand-profile-dev'}, 'object': {'key': 'companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KHWABBKWAPE5FD8RD34Z53JG.pdf', 'size': 704958, 'eTag': '765e8d53efdbd7d49f21aed78b22ded0', 'sequencer': '006997B7BB2D483FD3'}}}]}
-
+cv_path = r"C:\Users\Administrator\Desktop\worko_working\worko_cv_jd\cv\tech\shaukat_cv.pdf"
+event = {'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'ap-south-1', 'eventTime': '2026-02-20T10:02:48.483Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp'}, 'requestParameters': {'sourceIPAddress': '103.176.210.4'}, 'responseElements': {'x-amz-request-id': '0GV2XM0G06SZCHGF', 'x-amz-id-2': 'x34y2miLD2LyN9AGVFLClux6M3yMIuG1hlWSrLcbegWm8EpI8llJ0nPkekh41t93bJGPpDXQcwDg8HsUEeOpw/dOdQBSNKZU'}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': 'dc878d7e-0a7a-48a3-b24f-e9ca7c67352a', 'bucket': {'name': 'worko-corporate-cand-profile-dev', 'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 'arn': 'arn:aws:s3:::worko-corporate-cand-profile-dev'}, 'object': {'key': 'companies/01K47MSBKS79ACY0BM6Z8VS3F5/bulk-cvs/01KHX80Z8F7FE17ZPYSEBAYN0G.pdf', 'size': 554118, 'eTag': 'daaf0aa1cde51652c86a77da2bb54e9e', 'sequencer': '00699831486FA6095A'}}}]}
 def get_secret(secret_name):
     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
     try:
@@ -53,7 +70,7 @@ if __name__ == "__main__":
     GCP_secret_name = f"GCP-firestore-secret-{env}"
     
     db = initialize_firestore(GCP_secret_name, GCP_DATABASE_NAME)
-    metadata = get_metadata(totalResumesUploadedevent)
+    metadata = get_metadata(event)
     bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid", "")
     
     if bulksourcetyperesumeid:
@@ -61,171 +78,124 @@ if __name__ == "__main__":
     else:
         print("No bulksourcetyperesumeid found in metadata")
 
-# def call_GCP_models(prompt, service_account_info, want_json=True,max_try_for_json=3, thinking_mode=False, thinking_budget=None):
 
 
-#     # 2. Load and refresh credentials
-#     credentials = service_account.Credentials.from_service_account_info(
-#     service_account_info,
-#     scopes=["https://www.googleapis.com/auth/cloud-platform"]
-#     )
-
-#     credentials.refresh(google.auth.transport.requests.Request())
-
-#     # 3. Prepare API endpoint
-#     project_id = "worko-dev"
-#     location = "us-central1"
-#     model_name = "gemini-1.5-pro"
-
-#     url = f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{location}/publishers/google/models/{model_name}:generateContent"
-
-#     # 4. Prepare headers and payload
-#     headers = {
-#         "Authorization": f"Bearer {credentials.token}",
-#         "Content-Type": "application/json"
-#     }
-
-#     payload = {
-#         "contents": [
-#             {
-#                 "role": "user",
-#                 "parts": [
-#                     {"text": prompt}
-#                 ]
-#             }
-#         ],
-#         "generationConfig": {
-#             "maxOutputTokens": 5000,
-#             "temperature": 0.7,
-#             "responseMimeType": "application/json" if want_json else "text/plain",
-#             "thinkingConfig": {
-#                 "mode": "THINKING_MODE_ENABLED",
-#                 "thinkingBudget": thinking_budget
-#             } if thinking_mode and thinking_budget else {"mode": "THINKING_MODE_ENABLED"} if thinking_mode else {}
-#         }
-#     }
-
-#     # 5. Make API call
+# def get_secret(secret_name):
+#     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
 #     try:
-#         if not want_json:
-#             response = requests.post(url, headers=headers, json=payload)
-#             response.raise_for_status()  # Raise exception for bad status codes
-#             result = response.json()
-            
-#             inpute = result["usageMetadata"]["promptTokenCount"]
-#             output = result["usageMetadata"]["candidatesTokenCount"] + result["usageMetadata"]["thoughtsTokenCount"]
-#             print("inpute tokens:- ",inpute,"Output tokens",output)
-#             response = result['candidates'][0]['content']['parts'][0]['text']
-#             print(response)
-#             return response
+#         response = secrets_client.get_secret_value(SecretId=secret_name)
+#         return json.loads(response['SecretString'])
+#     except ClientError as e:
+#         print(f"Error getting secret: {e}")
+#         return None
 
-#         for attempt in range(max_try_for_json):
+# def extract_text_from_pdf(pdf_path):
+#     text = ""
+#     with fitz.open(pdf_path) as pdf_document:
+#         for page in pdf_document:
+#             text += page.get_text()
+#     return text
+
+# class AzureOpenAIClient:
+#     def __init__(self, azure_openai_secret, model="gpt-4o"):
+#         self.model = model
+#         self.endpoint = azure_openai_secret.get("AZURE_OPENAI_ENDPOINT", "")
+#         self.api_key = azure_openai_secret.get("AZURE_OPENAI_API_KEY", "")
+#         if model == "gpt-4o":
+#             self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4o", "")
+#             self.api_version = azure_openai_secret.get("AZURE_OPENAI_API_VERSION_gpt-4o", "2024-05-01-preview")
+#         elif model == "gpt-4.1-mini":
+#             self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini", "")
+#             self.api_version = azure_openai_secret.get("AZURE_OPENAI_API_VERSION_gpt-4.1-mini", "2024-05-01-preview")
+    
+#     def invoke_model_with_backoff(self, prompt, Task="Not specified"):
+#         print(f"Task: {Task}")
+#         url = f"{self.endpoint}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}"
+#         headers = {"Content-Type": "application/json", "api-key": self.api_key}
+#         data = {
+#             "messages": [
+#                 {"role": "system", "content": "You are a helpful assistant."},
+#                 {"role": "user", "content": prompt}
+#             ],
+#             "temperature": 0.3
+#         }
+        
+#         for attempt in range(3):
 #             try:
-#                 response = requests.post(url, headers=headers, json=payload)
+#                 response = requests.post(url=url, headers=headers, json=data)
 #                 response.raise_for_status()
 #                 result = response.json()
-#                 text_response = result['candidates'][0]['content']['parts'][0]['text']
-#                 text_response = text_response.strip().removeprefix("```json").removesuffix("```").strip()
-#                 json_result = json.loads(text_response)
-#                 print(json_result)
-#                 return json_result
-#             except Exception as e:
-#                 remaining = max_try_for_json - attempt - 1
-#                 print(f"JSON parse failed. Retries left: {remaining}")
-#                 print("Error:", e)
-#                 time.sleep(5)
-#                 if remaining == 0:
+#                 content = result["choices"][0]["message"]["content"]
+#                 content = content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+#                 return json.loads(content)
+#             except json.JSONDecodeError:
+#                 if attempt == 2:
 #                     raise
-#     except requests.exceptions.RequestException as e:
-#         print(f"Error occured : {e}")
-#         return f"Error occured : {e}"
+#                 time.sleep(2)
+#             except requests.exceptions.HTTPError as e:
+#                 raise
 
-# def clean_and_load(raw: str) -> dict:
-#     """
-#     Cleans a raw JSON string that may contain ```json ... ``` wrappers
-#     and loads it into a Python dictionary.
-#     """
-#     # 1. Remove ```json or ``` wrappers using regex
-#     cleaned = re.sub(r"```json|```", "", raw).strip()
-
-#     # 2. Ensure it's valid JSON and load
-#     try:
-#         data = json.loads(cleaned)
-#         return data
-#     except json.JSONDecodeError as e:
-#         print("JSON loading error:", e)
-#         print("Cleaned JSON:", cleaned)
-#         return None
-
-# def call_sonnet4(prompt,creds, max_json_try=3, want_json=True, system_prompt=None):  # ← Add system_prompt parameter
-
-
-#     PROJECT_ID = "worko-dev"
-#     LOCATION="global"
-#     # SERVICE_ACCOUNT_FILE = r"C:\Users\Administrator\Desktop\worko_working\worko_code_chainged_files\vertex-sa.json"
-
-#     # Load credentials
-#     credentials = service_account.Credentials.from_service_account_info(
-#         creds,
-#         scopes=["https://www.googleapis.com/auth/cloud-platform"]
+# def process_cv(processed_text, gpt_model):
+#     processed_text = " ".join(processed_text.split())
+    
+#     parsed_prompt = (
+#         f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
+#         f"Resume text:\n{processed_text}\n\n"
+#         f"*** RULE: If you don't find any data in the resume ***\n"
+#         f"- If the value is a number → use 0\n"
+#         f"- If the value is a boolean → use false\n"
+#         f"- If the value is a string → use an empty string \"\"\n"
+#         f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
+#         f"*** Mandatory data to find in the resume ***\n"
+#         f"These fields MUST always be present in the output:\n"
+#         f"1. candidateName\n2. candidateCurrentDesignation\n3. candidateCurrentCompany\n4. candidateTotalYOE\n5. candidateLocation\n\n"
+#         f"*** Output Format (JSON only) ***\n"
+#         f"{{{{\n"
+#         f"  \"candidateName\": \"\",\n"
+#         f"  \"about\":\"extract about me or summary or profile or objective from resume\",\n"
+#         f"  \"education\": [{{\"collage\": \"\", \"degree\": \"\", \"startedYear\": \"\", \"passingYear\": \"\"}}],\n"
+#         f"  \"multipleCandidateExperience\": [{{\"companyName\": \"\", \"designation\": \"\", \"department\": \"\", \"YOE\": 0, \"startDate\": \"\", \"endDate\": \"\"}}],\n"
+#         f"  \"candidateEmail\": \"\",\n"
+#         f"  \"candidatePhoneNumber\": \"\",\n"
+#         f"  \"candidateNumber\": 0,\n"
+#         f"  \"candidatePhoneCountryCode\": 0,\n"
+#         f"  \"candidateCurrentCompany\": \"\",\n"
+#         f"  \"candidateCurrentDesignation\": \"\",\n"
+#         f"  \"candidateExperience\": 0,\n"
+#         f"  \"candidateTotalYOE\": 0,\n"
+#         f"  \"candidateRelevantYOE\": 0,\n"
+#         f"  \"candidateNoticePeriod\": \"\",\n"
+#         f"  \"candidateLocation\": \"\",\n"
+#         f"  \"candidateReadyToRelocate\": false,\n"
+#         f"  \"isNoticePeriodNegotiable\": false\n"
+#         f"}}}}\n"
 #     )
-
-#     # Initialize Anthropic client with Vertex AI
-#     client = anthropic.AnthropicVertex(
-#         project_id=PROJECT_ID,
-#         region=LOCATION,
-#         credentials=credentials
-#     )
-#     # model="claude-sonnet-4-5@20250929"
-#     model="claude-sonnet-4@20250514"
     
-#     # Build request
-#     request_params = {
-#         "model": model,
-#         "max_tokens": 5000,
-#         "temperature": 0.3,
-#         "messages": [{"role": "user", "content": prompt}]
-#     }
-    
-#     # ← ADD THIS BLOCK
-#     if system_prompt:
-#         request_params["system"] = [
-#             {
-#                 "type": "text",
-#                 "text": system_prompt,
-#                 "cache_control": {"type": "ephemeral"}
-#             }
-#         ]
-#     # ← END OF NEW BLOCK
-    
-#     response = client.messages.create(**request_params)  # ← Change this line to use **request_params
+#     cv_extracted_parsed = gpt_model.invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
+#     return cv_extracted_parsed
 
-#     if not want_json:
-#         input_t = response.usage.output_tokens 
-#         output_t  = response.usage.input_tokens
-#         cache_read_input_tokens  = response.usage.cache_read_input_tokens
-        
-#         print(f"Input tokens: {input_t}, Output tokens: {output_t}, cashed Token {cache_read_input_tokens}")
-#         return response.content[0].text
-#     else:
-#         for i in range(max_json_try):
-#             try:
-#                 input_t = response.usage.output_tokens 
-#                 output_t  = response.usage.input_tokens
-#                 cache_read_input_tokens  = response.usage.cache_read_input_tokens
-
-#                 print(f"Input tokens: {input_t}, Output tokens: {output_t}, cashed Token {cache_read_input_tokens}")
-#                 response = response.content[0].text
-#                 response = clean_and_load(response)
-#                 return response
-#             except json.JSONDecodeError as e:
-#                 print(f"JSONDecodeError on attempt {i+1}: {e}")
-#                 continue
-#             except Exception as e:
-#                 print(f"Unexpected error on attempt {i+1}: {e}")
-#                 continue
-#         return None
+# if __name__ == "__main__":
+#     start = time.time()
+#     env = "dev"
+#     azure_openai_secret_name = f"AZURE-openai-secret-multimodel-{env}"
+#     azure_openai_secret = get_secret(azure_openai_secret_name)
     
-# credentials = get_secret(GCP_secret_name)
-
-# response = call_sonnet4(prompt=dynamic_prompt,creds = credentials,max_json_try=3, want_json=True, system_prompt=prompt)
+#     gpt4_1_mini = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
+    
+#     processed_text = extract_text_from_pdf(cv_path)
+    
+#     while True:
+#         try:
+#             result = process_cv(processed_text, gpt4_1_mini)
+#             print(json.dumps(result, indent=2))
+#             end = time.time()
+#             print(f"\nTotal time taken: {end - start:.2f} seconds")
+#             break
+#         except Exception as e:
+#             error_message = str(e).lower()
+#             if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
+#                 print(f"Throttling error: {e}. Retrying in 3 seconds...")
+#                 time.sleep(3)
+#             else:
+#                 print(f"Error: {e}")
+#                 break
