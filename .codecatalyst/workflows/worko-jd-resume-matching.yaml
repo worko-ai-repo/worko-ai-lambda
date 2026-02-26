@@ -95,7 +95,7 @@ Actions:
             cd src/worko-jd-resume-matching
             
             echo "Building SAM application..."
-            sam build --use-container --template template.yaml
+            sam build --use-container
             BUILD_EXIT_CODE=$?
             if [ $BUILD_EXIT_CODE -ne 0 ]; then
               echo "ERROR: Build failed"
