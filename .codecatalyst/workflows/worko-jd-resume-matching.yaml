@@ -92,16 +92,7 @@ Actions:
               LAMBDA_EXISTS=false
             fi
             
-            echo "Current directory: $(pwd)"
-            echo "Listing files:"
-            ls -la
-            
-            if [ -d "src/worko-jd-resume-matching" ]; then
-              cd src/worko-jd-resume-matching
-            else
-              echo "ERROR: Directory src/worko-jd-resume-matching not found"
-              exit 1
-            fi
+            cd src/worko-jd-resume-matching
             
             echo "Building SAM application..."
             sam build --use-container
