@@ -31,6 +31,7 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
     4) -In multipleCandidateExperience if anything is not present jut don't retrun the key never give null or empty string.
        - give startDate and endDate in iso date formate only exaple 2026-02-14 if moth and date is not mentioned just take 01-01.
        - if enddate is not there just do not return the key itself do not give "" .
+    5) never put currentDesignation as fresher for working candidate, give fresher only whos cv do not shows any experience.
     {{
         "name": "",
         "email": "",
