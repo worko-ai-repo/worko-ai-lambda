@@ -2990,7 +2990,7 @@ def lambda_handler(event, context):
                     f"Now, analyze the candidate’s resume **against each job requirement one by one** and provide your final JSON response below — strictly following the above format."
                     )
 
-                    feedbackMachingWithCandidate =  invoke_model_with_backoff_OpenAI(prompt,Task= "Ask ai, feedback matching or not")
+                    feedbackMachingWithCandidate =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Ask ai, feedback matching or not")
                     print('feedbackMachingWithCandidate :- ' ,feedbackMachingWithCandidate)
                     number_of_requirements_not_met = False 
                     try:
@@ -3076,7 +3076,7 @@ def lambda_handler(event, context):
 
                         
     
-                completion_text_rejection = invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
+                completion_text_rejection = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
                 # content = invoke_model_with_backoff_OpenAI(prompt)
                 # completion_text_rejection = clean_json_response(content)
                 # try:
@@ -3154,7 +3154,7 @@ def lambda_handler(event, context):
                     # print_completion_text(completion_text_approval)
                     # scoreDetails = completion_text_approval
 
-                    completion_text_approval= invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback  for >40")
+                    completion_text_approval= gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback  for >40")
                     print_completion_text(completion_text_approval)
                     scoreDetails = completion_text_approval.get("feedback_Recruiter")
                     scoreDetailsForApplicant = completion_text_approval.get("feedback_Candidate")
@@ -3177,7 +3177,7 @@ def lambda_handler(event, context):
 
                     # content = invoke_model_with_backoff_nova(prompt)
                     # emailFeedback = extract_text_from_nova(content)
-                    emailFeedback = invoke_model_with_backoff_OpenAI(prompt,want_json=False)
+                    emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt,want_json=False)
                     print("feedback_for_email:-",emailFeedback)
             
             elif overall_matching_score >= 70:
@@ -3262,7 +3262,7 @@ def lambda_handler(event, context):
                 # print_completion_text(completion_text_approval)
                 # scoreDetails = completion_text_approval
 
-                completion_text_approval =invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback for >70")
+                completion_text_approval =gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
 
 
                 ###########################################
@@ -3349,7 +3349,7 @@ def lambda_handler(event, context):
                     # content = invoke_model_with_backoff_claude(prompt)  #cloud
                     # analysis_result = extract_text(content)
 
-                    analysis_result_json  = invoke_model_with_backoff_OpenAI(prompt,Task= "Cheching Mandatoey Requirements") 
+                    analysis_result_json  = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Cheching Mandatoey Requirements") 
                     # content = invoke_model_with_backoff_OpenAI(prompt)   #open ai
                     # analysis_result = clean_json_response(content)
                     print("analysis_result",analysis_result_json)
@@ -3491,7 +3491,7 @@ def lambda_handler(event, context):
                         # print("******mandatory_skills_missing Issue******:", overall_matching_score)
 
 
-                        completion_text_rejection =  invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection when amndatory Not met")
+                        completion_text_rejection =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection when amndatory Not met")
                         # content = invoke_model_with_backoff_OpenAI(prompt)
                         # completion_text_rejection = clean_json_response(content)
                         # try:
@@ -3564,10 +3564,10 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     
     
-    # event ={'USER_PK': 'USR#EML#asanuragsaxena@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJA3PFYZ6Y785TXZDPWYFPHM', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'sourceTypeCvAwsS3Details': {'resourceType': 'AGENCY_SUBMIT_USER_CV', 'bucketName': 'worko-app-dev', 'filePath': 'agencies/71WFYNMG3HE02CK2EE0TAF04MX/companies/01JWAQF1G96E0SE9XHXSFGHNWW/jobs/01K5X6795RH2F00Z8BXQTSXDTH/user-profiles', 'fileName': '01KGSEPNYYJ2NK72X0ZJSCVZCT.pdf'}}
+    event ={'USER_PK': 'USR#EML#ask.72544@gmail.com', 'USER_DETAIL_SK': 'ID#', 'MATCHING_ENTITY': 'JOB_APP', 'ENTITY_SK': 'JOB#APP#ID#01KJCSD7G4CGQNQYEGWFK3V9VK'}
     
     # form submit flow event
-    event ={'USER_PK': 'USR#EML#syadavendra@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJC783RRGAJ1EXXEV9KARE8X', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KJC77XNPRW652J3GSYCDXREP', 'sourceTypeCvAwsS3Details': {'resourceType': 'CAND_SUBMIT_CV_JOB', 'bucketName': 'worko-app-dev', 'filePath': 'candidate-submit-cvs/companies/01K47MSBKS79ACY0BM6Z8VS3F5/jobs/01KHZVWRAG1H29PNBX6FQ4RYJW/cvs', 'fileName': '01KJC779BZ9D6J9YA75T30P7WD.pdf'}}
+    # event ={'USER_PK': 'USR#EML#syadavendra@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJC783RRGAJ1EXXEV9KARE8X', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KJC77XNPRW652J3GSYCDXREP', 'sourceTypeCvAwsS3Details': {'resourceType': 'CAND_SUBMIT_CV_JOB', 'bucketName': 'worko-app-dev', 'filePath': 'candidate-submit-cvs/companies/01K47MSBKS79ACY0BM6Z8VS3F5/jobs/01KHZVWRAG1H29PNBX6FQ4RYJW/cvs', 'fileName': '01KJC779BZ9D6J9YA75T30P7WD.pdf'}}
     lambda_handler(event, None)
 
 
