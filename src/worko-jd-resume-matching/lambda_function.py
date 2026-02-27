@@ -247,7 +247,7 @@ def update_sqs_queue(email, userId, referralId, job_ref_type):
         else:
             event = "unknown"
 
-        print("event:-", event)
+        print("sent sqs event successfully:-", event)
 
         # Define the SQS queue URL
         account_id = get_account_id()
@@ -1612,7 +1612,7 @@ def lambda_handler(event, context):
 
     if not item or not has_key_elements(str(cvExtractParsed).lower(), key_resume_elements, 2):
         update_cv_extract_in_dynamodb(table_name, partition_key_value, sort_key_prefix2, "No valid resume data found or resume data is not readable", 250, -1)
-        update_sqs_queue(email, userId, referralId, job_ref_type)
+        # update_sqs_queue(email, userId, referralId, job_ref_type) recently commented
         print("No valid resume data found or resume data is not readable")
         return {"statusCode": 200, "body": "Overall matching score: 0"}
 
@@ -1840,7 +1840,7 @@ def lambda_handler(event, context):
     if not jdItem or not has_key_elements(jdItem_extracted.lower(), key_jd_elements, 1):
         update_cv_extract_in_dynamodb(table_name, partition_key_value, sort_key_prefix2, "No valid job description found or job description is not readable", 251, -1)
         print("No valid job description found or job description is not readable")
-        update_sqs_queue(email, userId, referralId, job_ref_type)
+        # update_sqs_queue(email, userId, referralId, job_ref_type) recently commented
         return {"statusCode": 200, "body": "Overall matching score: 0"}
 
     print("*****************************Job Description******************************************")
@@ -3523,7 +3523,7 @@ def lambda_handler(event, context):
                 print("******Potential Issue******:", overall_matching_score)
                 overall_matching_score = 90
 
-            update_sqs_queue(email, userId, referralId, job_ref_type)
+            # update_sqs_queue(email, userId, referralId, job_ref_type) recently comented
             print("overall_matching_score", overall_matching_score)
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -3532,7 +3532,7 @@ def lambda_handler(event, context):
             else:
                 update_cv_extract_in_dynamodb(table_name, partition_key_value, sort_key_prefix2, str(e) , 251, -1)
 
-            update_sqs_queue(email, userId, referralId, job_ref_type)
+            # update_sqs_queue(email, userId, referralId, job_ref_type) recently comented
             return {"statusCode": 500, "body": {"error": str(e)}}
     elif reject_on_ctc_or_exp:
         overall_matching_score = 50
@@ -3555,7 +3555,7 @@ def lambda_handler(event, context):
     else:
         update_ref_response_in_dynamodb(table_name, partition_key_value, sort_key_prefix2, scoreDetails,scoreDetailsForApplicant, overall_matching_score, emailFeedback, rejection_feedback,rejectionFeedbackBySystemForApplicant)
     
-  
+    update_sqs_queue(email, userId, referralId, job_ref_type)
     return {"statusCode": 200, "body": 
             {"Overall Matching Score": overall_matching_score}
         }

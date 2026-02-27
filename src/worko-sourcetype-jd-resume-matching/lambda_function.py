@@ -727,7 +727,6 @@ def get_cv(s3_bucket_name,cvAwsS3FilePath,cvAwsS3FileName):
     #validate te resume
     if not processed_text or not has_key_elements(str(processed_text).lower(), key_resume_elements, 2):
         # update_cv_extract_in_dynamodb(table_name, partition_key_value, sort_key_prefix2, "No valid resume data found or resume data is not readable", 250, -1)
-        # update_sqs_queue(email, userId, referralId, job_ref_type)
         print("No valid resume data found or resume data is not readable")
         return {"statusCode": 200, "body": "Overall matching score: 0"}
 
