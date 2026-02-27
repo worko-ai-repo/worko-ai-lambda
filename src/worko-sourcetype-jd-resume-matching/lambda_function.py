@@ -393,7 +393,7 @@ def expRejectCheck(inps):
             print('above')
     return new_check
 
-def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text):
+def Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text,gpt_models):
     print("found a registered user ... started analysis")
     print("partition_key_value...",partition_key_value)
     table_name="worko"
@@ -1328,7 +1328,7 @@ def lambda_handler(event, context):
             
             Rejection_object = False
             if partition_key_value:
-                Rejection_object = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text)
+                Rejection_object = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text,gpt_models)
             
             update_data = {
                 'isFindMatchingScoreInProgress': False,
@@ -1407,7 +1407,7 @@ def lambda_handler(event, context):
             Rejection_object=False
             
             if partition_key_value:
-                Rejection_object  = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text)
+                Rejection_object  = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text,gpt_models)
 
             if candidateJobMatchingId:
                 DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
