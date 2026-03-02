@@ -1542,6 +1542,7 @@ def lambda_handler(event, context):
             filePath= sourceTypeCvAwsS3Details.get("filePath","")
             fileName= sourceTypeCvAwsS3Details.get("fileName","")
             key = filePath + "/" + fileName
+            s3_bucket_name = sourceTypeCvAwsS3Details.get("bucketName")
         else:
             key = "users/" + resumeId + "/resumes/" + cvId
         print("key",key)
@@ -3564,10 +3565,15 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     
     
-    event ={'USER_PK': 'USR#EML#ask.72544@gmail.com', 'USER_DETAIL_SK': 'ID#', 'MATCHING_ENTITY': 'JOB_APP', 'ENTITY_SK': 'JOB#APP#ID#01KJCSD7G4CGQNQYEGWFK3V9VK'}
+    # event ={'USER_PK': 'USR#EML#ask.72544@gmail.com', 'USER_DETAIL_SK': 'ID#', 'MATCHING_ENTITY': 'JOB_APP', 'ENTITY_SK': 'JOB#APP#ID#01KJCSD7G4CGQNQYEGWFK3V9VK'}
     
     # form submit flow event
+    
     # event ={'USER_PK': 'USR#EML#syadavendra@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJC783RRGAJ1EXXEV9KARE8X', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KJC77XNPRW652J3GSYCDXREP', 'sourceTypeCvAwsS3Details': {'resourceType': 'CAND_SUBMIT_CV_JOB', 'bucketName': 'worko-app-dev', 'filePath': 'candidate-submit-cvs/companies/01K47MSBKS79ACY0BM6Z8VS3F5/jobs/01KHZVWRAG1H29PNBX6FQ4RYJW/cvs', 'fileName': '01KJC779BZ9D6J9YA75T30P7WD.pdf'}}
+    
+    #request from move to aplicant from my database
+    event = {'USER_PK': 'USR#EML#sahanasgp7@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJPQ9GK51XSH4JBDP6FKJRGB', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KHXASXJ694280F3KY45AK6MR', 'sourceTypeCvAwsS3Details': {'resourceType': 'CORP_CAND_BULK_CV_UPLOAD', 'bucketName': 'worko-corporate-cand-profile-dev', 'filePath': 'companies/01K47MSBKS79ACY0BM6Z8VS3F5/bulk-cvs', 'fileName': '01KHXAS6YPNDWRDTJ1GVECX7G1.pdf'}}
+
     lambda_handler(event, None)
 
 
