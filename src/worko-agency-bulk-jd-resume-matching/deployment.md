@@ -174,3 +174,7 @@ sam deploy \
   rejectionFeedbackBySystem?: string;
 }
 ```
+
+09/03/2026
+added this line in the prompt
+            f" candidateLocation must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"
