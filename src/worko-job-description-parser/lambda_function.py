@@ -766,7 +766,7 @@ def lambda_handler(event, context):
 
     GCP_secret_name = "AZURE-openai-secret-multimodel-"+env
     azure_secret = get_secret(GCP_secret_name)
-    print("azure_secret",azure_secret)
+
     gpt52_client = AzureOpenAIClient(azure_secret, model="gpt-5.2")
     try:
         response = gpt52_client.invoke_model_with_backoff(
