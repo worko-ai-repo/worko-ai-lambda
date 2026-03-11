@@ -11,6 +11,9 @@ from botocore.exceptions import ClientError
 import anthropic
 from google.oauth2 import service_account
 
+from google import genai
+from google.genai import types
+
 # Initialize Bedrock clients
 region = 'ap-south-1'
 dynamodb = boto3.resource('dynamodb')
@@ -51,84 +54,68 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
-def call_GCP_models(prompt, service_account_info, want_json=True,max_try_for_json=3, thinking_mode=False, thinking_budget=None):
+def call_gemini_pro(prompt, creds, env, max_json_try=3, want_json=True, system_prompt=None):
+    PROJECT_ID = "worko-" + env
+    LOCATION = "global"
 
-
-    # 2. Load and refresh credentials
+    # Load credentials
     credentials = service_account.Credentials.from_service_account_info(
-    service_account_info,
-    scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        creds,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
 
-    credentials.refresh(google.auth.transport.requests.Request())
+    # Initialize Google Gen AI client with Vertex AI
+    client = genai.Client(
+        vertexai=True,
+        project=PROJECT_ID,
+        location=LOCATION,
+        credentials=credentials
+    )
 
-    # 3. Prepare API endpoint
-    project_id = "worko-dev"
-    location = "us-central1"
-    model_name = "gemini-1.5-pro"
+    model = "gemini-2.5-pro"  
 
-    url = f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{location}/publishers/google/models/{model_name}:generateContent"
+    # Build config
+    generate_config = types.GenerateContentConfig(
+        max_output_tokens=5000,
+        temperature=0.3,
+        system_instruction=system_prompt if system_prompt else None,
+    )
 
-    # 4. Prepare headers and payload
-    headers = {
-        "Authorization": f"Bearer {credentials.token}",
-        "Content-Type": "application/json"
-    }
+    # Build contents
+    contents = [
+        types.Content(
+            role="user",
+            parts=[types.Part(text=prompt)]
+        )
+    ]
 
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": prompt}
-                ]
-            }
-        ],
-        "generationConfig": {
-            "maxOutputTokens": 5000,
-            "temperature": 0.7,
-            "responseMimeType": "application/json" if want_json else "text/plain",
-            "thinkingConfig": {
-                "mode": "THINKING_MODE_ENABLED",
-                "thinkingBudget": thinking_budget
-            } if thinking_mode and thinking_budget else {"mode": "THINKING_MODE_ENABLED"} if thinking_mode else {}
-        }
-    }
+    response = client.models.generate_content(
+        model=model,
+        contents=contents,
+        config=generate_config,
+    )
 
-    # 5. Make API call
-    try:
-        if not want_json:
-            response = requests.post(url, headers=headers, json=payload)
-            response.raise_for_status()  # Raise exception for bad status codes
-            result = response.json()
-            
-            inpute = result["usageMetadata"]["promptTokenCount"]
-            output = result["usageMetadata"]["candidatesTokenCount"] + result["usageMetadata"]["thoughtsTokenCount"]
-            print("inpute tokens:- ",inpute,"Output tokens",output)
-            response = result['candidates'][0]['content']['parts'][0]['text']
-            print(response)
-            return response
+    response_text = response.text
+    input_t = response.usage_metadata.prompt_token_count
+    output_t = response.usage_metadata.candidates_token_count
+    cached_t = response.usage_metadata.cached_content_token_count or 0
 
-        for attempt in range(max_try_for_json):
+    print(f"Input tokens: {input_t}, Output tokens: {output_t}, Cached Tokens: {cached_t}")
+
+    if not want_json:
+        return response_text
+    else:
+        for i in range(max_json_try):
             try:
-                response = requests.post(url, headers=headers, json=payload)
-                response.raise_for_status()
-                result = response.json()
-                text_response = result['candidates'][0]['content']['parts'][0]['text']
-                text_response = text_response.strip().removeprefix("```json").removesuffix("```").strip()
-                json_result = json.loads(text_response)
-                print(json_result)
-                return json_result
+                cleaned = clean_and_load(response_text)
+                return cleaned
+            except json.JSONDecodeError as e:
+                print(f"JSONDecodeError on attempt {i+1}: {e}")
+                continue
             except Exception as e:
-                remaining = max_try_for_json - attempt - 1
-                print(f"JSON parse failed. Retries left: {remaining}")
-                print("Error:", e)
-                time.sleep(5)
-                if remaining == 0:
-                    raise
-    except requests.exceptions.RequestException as e:
-        print(f"Error occured : {e}")
-        return f"Error occured : {e}"
+                print(f"Unexpected error on attempt {i+1}: {e}")
+                continue
+        return None
 
 def clean_and_load(raw: str) -> dict:
     """
@@ -376,7 +363,7 @@ def load_ai_json(response):
 
 def lambda_handler(event, context):
     print(event)
-    env = os.environ.get("ENVIRONMENT")
+    env = os.environ.get("ENVIRONMENT","dev")
     
     GCP_secret_name = "GCP-firestore-secret-"+env
     print(GCP_secret_name)
@@ -547,7 +534,8 @@ def lambda_handler(event, context):
 
     credentials = get_secret(GCP_secret_name)
 
-    response = call_sonnet4(prompt=dynamic_prompt,creds = credentials,env=env,max_json_try=3, want_json=True, system_prompt=prompt)
+    response = call_gemini_pro(dynamic_prompt, credentials, env, max_json_try=3, want_json=True, system_prompt=prompt)
+    # response = call_sonnet4(prompt=dynamic_prompt,creds = credentials,env=env,max_json_try=3, want_json=True, system_prompt=prompt)
     # response = clean_and_load(content)
     end_time = time.time()
     print(f"step 2 invoked ai and got response time took :- {end_time-start_time}")
@@ -559,3 +547,7 @@ def lambda_handler(event, context):
         "headers": {"Content-Type": "application/json"},
         "body": json.dumps(response)  # Convert the dictionary to a JSON string
     }
+
+if __name__ == "__main__":
+    event = {'JOB_DESC': 'Job Title: Full Stack Developer (React.js | Node.js | AWS)\n\nDepartment: Engineering / Technology\n\nRole: Full Stack Web Developer\n\nJob Description:\n\nWe are seeking a results-driven and detail-oriented Full Stack Web Developer with proven experience in architecting, building, deploying, and maintaining high-performance web applications. The ideal candidate will demonstrate deep expertise in modern JavaScript frameworks, RESTful APIs, cloud-native services, and scalable system design. This role requires strong problem-solving skills, hands-on coding experience, and a passion for clean, maintainable code.\n\nKey Responsibilities:\n\nDesign and implement full stack solutions using React.js, Node.js, Express.js, and MongoDB, following agile software development practices.\n\nLead the migration from Angular to React using modular design principles, creating reusable components, custom hooks, and scalable context-based state management.\n\nDevelop and maintain high-performance REST APIs and backend services with Express.js, integrating business logic and authentication workflows using JWT, OAuth 2.0, and AWS Cognito.\n\nArchitect microfrontend-based systems and build proxy applications for seamless coexistence of legacy and new systems, leveraging AWS CloudFront.\n\nIntegrate and optimize third-party services (e.g., Razorpay) and ensure real-time synchronization of transactional and user data.\n\nImplement CMS functionalities, including dynamic dashboards, job posting systems, PDF parsing with pdfjs-dist, and rich text editing using Quill.\n\nEstablish CI/CD pipelines with AWS CodeCatalyst, ensure test coverage using Postman and Jest, and deploy infrastructure with high reliability.\n\nUtilize AWS SES, CloudWatch, and DynamoDB to manage emails, monitor logs, and handle NoSQL storage with Dynamoose ORM.\n\nImprove SEO and web accessibility through dynamic meta tag generation and performance optimization techniques.\n\nLead code reviews, enforce clean code standards, and mentor junior developers in a collaborative, fast-paced environment.\n\nRequired Skills:\n\nFrontend: React.js, React Hook Form, React Query, Context API, SCSS, Tailwind CSS, Bootstrap\n\nBackend: Node.js, Express.js, MVC architecture\n\nCloud & DevOps: AWS Cognito, AWS SES, AWS CloudFront, CloudWatch, CodeCatalyst\n\nDatabases: MongoDB, DynamoDB (Dynamoose)\n\nAuthentication & Security: JWT, OAuth 2.0, role-based access control\n\nAPI Development & Integration: REST APIs, Razorpay, FIX API\n\nTesting: Postman (manual & integration), Jest (unit testing)\n\nVersion Control: Git, GitHub, Git-Bash\n\nPreferred Skills:\n\nMicrofrontend Architecture and Modular Component Design\n\nExperience with FIX API and algorithmic trading environments\n\nBuilding LLM-based applications (e.g., GPT Clone, Mythomist-7B via OpenRoute)\n\nSEO optimization, accessibility standards, and Lighthouse performance improvements\n\nWorking knowledge of legacy frameworks like Angular for transitional projects\n\nEducation:\n\nMaster of Computer Applications – Centre for Development of Advanced Computing\n\nBachelor of Computer Applications – Jamia Hamdard University\n\nCertifications:\n\nAWS Certified Cloud Practitioner (preferred)\n\nFull Stack Web Development (React, Node.js, MongoDB) (preferred)\n\nJavaScript and ES6+ Advanced Programming (optional but relevant)\n\nEmployment Type: Full-time\nExperience Level: 2–4 years\nLocation: Remote / Bangalore / Delhi NCR\nIndustry: SaaS / Product Development / Technology / FinTech / EdTech'}
+    lambda_handler(event, None)
