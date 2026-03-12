@@ -9,3 +9,7 @@ worko-bulk-jd-resume-matching
 worko-cand-profile-parser
 worko-referral-source-cand-profile-parser
 worko-resume-parser
+
+12/03/2026
+added large files handling and sending summmary to recruoter in csv
+worko-cand-profil-parser

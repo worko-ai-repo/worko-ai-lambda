@@ -1330,7 +1330,7 @@ def lambda_handler(event, context):
         if this_is_last_resume:
 
             status = "LARGE_RESUME_FILE"
-            large_files = DBManager.get_documents_by_bulkSourceTypeResumeId_and_status(collection_name_for_firstore_updating_counts, bulkSourceTypeResumeId,status)
+            large_files = DBManager.get_documents_by_bulkSourceTypeResumeId_and_status(collection_name_for_firstore_updating_counts, bulksourcetyperesumeid,status)
             try:
                 large_files_list = [i["userResumeFileName"] for i in large_files]
                 print("large_files_list",large_files_list)
