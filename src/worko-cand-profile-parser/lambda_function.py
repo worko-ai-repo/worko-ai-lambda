@@ -500,6 +500,13 @@ class FirestoreManager:
     def get_documents_by_bulkSourceTypeResumeId(self, collection_name, bulkSourceTypeResumeId):
         docs = self.db.collection(collection_name).where(filter=FieldFilter("bulkSourceTypeResumeId", "==", bulkSourceTypeResumeId)).get()
         return [doc.to_dict() for doc in docs]
+    
+    def get_documents_by_bulkSourceTypeResumeId_and_status(self, collection_name, bulkSourceTypeResumeId, status):
+        docs = self.db.collection(collection_name) \
+            .where(filter=FieldFilter("bulkSourceTypeResumeId", "==", bulkSourceTypeResumeId)) \
+            .where(filter=FieldFilter("status", "==", status)) \
+            .get()
+        return [doc.to_dict() for doc in docs]
 
 def process_parsed_cv_json(cv_obj):
     try:
@@ -1004,6 +1011,7 @@ def if_last_cv(collection_name_for_firstore_updating_counts,bulkSourceTypeResume
     totalResumesSucceeded = doc.get("totalResumesSucceeded","")
     totalResumesFailed = doc.get("totalResumesFailed","")
     totalResumesDuplicate = doc.get("totalResumesDuplicate","")
+
     if totalResumesUploaded == totalResumesSucceeded+totalResumesFailed +totalResumesDuplicate:
         this_is_last_resume = True
     else:
@@ -1086,12 +1094,19 @@ Worko Team"""
     except Exception as e:
         print(f"Failed to send email: {e}")
 
-def build_status_summary(all_docs: list):
+def build_status_summary(all_docs,large_files_list):
     summary = {
         "SUCCESS": {"count": 0, "candidates": []},
         "FAILED": {"count": 0, "candidates": []},
-        "DUPLICATE": {"count": 0, "candidates": []},
+        "DUPLICATE": {"count": 0, "candidates": []}
     }
+    # Add unprocessed large files field if large_files_list has items
+    if large_files_list and len(large_files_list) > 0:
+        print("large_files_list", large_files_list)
+        summary["UNPROCESSED_LARGE_FILES"] = {
+            "count": len(large_files_list),
+            "files": large_files_list
+        }
 
     for data in all_docs:
         status = data.get("status")
@@ -1106,6 +1121,7 @@ def build_status_summary(all_docs: list):
             })
 
     return summary, len(all_docs)
+
 
 def get_text_from_cv(s3_bucket_name,key):
     try:
@@ -1312,7 +1328,17 @@ def lambda_handler(event, context):
         this_is_last_resume = if_last_cv(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
         # this_is_last_resume=True  #$$$
         if this_is_last_resume:
-            Data_of_cv  = DBManager.get_documents_by_bulkSourceTypeResumeId("bulkSourceTypeParseResumes",bulksourcetyperesumeid     )
+
+            status = "LARGE_RESUME_FILE"
+            large_files = DBManager.get_documents_by_bulkSourceTypeResumeId_and_status(collection_name_for_firstore_updating_counts, bulkSourceTypeResumeId,status)
+            try:
+                large_files_list = [i["userResumeFileName"] for i in large_files]
+                print("large_files_list",large_files_list)
+            except Exception as e:
+                print("Got error while getting large files data",e)
+
+
+            Data_of_cv  = DBManager.get_documents_by_bulkSourceTypeResumeId("bulkSourceTypeParseResumes",bulksourcetyperesumeid)
             print("all parsed cv data in bulk collection",Data_of_cv)
             all_cv_parsing_summary =build_status_summary(Data_of_cv)
             send_cv_summary_email(all_cv_parsing_summary, metadata)
