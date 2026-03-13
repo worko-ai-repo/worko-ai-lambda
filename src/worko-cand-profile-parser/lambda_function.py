@@ -1186,6 +1186,14 @@ def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
     # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
     print("got event:",event)
+    try:
+        metadata = get_meta_data(event)
+        if metadata.get("skipParsing","")==True:
+            return {'statusCode': 200, 'body': json.dumps(f'skipParsing as got info to skip in metadata')}
+    except Exception as e:
+        print("following normal flow")
+
+        
     env = os.environ.get("ENVIRONMENT", "dev")
     GCP_DATABASE_NAME = "worko-corp-db-"+env
     GCP_secret_name = "GCP-firestore-secret-"+env
