@@ -2292,7 +2292,9 @@ def lambda_handler(event, context):
     try:
         metadata = get_meta_data(event)
         if metadata.get("skipparsing","")=="true":
+            print("skipParsing as got info to skip in metadata")
             return {'statusCode': 200, 'body': json.dumps(f'skipParsing as got info to skip in metadata')}
+        
     except Exception as e:
         print("following normal flow")
 
