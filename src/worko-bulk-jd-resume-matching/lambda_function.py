@@ -2273,8 +2273,29 @@ def invoke_claude_with_image(base64_images):
 def clean_json_response(response: str) -> str:
     return response.strip().removeprefix("```json").removesuffix("```").strip()
 
+def get_meta_data(event):
+    s3_client = boto3.client('s3')
+
+    # Extract bucket and key from event
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    # key = "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KH8PX3GBW8N6RP1SBRSXN79P.pdf"
+    # bucket = "worko-corporate-cand-profile-dev"
+    # Get object metadata
+    response = s3_client.head_object(Bucket=bucket, Key=key)
+    metadata = response.get('Metadata', {})
+    return metadata
+
 def lambda_handler(event, context):
     print("event-----", event)
+    print("got event:",event)
+    try:
+        metadata = get_meta_data(event)
+        if metadata.get("skipparsing","")=="true":
+            return {'statusCode': 200, 'body': json.dumps(f'skipParsing as got info to skip in metadata')}
+    except Exception as e:
+        print("following normal flow")
+
     table_name = os.environ.get('table_name')
 
     env = os.environ.get("ENVIRONMENT","dev")
