@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Worko AI Lambda - Candidate Search Prompt Parser Function
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 512
+    Runtime: python3.10
+
+Resources:
+  CandidateSearchPromptParserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
+
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "candidate-search-prompt-parser-deps-${Environment}"
+      Description: Python dependencies for worko candidate search prompt parser lambda
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.10
+    Metadata:
+      BuildMethod: python3.10
+
+  CandidateSearchPromptParserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "worko-candidate-search-prompt-parser-${Environment}"
+      CodeUri: ./
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt CandidateSearchPromptParserRole.Arn
+      Layers:
+        - !Ref PythonDependenciesLayer
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+
+Outputs:
+  CandidateSearchPromptParserFunctionArn:
+    Description: Candidate Search Prompt Parser Lambda Function ARN
+    Value: !GetAtt CandidateSearchPromptParserFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CandidateSearchPromptParserFunctionArn"
