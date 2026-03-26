@@ -190,12 +190,12 @@ def lambda_handler(event, context):
 
     return adjusted_query
 
-if __name__ == "__main__":
-    # Test the function with a sample event
-    test_event = {
-        "searchByPrompt": "Senior Software Engineer must have node js and python sills with 5-12 years experience and CTC 15-20 LPA"
-    }
-    result = lambda_handler(test_event, None)
-    print(result)
+# if __name__ == "__main__":
+#     # Test the function with a sample event
+#     test_event = {
+#         "searchByPrompt": "Senior Software Engineer must have node js and python sills with 5-12 years experience and CTC 15-20 LPA"
+#     }
+#     result = lambda_handler(test_event, None)
+#     print(result)
 
 
