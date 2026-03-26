@@ -226,12 +226,12 @@ def lambda_handler(event, context):
         "body": json.dumps(adjusted_query)  # Convert the dictionary to a JSON string
     }
 
-if __name__ == "__main__":
-    # Test the function with a sample event
-    test_event = {
-        "searchByPrompt": "need a software Engineer with 3+ years of experience in java and python with ctc 40"
-    }
-    result = lambda_handler(test_event, None)
-    print(result)
+# if __name__ == "__main__":
+#     # Test the function with a sample event
+#     test_event = {
+#         "searchByPrompt": "need a software Engineer with 3+ years of experience in java and python with ctc 40"
+#     }
+#     result = lambda_handler(test_event, None)
+#     print(result)
 
 
