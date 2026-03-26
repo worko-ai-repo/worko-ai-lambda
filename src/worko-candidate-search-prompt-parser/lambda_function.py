@@ -188,7 +188,11 @@ def lambda_handler(event, context):
     # Apply threshold adjustments based on check_ctc and check_experience logic
     adjusted_query = apply_threshold_adjustments(parsed_query)
 
-    return adjusted_query
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps(adjusted_query)  # Convert the dictionary to a JSON string
+    }
 
 # if __name__ == "__main__":
 #     # Test the function with a sample event
