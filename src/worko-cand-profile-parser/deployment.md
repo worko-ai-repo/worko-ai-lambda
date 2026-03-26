@@ -256,3 +256,7 @@ sam deploy \
 ---
 
 **Deployment Status**: ✅ Active in Dev | ⏳ Pending in Prod
+
+09/04/2026
+just added this line in prompt to make it consistant
+f"candidateLocation must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"

@@ -426,7 +426,7 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
             f"Rule to return null values:\n"
             f" if any str key is not given in in resume text just return Null for that partcular fild "
             f" example :candidateNoticePeriod,candidateLocation"
-
+            f" candidateLocation must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"
             f"*** Output Format (JSON only) ***\n"
             f"{{{{\n"
             f"  \"candidateName\": \"\",\n"

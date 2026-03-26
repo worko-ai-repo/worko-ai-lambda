@@ -39,6 +39,17 @@ This Lambda function handles resume parsing for three distinct flows in the Work
 4. User profile is updated with parsed data
 
 ---
+## Flow 4: User SOURCE_TYPE_REFRESH_CV
+
+```json
+{
+   "event": "SOURCE_TYPE_REFRESH_CV"
+   "candidateParsedCvAwsS3FileName":"UJFGVBGVGHVFGGHCJVNB.pdf",
+   "cvAwsS3FilePath": "....",
+   "cvAwsS3ResourceType": "CORP_CAND_BULK_CV_UPLOAD",
+   "cvAwsS3BucketName": "worko-corporate-cand-profile-dev",
+   "cvAwsS3FilePath": "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs"
+}
 
 ## Common Processing
 All flows:

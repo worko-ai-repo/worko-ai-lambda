@@ -1,0 +1,144 @@
+[
+    {
+        "createdAt": "2026-02-12T15:29:18.957225",
+        "updatedAt": "2026-02-12T15:29:18.957225",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "candidateName": "Shaukat Shaikh",
+        "id": "26d383b6-b93a-4cc8-a171-8f4386ba3a12"
+    },
+    {
+        "id": "27948c33-a4b8-42a9-8ecd-ccdcdfdaee4b",
+        "updatedAt": "2026-02-12T16:48:20.056716",
+        "createdAt": "2026-02-12T16:48:20.056716",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "FAILED",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "candidateName": "Shaukat Shaikh"
+    },
+    {
+        "createdAt": "2026-02-12T15:32:36.757547",
+        "updatedAt": "2026-02-12T15:32:36.757547",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "bulkSourceTypeResumeId": [
+            "01KH8DQ92Z7PDCQ0QCG83ZN1PS"
+        ],
+        "candidateName": "Shaukat Shaikh",
+        "id": "27d7c273-dfd2-4b1a-a749-609a7f2e873e"
+    },
+    {
+        "createdAt": "2026-02-12T15:24:06.892904",
+        "updatedAt": "2026-02-12T15:24:06.892904",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "candidateName": "Shaukat Shaikh",
+        "id": "2906703d-27e3-4ed6-bdfb-5de48d4c2d31"
+    },
+    {
+        "id": "2cf5b8fd-9192-4e3a-8e06-470d2a90318c",
+        "updatedAt": "2026-02-12T16:19:57.910182",
+        "createdAt": "2026-02-12T16:19:57.910182",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "candidateName": "Shaukat Shaikh"
+    },
+    {
+        "id": "53ba1e28-5238-4ce6-bf5b-1fababe640a5",
+        "updatedAt": "2026-02-12T16:37:31.513476",
+        "createdAt": "2026-02-12T16:37:31.513476",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "candidateName": "Shaukat Shaikh"
+    },
+    {
+        "createdAt": "2026-02-12T16:05:05.810447",
+        "updatedAt": "2026-02-12T16:05:05.810447",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "candidateName": "Shaukat Shaikh",
+        "id": "938897ce-4907-45d8-8d49-5f9231f2179e"
+    },
+    {
+        "status": "FAILED",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "id": "DMTJH5ihkrpkHPdlmwGI"
+    },
+    {
+        "status": "SUCCESS",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "id": "L0lrWKjswp6mis29T1mt"
+    },
+    {
+        "id": "b790118e-2e1b-42eb-9208-ae7c051a623f",
+        "updatedAt": "2026-02-12T16:41:40.365676",
+        "createdAt": "2026-02-12T16:41:40.365676",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "candidateName": "Shaukat Shaikh"
+    },
+    {
+        "status": "DUPLICATE",
+        "candidateEmail": "example@gmail.com",
+        "bulkSourceTypeParseResumes": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "id": "bAk3ALU85OkSi5ifFX1m"
+    },
+    {
+        "id": "cecb82c5-ce20-4c0a-8b59-0883d489c778",
+        "updatedAt": "2026-02-12T16:43:57.661349",
+        "createdAt": "2026-02-12T16:43:57.661349",
+        "phoneNumberDetails": {
+            "candidateNumber": 9876543210,
+            "candidatePhoneCountryCode": 91,
+            "candidatePhoneNumber": "+91-9876543210"
+        },
+        "status": "SUCCESS",
+        "candidateEmail": "shaukatdatascience@gmail.com",
+        "bulkSourceTypeResumeId": "01KH8DQ92Z7PDCQ0QCG83ZN1PS",
+        "candidateName": "Shaukat Shaikh"
+    }
+]

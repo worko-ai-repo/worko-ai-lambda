@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Worko JD Resume Matching Lambda Function
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 512
+    Runtime: python3.10
+
+Resources:
+  WorkoJdResumeMatchingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:PutObject
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Scan
+                  - dynamodb:BatchWriteItem
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueUrl
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sts:GetCallerIdentity
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3vectors:QueryVectors
+                Resource: "*"
+
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-jd-resume-matching-deps-${Environment}"
+      Description: Python dependencies for worko JD resume matching lambda
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.10
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.10
+      BuildArchitecture: x86_64
+
+  WorkoJdResumeMatchingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "worko-jd-resume-matching-${Environment}"
+      CodeUri: ./
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt WorkoJdResumeMatchingRole.Arn
+      Layers:
+        - !Ref PythonDependenciesLayer
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          S3_BUCKET_NAME: !Sub "worko-app-${Environment}"
+          DYNAMO_TABLE_NAME: "worko"
+          JOBS_DYNAMO_TABLE_NAME: "worko-job-app"
+          S3_VECTOR_BUCKET_NAME: "worko-s3-vector-bucket"
+          S3_VECTOR_INDEX_NAME: "collegelist-s3-vector-index"
+          AZURE_OPENAI_ENDPOINT: "https://aif-wrk-dev-sin-01.openai.azure.com"
+          AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
+          AZURE_OPENAI_API_KEY: "REDACTED"
+          AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
+
+Outputs:
+  WorkoJdResumeMatchingFunctionArn:
+    Description: Worko JD Resume Matching Lambda Function ARN
+    Value: !GetAtt WorkoJdResumeMatchingFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-WorkoJdResumeMatchingFunctionArn"

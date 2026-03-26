@@ -1,10 +1,19 @@
+<<<<<<< HEAD
 # gpt-4.1-mini confugrations
 from importlib import metadata
 import requests
+=======
+>>>>>>> 13ae8e1bd0e6cfb17cdf475ee089b828c78dc6fa
 import json
-from typing import Tuple, Dict, Any, Optional, Union
+import ast
 import boto3
+import re
+import os
+import base64
+from datetime import datetime
+from decimal import Decimal
 import time
+<<<<<<< HEAD
 import json
 from typing import Callable, Any
 from lambda_function import *
@@ -107,8 +116,35 @@ def get_meta_data(event, context):
     # Extract your values
     # bulk_source_type_resume_id = metadata.get('bulksourcetyperesumeid')
     # company_id = metadata.get('companyid')
+=======
+from docx import Document
+import fitz
+from io import BytesIO
+from urllib.parse import unquote_plus
+from botocore.exceptions import ClientError
+import requests
+import random
+from typing import Tuple, Dict, Any, Optional, Union
+from google.cloud import firestore
+from google.oauth2 import service_account
+from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore_v1 import Or, And
+import uuid
+from urllib.parse import unquote_plus
+>>>>>>> 13ae8e1bd0e6cfb17cdf475ee089b828c78dc6fa
 
+cv_path = r"C:\Users\Administrator\Desktop\worko_working\worko_cv_jd\cv\tech\shaukat_cv.pdf"
+event = {'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'ap-south-1', 'eventTime': '2026-02-20T10:02:48.483Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp'}, 'requestParameters': {'sourceIPAddress': '103.176.210.4'}, 'responseElements': {'x-amz-request-id': '0GV2XM0G06SZCHGF', 'x-amz-id-2': 'x34y2miLD2LyN9AGVFLClux6M3yMIuG1hlWSrLcbegWm8EpI8llJ0nPkekh41t93bJGPpDXQcwDg8HsUEeOpw/dOdQBSNKZU'}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': 'dc878d7e-0a7a-48a3-b24f-e9ca7c67352a', 'bucket': {'name': 'worko-corporate-cand-profile-dev', 'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 'arn': 'arn:aws:s3:::worko-corporate-cand-profile-dev'}, 'object': {'key': 'companies/01K47MSBKS79ACY0BM6Z8VS3F5/bulk-cvs/01KHX80Z8F7FE17ZPYSEBAYN0G.pdf', 'size': 554118, 'eTag': 'daaf0aa1cde51652c86a77da2bb54e9e', 'sequencer': '00699831486FA6095A'}}}]}
+def get_secret(secret_name):
+    secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
+    try:
+        response = secrets_client.get_secret_value(SecretId=secret_name)
+        return json.loads(response['SecretString'])
+    except ClientError as e:
+        print(f"Error getting secret: {e}")
+        return None
 
+<<<<<<< HEAD
 def send_cv_summary_email(all_cv_parsing_summary, to_address):
     import csv
     from io import StringIO
@@ -242,277 +278,111 @@ print(get_meta_data(event))
 #     sqs = boto3.client('sqs')
 #     response = sqs.get_queue_url(QueueName=queue_name)
 #     return response['QueueUrl']
+=======
+def initialize_firestore(secret_name, db_name):
+    creds_dict = get_secret(secret_name)
+    credentials = service_account.Credentials.from_service_account_info(creds_dict)
+    return firestore.Client(project=creds_dict.get("project_id"), credentials=credentials, database=db_name)
 
-# def decimal_default(obj):
-#     if isinstance(obj, Decimal):
-#         return float(obj)
-#     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+def get_metadata(event):
+    s3_client = boto3.client('s3')
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    response = s3_client.head_object(Bucket=bucket, Key=key)
+    return response.get('Metadata', {})
+>>>>>>> 13ae8e1bd0e6cfb17cdf475ee089b828c78dc6fa
 
-# def send_sqs_for_throttling_error(retry_queue_name,message_body):
-#     try:
-#         retry_counter = message_body.get("retry_counter", "retry_counter not found")
-#         from datetime import datetime, timedelta
-#         queue_url = get_queue_url(retry_queue_name)
-#         sqs = boto3.client('sqs')
+def get_counts(db, bulkSourceTypeResumeId):
+    doc_ref = db.collection("bulkSourceTypeResumes").document(bulkSourceTypeResumeId)
+    doc = doc_ref.get()
+    if doc.exists:
+        data = doc.to_dict()
+        totalResumesUploaded = data.get("totalResumesUploaded", 0)
+        totalResumesSucceeded = data.get("totalResumesSucceeded", 0)
+        totalResumesFailed = data.get("totalResumesFailed", 0)
+        totalResumesDuplicate = data.get("totalResumesDuplicate", 0)
         
-#         # message_body = {"processed_text": processed_text,"object_key": object_key,"from":"throttling error"}
-#         delay_seconds = 5
-        
-#         current_time = datetime.now()
-#         visible_time = current_time + timedelta(seconds=delay_seconds)
-        
-#         print(f"Sending message to SQS with retry_counter: {retry_counter}")
-#         print(f"[SQS SEND] Current time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
-#         print(f"[SQS SEND] Message will be visible at: {visible_time.strftime('%Y-%m-%d %H:%M:%S')}")
-#         print(f"[SQS SEND] DelaySeconds: {delay_seconds}")
-#         print(f"SQS message body for throttled steps: {json.dumps(str(message_body)[:100])}")
-        
-#         response = sqs.send_message(
-#             QueueUrl=queue_url,
-#             MessageBody=json.dumps(message_body, default=decimal_default),
-#             DelaySeconds=delay_seconds
-#         )
-        
-#         print(f"[SQS SEND] MessageId: {response.get('MessageId', 'N/A')}")
-        
-        
-#     except Exception as sqs_error:
-#         print(f"Error sending send_sqs_for_throttling_error step to SQS: {sqs_error}")
-#         print(f"Queue URL attempted: {queue_url}")
-#         print(f"Message body: {message_body}")
+        print(f"totalResumesUploaded {totalResumesUploaded}")
+        print(f"totalResumesSucceeded {totalResumesSucceeded}")
+        print(f"totalResumesFailed {totalResumesFailed}")
+        print(f"totalResumesDuplicate {totalResumesDuplicate}")
+        return data
+    else:
+        print(f"Document not found for bulkSourceTypeResumeId: {bulkSourceTypeResumeId}")
+        return None
 
-# retry_queue_name = "worko-cand-profile-parser-retry-queue-dev"
-
-# for i in range(10):
-#     message_body = {f"testing_and_test{i}":"7757852171"}
-#     # time.sleep(2)
-#     send_sqs_for_throttling_error(retry_queue_name,message_body)
-
-    ############################################################################
-# def get_queue_url(queue_name):
-#     sqs = boto3.client('sqs')
-#     response = sqs.get_queue_url(QueueName=queue_name)
-#     return response['QueueUrl']
+if __name__ == "__main__":
+    env = "dev"
+    GCP_DATABASE_NAME = f"worko-corp-db-{env}"
+    GCP_secret_name = f"GCP-firestore-secret-{env}"
+    
+    db = initialize_firestore(GCP_secret_name, GCP_DATABASE_NAME)
+    metadata = get_metadata(event)
+    bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid", "")
+    
+    if bulksourcetyperesumeid:
+        get_counts(db, bulksourcetyperesumeid)
+    else:
+        print("No bulksourcetyperesumeid found in metadata")
 
 
-
-
-
-# retry_queue_name = "worko-cand-profile-parser-retry-queue-dev"
-# print(get_queue_url(retry_queue_name))
-# azure_openai_secret = {"AZURE_OPENAI_API_KEY" :"REDACTED",
-#                         "AZURE_OPENAI_API_VERSION" : "2024-12-01-preview",
-#                         "AZURE_OPENAI_DEPLOYMENT" : "gpt-4.1-mini",
-#                         "AZURE_OPENAI_ENDPOINT":"https://aif-wrk-dev-sin-01.openai.azure.com"}
 
 # def get_secret(secret_name):
 #     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
-
 #     try:
 #         response = secrets_client.get_secret_value(SecretId=secret_name)
-#         secret_value = response['SecretString']
-        
-#         # Try to parse as JSON, fallback to string
-#         try:
-#             secret_data = json.loads(secret_value)
-#         except json.JSONDecodeError:
-#             secret_data = secret_value
-#         return secret_data
+#         return json.loads(response['SecretString'])
 #     except ClientError as e:
-#         if e.response['Error']['Code'] == 'ResourceNotFoundException':
-#             return {
-#                 "statusCode": 404,
-#                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
-#             }
+#         print(f"Error getting secret: {e}")
+#         return None
 
-# secret_name = "AZURE-openai-secret-multimodel-dev"
-# azure_openai_secret =get_secret(secret_name)
-# print(azure_openai_secret)
-
+# def extract_text_from_pdf(pdf_path):
+#     text = ""
+#     with fitz.open(pdf_path) as pdf_document:
+#         for page in pdf_document:
+#             text += page.get_text()
+#     return text
 
 # class AzureOpenAIClient:
-#     """Client for Azure OpenAI API with retry logic."""
-    
-#     DEFAULT_TEMPERATURE = 0.3
-#     DEFAULT_API_VERSION = "2024-05-01-preview"
-#     REQUEST_TIMEOUT = 30  # seconds
-    
-#     def __init__(self, azure_openai_secret: Dict[str, str]):
-#         """Initialize Azure OpenAI client.
-        
-#         Args:
-#             azure_openai_secret: Dict containing:
-#                 - AZURE_OPENAI_ENDPOINT
-#                 - deployment_name
-#                 - api_key
-#                 - AZURE_OPENAI_API_VERSION (optional)
-#         """
-#         if not isinstance(azure_openai_secret, dict):
-#             raise TypeError("azure_openai_secret must be a dictionary")
-        
+#     def __init__(self, azure_openai_secret, model="gpt-4o"):
+#         self.model = model
 #         self.endpoint = azure_openai_secret.get("AZURE_OPENAI_ENDPOINT", "")
-#         self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT", "")
-#         self.api_version = azure_openai_secret.get(
-#             "AZURE_OPENAI_API_VERSION", 
-#             self.DEFAULT_API_VERSION
-#         )
 #         self.api_key = azure_openai_secret.get("AZURE_OPENAI_API_KEY", "")
-        
-#         # Validate required fields
-#         if not all([self.endpoint, self.deployment_name, self.api_key]):
-#             raise ValueError(
-#                 "Missing required Azure OpenAI configuration: "
-#                 "AZURE_OPENAI_ENDPOINT, deployment_name, and api_key are required"
-#             )
+#         if model == "gpt-4o":
+#             self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4o", "")
+#             self.api_version = azure_openai_secret.get("AZURE_OPENAI_API_VERSION_gpt-4o", "2024-05-01-preview")
+#         elif model == "gpt-4.1-mini":
+#             self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini", "")
+#             self.api_version = azure_openai_secret.get("AZURE_OPENAI_API_VERSION_gpt-4.1-mini", "2024-05-01-preview")
     
-#     def invoke_model_with_backoff(
-#         self,
-#         prompt: str,
-#         Task="Not specified",
-#         system_content: str = "You are a helpful assistant.",
-#         max_retries: int = 10,
-#         base_delay: int = 2,
-#         want_json: bool = True
-#     ) -> Union[str, Dict[Any, Any]]:
-#         """Invoke model with exponential backoff for rate limiting.
-        
-#         Args:
-#             prompt: User prompt
-#             system_content: System message for the model
-#             max_retries: Maximum number of retry attempts
-#             base_delay: Base delay for exponential backoff
-#             want_json: Whether to parse response as JSON
-            
-#         Returns:
-#             Model response as string or parsed JSON dict
-#         """
-#         for attempt in range(max_retries):
-#             print("Task to Ai is :- ",Task)
-#             try:
-#                 return self.invoke_model(system_content, prompt, want_json)
-            
-#             except requests.exceptions.HTTPError as e:
-#                 # Check for rate limiting (429) or server errors (5xx)
-#                 if e.response.status_code in [500, 502, 503, 504]:
-#                     if attempt < max_retries - 1:
-#                         delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
-#                         print(
-#                             f"Rate limit or server error (status {e.response.status_code}). "
-#                             f"Retrying in {delay:.2f} seconds..."
-#                         )
-#                         time.sleep(delay)
-#                     else:
-#                         raise
-#                 else:
-#                     # Don't retry for other HTTP errors (auth, not found, etc.)
-#                     raise
-            
-#             except requests.exceptions.RequestException as e:
-#                 # Network errors - retry
-#                 if attempt < max_retries - 1:
-#                     delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
-#                     print(f"Network error: {e}. Retrying in {delay:.2f} seconds...")
-#                     time.sleep(delay)
-#                 else:
-#                     raise
-    
-#     def invoke_model(
-#         self,
-#         system_content: str,
-#         prompt: str,
-#         want_json: bool = True,
-#         max_json_retries: int = 3,
-#         temperature: float = DEFAULT_TEMPERATURE
-#     ) -> Union[str, Dict[Any, Any]]:
-#         """Invoke Azure OpenAI model.
-        
-#         Args:
-#             system_content: System message
-#             prompt: User prompt
-#             want_json: Whether to parse response as JSON
-#             max_json_retries: Max retries for JSON parsing
-#             temperature: Model temperature
-            
-#         Returns:
-#             Model response as string or parsed JSON dict
-#         """
-#         url = (
-#             f"{self.endpoint}/openai/deployments/{self.deployment_name}/"
-#             f"chat/completions?api-version={self.api_version}"
-#         )
-        
-#         headers = {
-#             "Content-Type": "application/json",
-#             "api-key": self.api_key
-#         }
-        
+#     def invoke_model_with_backoff(self, prompt, Task="Not specified"):
+#         print(f"Task: {Task}")
+#         url = f"{self.endpoint}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}"
+#         headers = {"Content-Type": "application/json", "api-key": self.api_key}
 #         data = {
 #             "messages": [
-#                 {"role": "system", "content": system_content},
+#                 {"role": "system", "content": "You are a helpful assistant."},
 #                 {"role": "user", "content": prompt}
 #             ],
-#             "temperature": temperature
+#             "temperature": 0.3
 #         }
         
-#         if not want_json:
-#             response = requests.post(
-#                 url=url, 
-#                 headers=headers, 
-#                 json=data,
-#                 timeout=self.REQUEST_TIMEOUT
-#             )
-#             response.raise_for_status()
-#             result = response.json()
-#             return result["choices"][0]["message"]["content"]
-        
-#         # JSON mode with retries
-#         for attempt in range(max_json_retries):
+#         for attempt in range(3):
 #             try:
-#                 response = requests.post(
-#                     url=url, 
-#                     headers=headers, 
-#                     json=data,
-#                     timeout=self.REQUEST_TIMEOUT
-#                 )
+#                 response = requests.post(url=url, headers=headers, json=data)
 #                 response.raise_for_status()
 #                 result = response.json()
-#                 try :
-#                     tokens = result["usage"]
-#                     output_tokens= tokens["completion_tokens"]
-#                     input_tokens= tokens["prompt_tokens"]
-#                     total = tokens["total_tokens"]
-#                     print(" Token usage details input_tokens :-",input_tokens,"output_tokens",output_tokens,"total",total)
-
-#                 except Exception as e :
-#                     print("errore occured input output token not found :--",e)
-                
-#                 # Extract and clean content
 #                 content = result["choices"][0]["message"]["content"]
-#                 content = content.strip()
-                
-#                 # Remove markdown code blocks
-#                 if content.startswith("```"):
-#                     content = content.removeprefix("```json").removeprefix("```")
-#                     content = content.removesuffix("```").strip()
-                
+#                 content = content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 #                 return json.loads(content)
-            
-#             except json.JSONDecodeError as e:
-#                 remaining = max_json_retries - attempt - 1
-#                 print(f"JSON parse failed. Retries left: {remaining}")
-#                 print(f"Error: {e}")
-                
-#                 if remaining == 0:
-#                     print(f"Raw content: {content}")
-#                     raise ValueError(f"Failed to parse JSON after {max_json_retries} attempts") from e
-                
-#                 time.sleep(2)  # Brief delay before retry
-            
-#             except (KeyError, IndexError) as e:
-#                 print(f"Unexpected response structure: {result}")
-#                 raise ValueError("Invalid response format from Azure OpenAI") from e
-       
+#             except json.JSONDecodeError:
+#                 if attempt == 2:
+#                     raise
+#                 time.sleep(2)
+#             except requests.exceptions.HTTPError as e:
+#                 raise
 
+<<<<<<< HEAD
 # OpenAIClient = AzureOpenAIClient(azure_openai_secret)    
 # prompt   = "tell me about taj mahal in json style"
 # output = OpenAIClient.invoke_model_with_backoff(prompt,Task= "get cvExtractparsed step1 " )
@@ -580,3 +450,69 @@ print(get_meta_data(event))
 # # Usage
 # download_lambda_logs('worko-bulk-jd-resume-matching-dev', 'lambda_logs.txt', 200)
 
+=======
+# def process_cv(processed_text, gpt_model):
+#     processed_text = " ".join(processed_text.split())
+    
+#     parsed_prompt = (
+#         f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
+#         f"Resume text:\n{processed_text}\n\n"
+#         f"*** RULE: If you don't find any data in the resume ***\n"
+#         f"- If the value is a number → use 0\n"
+#         f"- If the value is a boolean → use false\n"
+#         f"- If the value is a string → use an empty string \"\"\n"
+#         f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
+#         f"*** Mandatory data to find in the resume ***\n"
+#         f"These fields MUST always be present in the output:\n"
+#         f"1. candidateName\n2. candidateCurrentDesignation\n3. candidateCurrentCompany\n4. candidateTotalYOE\n5. candidateLocation\n\n"
+#         f"*** Output Format (JSON only) ***\n"
+#         f"{{{{\n"
+#         f"  \"candidateName\": \"\",\n"
+#         f"  \"about\":\"extract about me or summary or profile or objective from resume\",\n"
+#         f"  \"education\": [{{\"collage\": \"\", \"degree\": \"\", \"startedYear\": \"\", \"passingYear\": \"\"}}],\n"
+#         f"  \"multipleCandidateExperience\": [{{\"companyName\": \"\", \"designation\": \"\", \"department\": \"\", \"YOE\": 0, \"startDate\": \"\", \"endDate\": \"\"}}],\n"
+#         f"  \"candidateEmail\": \"\",\n"
+#         f"  \"candidatePhoneNumber\": \"\",\n"
+#         f"  \"candidateNumber\": 0,\n"
+#         f"  \"candidatePhoneCountryCode\": 0,\n"
+#         f"  \"candidateCurrentCompany\": \"\",\n"
+#         f"  \"candidateCurrentDesignation\": \"\",\n"
+#         f"  \"candidateExperience\": 0,\n"
+#         f"  \"candidateTotalYOE\": 0,\n"
+#         f"  \"candidateRelevantYOE\": 0,\n"
+#         f"  \"candidateNoticePeriod\": \"\",\n"
+#         f"  \"candidateLocation\": \"\",\n"
+#         f"  \"candidateReadyToRelocate\": false,\n"
+#         f"  \"isNoticePeriodNegotiable\": false\n"
+#         f"}}}}\n"
+#     )
+    
+#     cv_extracted_parsed = gpt_model.invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
+#     return cv_extracted_parsed
+
+# if __name__ == "__main__":
+#     start = time.time()
+#     env = "dev"
+#     azure_openai_secret_name = f"AZURE-openai-secret-multimodel-{env}"
+#     azure_openai_secret = get_secret(azure_openai_secret_name)
+    
+#     gpt4_1_mini = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
+    
+#     processed_text = extract_text_from_pdf(cv_path)
+    
+#     while True:
+#         try:
+#             result = process_cv(processed_text, gpt4_1_mini)
+#             print(json.dumps(result, indent=2))
+#             end = time.time()
+#             print(f"\nTotal time taken: {end - start:.2f} seconds")
+#             break
+#         except Exception as e:
+#             error_message = str(e).lower()
+#             if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
+#                 print(f"Throttling error: {e}. Retrying in 3 seconds...")
+#                 time.sleep(3)
+#             else:
+#                 print(f"Error: {e}")
+#                 break
+>>>>>>> 13ae8e1bd0e6cfb17cdf475ee089b828c78dc6fa

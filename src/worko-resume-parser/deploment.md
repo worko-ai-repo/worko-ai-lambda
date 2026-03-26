@@ -46,3 +46,6 @@ sam deploy \
   --s3-bucket aws-sam-cli-managed-default-samclisourcebucket-mpwvaft0yfqx \
   --no-confirm-changeset
 ```
+09/03/2026
+added this line in the prompt
+ 6) location must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"

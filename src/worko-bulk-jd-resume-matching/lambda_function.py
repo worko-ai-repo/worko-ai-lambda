@@ -228,6 +228,8 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
             f"Rule to return null values:\n"
             f" if any str key is not given in in resume text just return Null for that partcular fild "
             f" example :candidateNoticePeriod,candidateLocation"
+            f" candidateLocation must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"
+
 
             f"*** Output Format (JSON only) ***\n"
             f"{{{{\n"
@@ -2271,8 +2273,31 @@ def invoke_claude_with_image(base64_images):
 def clean_json_response(response: str) -> str:
     return response.strip().removeprefix("```json").removesuffix("```").strip()
 
+def get_meta_data(event):
+    s3_client = boto3.client('s3')
+
+    # Extract bucket and key from event
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    # key = "companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KH8PX3GBW8N6RP1SBRSXN79P.pdf"
+    # bucket = "worko-corporate-cand-profile-dev"
+    # Get object metadata
+    response = s3_client.head_object(Bucket=bucket, Key=key)
+    metadata = response.get('Metadata', {})
+    return metadata
+
 def lambda_handler(event, context):
     print("event-----", event)
+    print("got event:",event)
+    try:
+        metadata = get_meta_data(event)
+        if metadata.get("skipparsing","")=="true":
+            print("skipParsing as got info to skip in metadata")
+            return {'statusCode': 200, 'body': json.dumps(f'skipParsing as got info to skip in metadata')}
+        
+    except Exception as e:
+        print("following normal flow")
+
     table_name = os.environ.get('table_name')
 
     env = os.environ.get("ENVIRONMENT","dev")
@@ -2417,3 +2442,4 @@ def lambda_handler(event, context):
 
 
 #     lambda_handler(event, None)
+

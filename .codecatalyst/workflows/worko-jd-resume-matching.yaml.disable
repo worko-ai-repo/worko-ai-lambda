@@ -1,4 +1,4 @@
-Name: DeployCandProfileParserLambda
+Name: DeployJdResumeMatchingLambda
 SchemaVersion: "1.0"
 
 Triggers:
@@ -15,7 +15,10 @@ Actions:
     Configuration:
       Steps:
         - Run: |
-            echo "=== Candidate Profile Parser Lambda Deployment ===" 
+            echo "=== JD Resume Matching Lambda Deployment ==="
+            
+            # Set AWS default profile
+            set AWS_PROFILE=DeveloperAccess-211125353899
             
             # Load environment configuration
             ENV=$(cat env-config.json | jq -r '.ENVIRONMENT')
@@ -23,8 +26,45 @@ Actions:
             export AWS_DEFAULT_REGION=$AWS_REGION
             S3_BUCKET_MANAGED=$(cat env-config.json | jq -r '.S3_BUCKET_MANAGED')
             
-            STACK_NAME="worko-cand-profile-parser-${ENV}-stack"
-            FUNCTION_NAME="worko-cand-profile-parser-${ENV}"
+            echo "Environment Variables:"
+            echo "AWS_PROFILE: $AWS_PROFILE"
+            echo "ENV: $ENV"
+            echo "AWS_REGION: $AWS_REGION"
+            echo "S3_BUCKET_MANAGED: $S3_BUCKET_MANAGED"
+            
+            STACK_NAME="worko-jd-resume-matching-${ENV}-stack"
+            FUNCTION_NAME="worko-jd-resume-matching-${ENV}"
+            
+            # ============================================================
+            # FORCE CLEANUP STEP (COMMENTED OUT) Run only in case of manual deployemnts so it will delete first
+            # ============================================================
+            # Uncomment this section ONLY when you need to:
+            # 1. Delete corrupted CloudFormation stacks
+            # 2. Remove manually deployed Lambda functions
+            # 3. Force a complete clean slate deployment
+            #
+            # WARNING: This will DELETE your Lambda and CloudFormation stack!
+            # ============================================================
+            
+            # echo "=== FORCE CLEANUP: Deleting corrupted resources ==="
+            # 
+            # # Delete manually deployed Lambda function if exists
+            # if aws lambda get-function --function-name $FUNCTION_NAME --region $AWS_REGION 2>/dev/null; then
+            #   echo "Deleting manually deployed Lambda function: $FUNCTION_NAME"
+            #   aws lambda delete-function --function-name $FUNCTION_NAME --region $AWS_REGION || true
+            #   echo "Lambda function deleted"
+            # fi
+            # 
+            # # Delete CloudFormation stack if exists (including corrupted ones)
+            # if aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION 2>/dev/null; then
+            #   echo "Deleting CloudFormation stack: $STACK_NAME"
+            #   aws cloudformation delete-stack --stack-name $STACK_NAME --region $AWS_REGION
+            #   echo "Waiting for stack deletion..."
+            #   aws cloudformation wait stack-delete-complete --stack-name $STACK_NAME --region $AWS_REGION || true
+            #   echo "Stack deleted successfully"
+            # fi
+            # 
+            # echo "Force cleanup completed"
             
             # Delete broken stack if it exists
             echo "Checking for existing stack..."
@@ -52,7 +92,7 @@ Actions:
               LAMBDA_EXISTS=false
             fi
             
-            cd src/worko-cand-profile-parser
+            cd src/worko-jd-resume-matching
             
             echo "Building SAM application..."
             sam build --use-container
@@ -100,7 +140,7 @@ Actions:
               exit 1
             fi
             
-            echo "SUCCESS: Candidate Profile Parser Lambda deployed successfully"
+            echo "SUCCESS: JD Resume Matching Lambda deployed successfully"
             
             # Verify deployment
             NEW_VERSION=$(aws lambda get-function --function-name $FUNCTION_NAME --region $AWS_REGION --query 'Configuration.Version' --output text)

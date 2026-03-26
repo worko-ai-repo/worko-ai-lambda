@@ -27,31 +27,83 @@ dynamodb = boto3.resource('dynamodb')
 s3_client = boto3.client('s3')
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
 
+
 def process_parsed_cv_json(cv_obj):
     try:
         if not isinstance(cv_obj, dict):
             return cv_obj
         
-        # Process education array separately
-        education = cv_obj.get("education", [])
-        if isinstance(education, list):
-            education = [
+        # Helper function to clean array items
+        def clean_array_items(arr):
+            if not isinstance(arr, list):
+                return arr
+            return [
                 {k: v for k, v in item.items() if v not in (None, "", [], {}, "null", "NULL")}
-                for item in education
+                for item in arr
                 if isinstance(item, dict)
             ]
+        
+        # Process all arrays that contain objects
+        array_fields = ["education", "multipleCandidateExperience", "coreSkills", "technicalSkills", "softSkills"]
+        cleaned_arrays = {}
+        
+        for field in array_fields:
+            if field in cv_obj:
+                cleaned_array = clean_array_items(cv_obj[field])
+                if cleaned_array:  # Only add back if not empty
+                    cleaned_arrays[field] = cleaned_array
         
         # Remove null/empty values from top level
         cv_obj = {k: v for k, v in cv_obj.items() if v not in (None, "", [], {}, "null", "NULL")}
         
-        # Add back cleaned education if it has items
-        if education:
-            cv_obj["education"] = education
+        # Add back all cleaned arrays
+        cv_obj.update(cleaned_arrays)
+        
+        try:
+            cv_obj["name"] = cv_obj["name"].lower()
+            cv_obj["email"] = cv_obj["email"].lower()
+        except Exception as e:
+            print("Error in lowercasing name and email",e)
+
         
         return cv_obj
     except Exception as e:
         print(f"Error processing parsed CV JSON: {e}")
         return cv_obj
+    
+
+
+# def process_parsed_cv_json(cv_obj):
+#     try:
+#         if not isinstance(cv_obj, dict):
+#             return cv_obj
+        
+#         # Process education array separately
+#         education = cv_obj.get("education", [])
+#         if isinstance(education, list):
+#             education = [
+#                 {k: v for k, v in item.items() if v not in (None, "", [], {}, "null", "NULL")}
+#                 for item in education
+#                 if isinstance(item, dict)
+#             ]
+        
+#         # Remove null/empty values from top level
+#         cv_obj = {k: v for k, v in cv_obj.items() if v not in (None, "", [], {}, "null", "NULL")}
+        
+#         # Add back cleaned education if it has items
+#         if education:
+#             cv_obj["education"] = education
+#         try:
+#             cv_obj["name"] = cv_obj["name"].lower()
+#             cv_obj["email"] = cv_obj["email"].lower()
+#         except Exception as e:
+#             print("Error in lowercasing name and email",e)
+
+        
+#         return cv_obj
+#     except Exception as e:
+#         print(f"Error processing parsed CV JSON: {e}")
+#         return cv_obj
     
 
 def reset_partition(partition_key_value):
@@ -1290,7 +1342,7 @@ def invoke_claude_with_image(base64_images):
     # Add resume parsing instructions
     messages[0]["content"].append({
         "type": "text",
-        "text": ('Carefully analyze the entire resume shown in the image. Extract all visible information and present it in plain text format, organized topic-wise never miss name and year of experience.\n\n'
+        "text": ('Carefully analyze the entire resume shown in the image. Extract all visible information and present it in plain text format, organized topic-wise never miss name, emaail and year of experience. as it wil always present in the data\n\n'
             'Name:\nEmail:\nExperience in year:\nAchievements:\nTechnical skills:'
             '\nSoft skills:\nCore skills:\nEducation:\nIndustry experience:\nResponsibilities:'
             '\nAchievements against responsibility:\nCertifications:\nStrength:\n'

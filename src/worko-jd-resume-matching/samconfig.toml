@@ -1,0 +1,11 @@
+version = 0.1
+[prod.deploy.parameters]
+stack_name = "worko-jd-resume-matching-prod-stack"
+resolve_s3 = true
+s3_prefix = "worko-jd-resume-matching-prod-stack"
+region = "ap-south-1"
+profile = "worko-p"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"prod\""
+image_repositories = []
