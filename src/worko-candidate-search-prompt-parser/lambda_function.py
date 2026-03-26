@@ -86,86 +86,116 @@ def apply_threshold_adjustments(parsed_query: Dict) -> Dict:
     exp_range = parsed_dict.get("experienceRange", {})
     sal_range = parsed_dict.get("salaryRange", {})
     
-    has_exp = exp_range.get("min") is not None or exp_range.get("max") is not None
-    has_ctc = sal_range.get("min") is not None or sal_range.get("max") is not None
+    has_exp = exp_range.get("min") not in (None, "") or exp_range.get("max") not in (None, "")
+    has_ctc = sal_range.get("min") not in (None, "") or sal_range.get("max") not in (None, "")
     
     print("\n=== THRESHOLD ADJUSTMENT ===")
     
     # ========== EXPERIENCE ADJUSTMENT ==========
     if has_exp:
-        exp_min = float(exp_range.get("min", 0) or 0)
-        exp_max = float(exp_range.get("max", 999) or 999)
+        exp_min_val = exp_range.get("min")
+        exp_max_val = exp_range.get("max")
+        exp_min = float(exp_min_val) if exp_min_val not in (None, "") else None
+        exp_max = float(exp_max_val) if exp_max_val not in (None, "") else None
         
-        print(f"Experience: {exp_min}-{exp_max} years")
+        print(f"Experience: {exp_min if exp_min is not None else 'Not specified'}-{exp_max if exp_max is not None else 'Not specified'} years")
         
-        # Adjust MIN
-        if exp_min <= 3:
-            adjusted_min = max(0, exp_min - 1)
-            print(f"  MIN: {exp_min} - 1 = {adjusted_min} (0-3y range)")
-        elif exp_min <= 6:
-            adjusted_min = max(0, exp_min - 1.5)
-            print(f"  MIN: {exp_min} - 1.5 = {adjusted_min} (3-6y range)")
-        elif exp_min <= 10:
-            adjusted_min = max(0, exp_min - 2)
-            print(f"  MIN: {exp_min} - 2 = {adjusted_min} (6-10y range)")
-        else:
-            if exp_min * 0.3 >= 3:
-                if exp_min <= 3:
-                    max_gap = 1
-                elif exp_min <= 6:
-                    max_gap = 1.5
-                elif exp_min <= 10:
-                    max_gap = 2
-                else:
-                    max_gap = 3
-                adjusted_min = max(0, exp_min - max_gap)
-                print(f"  MIN: {exp_min} - {max_gap} = {adjusted_min} (10+y gap logic)")
+        # Adjust MIN only if provided
+        if exp_min is not None:
+            if exp_min <= 3:
+                adjusted_min = max(0, exp_min - 1)
+                print(f"  MIN: {exp_min} - 1 = {adjusted_min} (0-3y range)")
+            elif exp_min <= 6:
+                adjusted_min = max(0, exp_min - 1.5)
+                print(f"  MIN: {exp_min} - 1.5 = {adjusted_min} (3-6y range)")
+            elif exp_min <= 10:
+                adjusted_min = max(0, exp_min - 2)
+                print(f"  MIN: {exp_min} - 2 = {adjusted_min} (6-10y range)")
             else:
-                adjusted_min = exp_min * 0.7
-                print(f"  MIN: {exp_min} * 0.7 = {adjusted_min} (10+y percentage logic)")
-        
-        exp_range["min"] = adjusted_min
-        
-        # Adjust MAX
-        if exp_max <= 3:
-            adjusted_max = exp_max + 1
-            print(f"  MAX: {exp_max} + 1 = {adjusted_max} (0-3y range)")
-        elif exp_max <= 6:
-            adjusted_max = exp_max + 1.5
-            print(f"  MAX: {exp_max} + 1.5 = {adjusted_max} (3-6y range)")
-        elif exp_max <= 10:
-            adjusted_max = exp_max + 2
-            print(f"  MAX: {exp_max} + 2 = {adjusted_max} (6-10y range)")
+                if exp_min * 0.3 >= 3:
+                    if exp_min <= 3:
+                        max_gap = 1
+                    elif exp_min <= 6:
+                        max_gap = 1.5
+                    elif exp_min <= 10:
+                        max_gap = 2
+                    else:
+                        max_gap = 3
+                    adjusted_min = max(0, exp_min - max_gap)
+                    print(f"  MIN: {exp_min} - {max_gap} = {adjusted_min} (10+y gap logic)")
+                else:
+                    adjusted_min = exp_min * 0.7
+                    print(f"  MIN: {exp_min} * 0.7 = {adjusted_min} (10+y percentage logic)")
+            
+            exp_range["min"] = adjusted_min
         else:
-            if exp_max <= 4:
-                adjusted_max = exp_max * 1.6
-                print(f"  MAX: {exp_max} * 1.6 = {adjusted_max} (10+y Statement 1)")
-            elif exp_max * 0.4 > 4:
-                adjusted_max = exp_max + 4
-                print(f"  MAX: {exp_max} + 4 = {adjusted_max} (10+y Statement 4)")
-            elif exp_max > 4:
-                adjusted_max = exp_max * 1.4
-                print(f"  MAX: {exp_max} * 1.4 = {adjusted_max} (10+y Statement 5)")
+            exp_range.pop("min", None)
         
-        exp_range["max"] = adjusted_max
-        print(f"  → Adjusted: {exp_range['min']}-{exp_range['max']} years")
+        # Adjust MAX only if provided
+        if exp_max is not None:
+            if exp_max <= 3:
+                adjusted_max = exp_max + 1
+                print(f"  MAX: {exp_max} + 1 = {adjusted_max} (0-3y range)")
+            elif exp_max <= 6:
+                adjusted_max = exp_max + 1.5
+                print(f"  MAX: {exp_max} + 1.5 = {adjusted_max} (3-6y range)")
+            elif exp_max <= 10:
+                adjusted_max = exp_max + 2
+                print(f"  MAX: {exp_max} + 2 = {adjusted_max} (6-10y range)")
+            else:
+                if exp_max <= 4:
+                    adjusted_max = exp_max * 1.6
+                    print(f"  MAX: {exp_max} * 1.6 = {adjusted_max} (10+y Statement 1)")
+                elif exp_max * 0.4 > 4:
+                    adjusted_max = exp_max + 4
+                    print(f"  MAX: {exp_max} + 4 = {adjusted_max} (10+y Statement 4)")
+                elif exp_max > 4:
+                    adjusted_max = exp_max * 1.4
+                    print(f"  MAX: {exp_max} * 1.4 = {adjusted_max} (10+y Statement 5)")
+            
+            exp_range["max"] = adjusted_max
+        else:
+            exp_range.pop("max", None)
+        
+        if exp_min is not None or exp_max is not None:
+            print(f"  → Adjusted: {exp_range.get('min', 'Not specified')}-{exp_range.get('max', 'Not specified')} years")
     
     # ========== CTC ADJUSTMENT ==========
     if has_ctc:
-        ctc_min = float(sal_range.get("min", 0) or 0)
-        ctc_max = float(sal_range.get("max", 999) or 999)
+        ctc_min_val = sal_range.get("min")
+        ctc_max_val = sal_range.get("max")
+        ctc_min = float(ctc_min_val) if ctc_min_val not in (None, "") else None
+        ctc_max = float(ctc_max_val) if ctc_max_val not in (None, "") else None
         
-        print(f"CTC: {ctc_min}-{ctc_max} LPA")
+        print(f"CTC: {ctc_min if ctc_min is not None else 'Not specified'}-{ctc_max if ctc_max is not None else 'Not specified'} LPA")
         
-        if ctc_max > 10:
-            adjusted_max = ctc_max * 1.2
-            print(f" greater the 10 so +20% is acceptable MAX: ({ctc_max} * 1.2) ")
+        # Remove min if empty
+        if ctc_min is None:
+            sal_range.pop("min", None)
+        
+        # Adjust MAX only if provided
+        if ctc_max is not None:
+            if ctc_max > 10:
+                adjusted_max = ctc_max * 1.2
+                print(f"  greater than 10 so +20% is acceptable MAX: ({ctc_max} * 1.2) = {adjusted_max}")
+            else:
+                adjusted_max = ctc_max * 1.3
+                print(f"  less than 10 so +30% is acceptable MAX: ({ctc_max} * 1.3) = {adjusted_max}")
+            
+            sal_range["max"] = int(adjusted_max)
+            print(f"  → Adjusted: {sal_range.get('min', 'Not specified')}-{sal_range['max']} LPA")
         else:
-            adjusted_max = ctc_max * 1.3
-            print(f" less the 10 so +30% is acceptable MAX: ({ctc_max} * 1.3) ")
-        
-        sal_range["max"] = int(adjusted_max)
-        print(f"  → Adjusted: {sal_range['min']}-{sal_range['max']} LPA")
+            sal_range.pop("max", None)
+    
+    # Clean up empty fields from entire parsed_dict
+    def clean_empty_values(obj):
+        if isinstance(obj, dict):
+            return {k: clean_empty_values(v) for k, v in obj.items() if v not in (None, "", [], {})}
+        elif isinstance(obj, list):
+            return [clean_empty_values(item) for item in obj if item not in (None, "", [], {})]
+        return obj
+    
+    parsed_dict = clean_empty_values(parsed_dict)
     
     print("=== ADJUSTMENT COMPLETE ===\n")
     
@@ -194,12 +224,12 @@ def lambda_handler(event, context):
         "body": json.dumps(adjusted_query)  # Convert the dictionary to a JSON string
     }
 
-# if __name__ == "__main__":
-#     # Test the function with a sample event
-#     test_event = {
-#         "searchByPrompt": "Senior Software Engineer must have node js and python sills with 5-12 years experience and CTC 15-20 LPA"
-#     }
-#     result = lambda_handler(test_event, None)
-#     print(result)
+if __name__ == "__main__":
+    # Test the function with a sample event
+    test_event = {
+        "searchByPrompt": "need a software Engineer woith 3+ years of experience"
+    }
+    result = lambda_handler(test_event, None)
+    print(result)
 
 
