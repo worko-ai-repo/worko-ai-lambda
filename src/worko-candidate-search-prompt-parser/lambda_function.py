@@ -219,7 +219,7 @@ def lambda_handler(event, context):
     
     # Apply threshold adjustments based on check_ctc and check_experience logic
     adjusted_query = apply_threshold_adjustments(parsed_query)
-
+    print(adjusted_query)
     return {
         "statusCode": 200,
         "headers": {"Content-Type": "application/json"},
