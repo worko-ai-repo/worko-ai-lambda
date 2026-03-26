@@ -38,7 +38,9 @@ class QueryParser:
     def parse_query(self, query: str) -> Dict:
         """Parse natural language query into structured format"""
         prompt = f"""you will get a user quiry in str formate from user you need to covert it to a below json formate nver skip any skill or requirements from quiry and never fabricate from your side and skip the key which is not given in the quiry. and never give any explanation or summary just pure json 100% correct output
-    if quiry say lpa or years then just give numbers in salary and experience range
+    if quiry say lpa or years then just give numbers in salary and experience range.
+    important instructions.
+    1) if quiry says experies or ctc in one number example 5+ years or must have 7 years then, make min max both as given one number. example {{"min":7,"max":7}}
     
     {{
     "jobTitle": "",
@@ -227,7 +229,7 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     # Test the function with a sample event
     test_event = {
-        "searchByPrompt": "need a software Engineer woith 3+ years of experience"
+        "searchByPrompt": "need a software Engineer with 3+ years of experience in java and python with ctc 40"
     }
     result = lambda_handler(test_event, None)
     print(result)
