@@ -1309,52 +1309,53 @@ def lambda_handler(event, context):
             print("This Event is triggered by S3...")
             
             # s3_event = event['Records'][0]['s3']   #old direct s3 triger code
-            s3_event =json.loads(event['Records'][0]["body"])["Records"][0]["s3"]
-            bucket_name = s3_event['bucket']['name']
-            object_key = unquote_plus(s3_event['object']['key'])
-            metadata = get_meta_data(bucket_name,object_key)
-            file_name = object_key.split("/")[-1]  # we need to sent it eith .pdf it will be used for view cv
-            
-            print(" file_name,", file_name)
-            processed_text = get_text_from_cv(bucket_name,object_key)
-            
-            bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid","")
-            doc = get_counts(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
+            for record in event['Records']:
+                s3_event = json.loads(record['body'])["Records"][0]["s3"]
+                bucket_name = s3_event['bucket']['name']
+                object_key = unquote_plus(s3_event['object']['key'])
+                metadata = get_meta_data(bucket_name,object_key)
+                file_name = object_key.split("/")[-1]  # we need to sent it eith .pdf it will be used for view cv
+                
+                print(" file_name,", file_name)
+                processed_text = get_text_from_cv(bucket_name,object_key)
+                
+                bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid","")
+                doc = get_counts(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
 
-            if "companies" in object_key: #example_path1:
-                company_id = object_key.split("/")[1]
-                metadata["company_id"] = company_id
-            else:
-                company_id = ""  #check once this work in all cases
-            if not processed_text:
-                print(f"Failed to extract text from S3, sending to retry queue")
-                body = {"bucket_name": bucket_name,"object_key": object_key,"from":"S3 text extraction failed","retry_counter":0,"metadata":metadata}
-                send_sqs_for_throttling_error(retry_queue_name,body,30)
-                return {'statusCode': 200, 'body': 'Sent to retry queue'}
+                if "companies" in object_key: #example_path1:
+                    company_id = object_key.split("/")[1]
+                    metadata["company_id"] = company_id
+                else:
+                    company_id = ""  #check once this work in all cases
+                if not processed_text:
+                    print(f"Failed to extract text from S3, sending to retry queue")
+                    body = {"bucket_name": bucket_name,"object_key": object_key,"from":"S3 text extraction failed","retry_counter":0,"metadata":metadata}
+                    send_sqs_for_throttling_error(retry_queue_name,body,30)
+                    return {'statusCode': 200, 'body': 'Sent to retry queue'}
             
-            # cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,bucket_name,object_key,0)
+                # cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,bucket_name,object_key,0)
 
-            # if cvExtractedParsed:
-            #     print("cvExtractedParsed",str(cvExtractedParsed)[:100],"...")
-            #     dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
-            #     if dublicat_data is not None:
-            #         print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
-            #         status = "DUPLICATE"
-            #         cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-            #         updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
-            #     elif dublicat_data is None:    
-            #         sqs_send_data = {"companyId": company_id,
-            #                     "candidateCvAwsS3FileName":file_name,
-            #                     "cvExtractedParsed":cvExtractedParsed}
-            #         send_final_sqs_for_cvExtractparsed(sqs_send_data)
-            #         status = "SUCCESS"
-            #         cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-            #         updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
-            # else:
-            #     print(f"sent the SQS : from s3 event")
-            status = "SUCCESS"
-            cand_data = {"file_name":file_name}   # here just update with name of file
-            updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
+                # if cvExtractedParsed:
+                #     print("cvExtractedParsed",str(cvExtractedParsed)[:100],"...")
+                #     dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
+                #     if dublicat_data is not None:
+                #         print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
+                #         status = "DUPLICATE"
+                #         cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                #         updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
+                #     elif dublicat_data is None:    
+                #         sqs_send_data = {"companyId": company_id,
+                #                     "candidateCvAwsS3FileName":file_name,
+                #                     "cvExtractedParsed":cvExtractedParsed}
+                #         send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                #         status = "SUCCESS"
+                #         cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                #         updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
+                # else:
+                #     print(f"sent the SQS : from s3 event")
+                status = "SUCCESS"
+                cand_data = {"file_name":file_name}   # here just update with name of file
+                updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)
                 
                 
 
@@ -1374,7 +1375,7 @@ def lambda_handler(event, context):
 
 
             Data_of_cv  = DBManager.get_documents_by_bulkSourceTypeResumeId("bulkSourceTypeParseResumes",bulksourcetyperesumeid)
-            print("all parsed cv data in bulk collection",Data_of_cv)
+            print("all parsed cv data in bulk collection",str(Data_of_cv)[:100],"...")
             all_cv_parsing_summary =build_status_summary(Data_of_cv,large_files_list)
             send_cv_summary_email(all_cv_parsing_summary, metadata)
 
@@ -1402,7 +1403,75 @@ if __name__ == "__main__":
     #           'messageAttributes': {}, 'md5OfBody': '30f2f4eb84e8973f7ee78c6be6db1c2b', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-retry-queue-dev', 'awsRegion': 'ap-south-1'}]}
     # # event = {'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'ap-south-1', 'eventTime': '2026-03-13T09:19:34.588Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp'}, 'requestParameters': {'sourceIPAddress': '43.251.217.94'}, 'responseElements': {'x-amz-request-id': 'FG127W175PKRXRW6', 'x-amz-id-2': 'Rx0SJiCbbWvPYSXSOAT44aFmrQwG55QR+TPD9VNN82srRYoBslLCTV9UrVg2isJvgZEaOc+VlYIRmSraPzVDbmCXUmYZB249G24g33b4wb0='}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': '7bf28bb9-cec6-40ba-8c21-819741898750', 'bucket': {'name': 'worko-corporate-cand-profile-dev', 'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 'arn': 'arn:aws:s3:::worko-corporate-cand-profile-dev'}, 'object': {'key': 'companies/01KCGXV5WPA6C4S0PXFSMRQAQZ/bulk-cvs/01KKK7WTJHTXD7XAFN2DVE986F.pdf', 'size': 62202, 'eTag': '5278005910e63ff01980ac601156ddca', 'sequencer': '0069B3D6A68B7BF69C'}}}]}
     # # new s3->sqs flow triger
-    event ={'Records': [{'messageId': '4a4a2052-44f2-40b5-933e-715669f75f90', 'receiptHandle': 'AQEBWvogdwYEidoqhqak+7CSxbk1JSliRNJSsDbkZzfR5JwCSf1h8xTIgVMRHIX9on9WpOByVodQ6Iqng06hmOacvVejLvH2Xtnv9VXyscyPYsD+9iOPqbCdyVrrzaQmPh3kC/lg9NTcpZ5qAGDLtOVPxNWSRc+u9nkjP1WZ3JO3HZsRt4HLCVhvd+7yL+oeh+yssbNjoqS/yXBCqR1zb4jBc3Suvi8K4QQz8ljJ7nhrjvAO5fp4o3koZ4MCuopKW48U9ssbQydJey8Mtuqc3XeUd8v8m92wJR7OTYADh7aheFILaCBid20M3B0MtgEpE+OcRTedofHrIUgE7xZ7Qv5iMsw1pDbFNy9+zOLQg7zAUTxq1gxQJPdUJfs+I70SjLRpzQH35PE5v9qbrDWYCpLbXPzAqKx86C4c5SMWh+JBAMo=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-03-27T04:55:14.683Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"202.94.161.178"},"responseElements":{"x-amz-request-id":"854QR7KXGVEEMHMC","x-amz-id-2":"kMw0WkzWD8dyHAyuSIAfljz75lO6leHxD/p+S+zGBmVBHeFCHcNl9lJltPXbQbkxPouzq0JYcsvooBQdc8+W+u8Toea8E2FxihSuxqgnxdk="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01KCGXV5WPA6C4S0PXFSMRQAQZ/bulk-cvs/01KMPTB0680ST56TT9YZ6ECGDE.pdf","size":889010,"eTag":"a9806a8d905f21d2571b6a0dddbe4cb0","sequencer":"0069C60DB2A1507042"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1774587315678', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1774587315684'}, 'messageAttributes': {}, 'md5OfBody': '15768f126aeb1e1a0d071e25ade50b08', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
-    #errore 
-    # event = {'Records': [{'messageId': '54203fc1-2ce7-4b48-a017-27db042078c3', 'receiptHandle': 'AQEBIhdPxPguwRqCebEfRlJWzL1p6IorVHepkJIUlkE98CrIrHMRyPuV7a3hcxD8AQpvMPEK9qkgqLtbZImGD4vAAoybfEDoKLlXKuhQgmkL3BTpzsuv7BW0UI87+g/qiyqcu6Hc73VK4THovq10jZUIPoiCTXZVpfNK1CO9EdxlhlAiKKXm6yD/UOlLrExTM0o0PmQjHVupb+bazWyp+Y0pq5US1ZWCoq3H/93Tq7oBJI5hgLf7s6nYvjOFHOc+wV4Scg2KA9Y2MD5d7QS42cMEh745akyfc12Ong+wT7BjU/xeOkdmbpVInGS2IlOWSu0T5Dyy4TCK6NrYuXSFWFlpscD4ePJnSlxXGo0GtQJ9fc7+svqbKZSG+UwZvRRImteHby9hPEjkRvUURH+X4ViBXRnM5NNMWy6JXweWdmA2FEQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-03-27T07:18:10.488Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.121"},"responseElements":{"x-amz-request-id":"HGN6BV18EGF1DJZE","x-amz-id-2":"69ECW661EY2vjfsaNkbnTSG3L4YTkaZx+tqR8zlweuj5N6TQpDEs4zDWNz3AKvIoKzzI8elDgl4wkKggGRElIdNlt8nqPkf+"},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01KCGXV5WPA6C4S0PXFSMRQAQZ/bulk-cvs/01KMQ2GN98AQTDJFP6T8PNQRX1.pdf","size":473769,"eTag":"06a4b5ef2853265302923a62e4c17961","sequencer":"0069C62F32760576F6"}}}]}', 'attributes': {'ApproximateReceiveCount': '73', 'SentTimestamp': '1774595890811', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1774595896232'}, 'messageAttributes': {}, 'md5OfBody': '140ae9249530b3c966afbc8bad826626', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '2f55e7b0-eda3-4d88-acaa-327f53b6acab', 'receiptHandle': 'AQEBAhv+BvA2z9Z0AhFYjtr0MmvOhNBmznO15hxZEnBvOwyWp0PCCfOw0ZoJYaj0lniNxUS6MEWaVpSs3dcqFpyVIIrEw3d/Dgw6IKyxakel9lMElv3FFF20k7Uf6ZXbeuEi56EphpuHvN9oj5GeIG//cU195aY+SS+7H6KX4FofwPdHOP3++RnK3hmyMDRmxqT6JhwZfkvn4FeYtaVEGQAiv/gsZBOLfvfSkxUwfj1oFyxbJgty99KIXXXTC+P8P7sX7o3f61dLrmUZiIymRSjU6VH5GTgV1yS5FLEss7CnEti/J9NXjBljLVDLIWl4WbHNM9df3xRCgwCE8N6HmM2DbC25q6OhMZpcyAAsPjJtny3/UTX8YdxVPTrly0rWRZd3Qyxq/QCo6e4refT/7UfBD9Zn42/nEIxZDbJGxeQN4Do=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-03-27T07:18:26.243Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.121"},"responseElements":{"x-amz-request-id":"FC3J2FF2XM2R5HY6","x-amz-id-2":"lul6dnp2OkXDAxVG0poZlVe62KxlOhYwyG64qTlGurbIEizPTwBLPYknLahry9KKVSr2dwxxnxY10dNXtlSf53kmkDmfU0GKsm4/CqdSKNY="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01KCGXV5WPA6C4S0PXFSMRQAQZ/bulk-cvs/01KMQ2H5SHSE4DA6A050X9SA48.pdf","size":303550,"eTag":"404227726ce5d56a6795b3507a7d40fb","sequencer":"0069C62F4238AAE391"}}}]}', 'attributes': {'ApproximateReceiveCount': '72', 'SentTimestamp': '1774595907123', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1774595907124'}, 'messageAttributes': {}, 'md5OfBody': '72228905735a5c72f906c4493febd080', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
+    # event ={'Records': [{'messageId': '4a4a2052-44f2-40b5-933e-715669f75f90', 'receiptHandle': 'AQEBWvogdwYEidoqhqak+7CSxbk1JSliRNJSsDbkZzfR5JwCSf1h8xTIgVMRHIX9on9WpOByVodQ6Iqng06hmOacvVejLvH2Xtnv9VXyscyPYsD+9iOPqbCdyVrrzaQmPh3kC/lg9NTcpZ5qAGDLtOVPxNWSRc+u9nkjP1WZ3JO3HZsRt4HLCVhvd+7yL+oeh+yssbNjoqS/yXBCqR1zb4jBc3Suvi8K4QQz8ljJ7nhrjvAO5fp4o3koZ4MCuopKW48U9ssbQydJey8Mtuqc3XeUd8v8m92wJR7OTYADh7aheFILaCBid20M3B0MtgEpE+OcRTedofHrIUgE7xZ7Qv5iMsw1pDbFNy9+zOLQg7zAUTxq1gxQJPdUJfs+I70SjLRpzQH35PE5v9qbrDWYCpLbXPzAqKx86C4c5SMWh+JBAMo=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-03-27T04:55:14.683Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"202.94.161.178"},"responseElements":{"x-amz-request-id":"854QR7KXGVEEMHMC","x-amz-id-2":"kMw0WkzWD8dyHAyuSIAfljz75lO6leHxD/p+S+zGBmVBHeFCHcNl9lJltPXbQbkxPouzq0JYcsvooBQdc8+W+u8Toea8E2FxihSuxqgnxdk="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01KCGXV5WPA6C4S0PXFSMRQAQZ/bulk-cvs/01KMPTB0680ST56TT9YZ6ECGDE.pdf","size":889010,"eTag":"a9806a8d905f21d2571b6a0dddbe4cb0","sequencer":"0069C60DB2A1507042"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1774587315678', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1774587315684'}, 'messageAttributes': {}, 'md5OfBody': '15768f126aeb1e1a0d071e25ade50b08', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
+    # btache of 10 event
+
+    event ={
+    "Records": [
+        {
+        "messageId": "888e685d-b60d-46d4-8e6f-c624b7702cae",
+        "receiptHandle": "AQEBPc6tw2K0EV3BAL9vGn3PsuD8FZyLh/CPOQmJviIT8HQ+Eh0NRfMA4lLE13bA7Rieg6h0dZMyxy8fGS8RAYsenyhoVxwR5KQ0MckiXORJNOZ+hV/eGUI6WctoqxH8rkZDKKaMtmDfn8sud5UNBOgNOWMHs3s/2YzM9wx5aBTxSWQy7wUOIXaydYhChIUN2pVjI9aTHxYyT7ci4KgDB40qeM9e1OFk33YsUwQVM8Z0nHoYsKJzWAHZxZMpw4eKOd37UV8vMu88g+gQYiIwZpdMinLQgx41u2bwV8GIuFI0ErzfssLcGYwPzAN2zj11IzPu+wH2beTuw4t5/hlxbLJ0IF8SdqYWv1b4M5HXQ5KKdTqQK0I8l3RtB07ZpS3EFYl7HmJTOqrsX133mXsvyLxORpPTaaMrP31XMT5J+cbBjAg=",
+        "body": "{\"Records\":[{\"eventVersion\":\"2.1\",\"eventSource\":\"aws:s3\",\"awsRegion\":\"ap-south-1\",\"eventTime\":\"2026-04-01T08:27:12.092Z\",\"eventName\":\"ObjectCreated:Put\",\"userIdentity\":{\"principalId\":\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\"},\"requestParameters\":{\"sourceIPAddress\":\"183.87.254.176\"},\"responseElements\":{\"x-amz-request-id\":\"TWZT4KYCXZHRRJ59\",\"x-amz-id-2\":\"sgl/IDYL5iPF/trzUAYAhw4V42g5FzISUyx1qZhy2vDyRnBW5TElaYND5IcD4vQqbbIRo2Z57Ee7QVU9wQ6w5AfTtyUuTrahp0ZWwjDvyWc=\"},\"s3\":{\"s3SchemaVersion\":\"1.0\",\"configurationId\":\"sqs-event-admin\",\"bucket\":{\"name\":\"worko-admin-cand-profile-dev\",\"ownerIdentity\":{\"principalId\":\"A1V0APDMR493SG\"},\"arn\":\"arn:aws:s3:::worko-admin-cand-profile-dev\"},\"object\":{\"key\":\"bulk-cvs/01KN42EMRBCGS1T5K6H8DC77AQ.pdf\",\"size\":241720,\"eTag\":\"8423cb3ac903e6640ddac3ee9d7136ad\",\"sequencer\":\"0069CCD6E0137665DF\"}}}]}",
+        "attributes": {
+            "ApproximateReceiveCount": "1",
+            "SentTimestamp": "1775032032762",
+            "SenderId": "AROAVASDGOGDX2TDMB5GG:S3-PROD-END",
+            "ApproximateFirstReceiveTimestamp": "1775032032764"
+        },
+        "messageAttributes": {},
+        "md5OfBody": "b198c48d0aa843c1fc8e252803e07420",
+        "eventSource": "aws:sqs",
+        "eventSourceARN": "arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev",
+        "awsRegion": "ap-south-1"
+        },
+        {
+        "messageId": "b290c4fe-ab76-4477-9af6-a5678f81224d",
+        "receiptHandle": "AQEBEakYB3D4uV8ySsrnyNeDl3zyGNduXKKYRH6/b8qFH5iRJ1fFYxod1sFPNCsrw4+mZZKIqxH8Vikgl+bJVDwl1zgy5IUQ/r4c2p2TiV/QKFZllCwM3XpiFafiui4VRdbKiQX1C3b3oHGmCAmBKklZZ1BUgMoPxCl7VNHnykhW2hOK3Se59JwvGSeFXJmku/VaQVUM7zLFqu9ASiNxhsXDbXcs54LXCGkicWc/p3MMGpbLX0YLAfOVgkJG/2hQZWph7N0znoWX2YrWbuF8hhtdp4yDjjgMtRUxaw+Bp2Ttd6r5WHY3JS3e1db8UrKegKfjHxv0Fll7gT6oCUR84jZGf036PktQxLki9qV2JZIw6N9NSJDBasMLBMfAJRhW0xkagCo/NCC8MH6KFQ9sVZd0i9rZ1A96Jj9FR560dYI6DgM=",
+        "body": "{\"Records\":[{\"eventVersion\":\"2.1\",\"eventSource\":\"aws:s3\",\"awsRegion\":\"ap-south-1\",\"eventTime\":\"2026-04-01T08:27:12.043Z\",\"eventName\":\"ObjectCreated:Put\",\"userIdentity\":{\"principalId\":\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\"},\"requestParameters\":{\"sourceIPAddress\":\"183.87.254.176\"},\"responseElements\":{\"x-amz-request-id\":\"TWZWERG9N00P5B35\",\"x-amz-id-2\":\"OzgZKMUJPf2NTA2JGGHVm6rN0CBu+l0TWcn4dmjLPTLSMVqJMELnHrxyf716ZmlIiDxrOGFlF0nCzzmtd6ttGg3N+0bIUU0SP3bWaQi+PK4=\"},\"s3\":{\"s3SchemaVersion\":\"1.0\",\"configurationId\":\"sqs-event-admin\",\"bucket\":{\"name\":\"worko-admin-cand-profile-dev\",\"ownerIdentity\":{\"principalId\":\"A1V0APDMR493SG\"},\"arn\":\"arn:aws:s3:::worko-admin-cand-profile-dev\"},\"object\":{\"key\":\"bulk-cvs/01KN42EMRC8DGFM7S2FSM6HKEZ.pdf\",\"size\":6727,\"eTag\":\"ffef798071f9c87a48c942bd88b75990\",\"sequencer\":\"0069CCD6E0039C47C9\"}}}]}",
+        "attributes": {
+            "ApproximateReceiveCount": "1",
+            "SentTimestamp": "1775032032759",
+            "SenderId": "AROAVASDGOGDX2TDMB5GG:S3-PROD-END",
+            "ApproximateFirstReceiveTimestamp": "1775032032765"
+        },
+        "messageAttributes": {},
+        "md5OfBody": "6937c756b515e5f02c4f03ad9f7c8c80",
+        "eventSource": "aws:sqs",
+        "eventSourceARN": "arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev",
+        "awsRegion": "ap-south-1"
+        },
+        {
+        "messageId": "92471e0a-f434-42b9-845e-89727b5b9c59",
+        "receiptHandle": "AQEBXCkW6ttTntVLgyQn2FCilDQO6488gsucJZYqo9tzr6Vfr8D6AqGV0UopJ11JsgQaFB+tqE+9XYIbjqTEmjCgkRKJ2/AQu9ioBTiJuXbZnpxDTwYfkYYZONIRSm0wZGCiHWKc3insebgxpj5bBORFQkfU+8WjITZaFgPwk2EDq09SsJn6jpMrkoBQ41E5pmsB5hjywJGy2l/+jxE3HHCDUCXuQtPiWWQ4h8YafKQzskPsiiXZlpc7d6TvupzLDV9XYnR61gNgaVtOnkpb1LT4aEP9PfbpBilWjymRtSZqeL0Io0wST5mhLXDd+l20ZQmMxGYhCfgb3eiAZgrqZg1lHOyzjmS4j1RV0ZwmCpw6l6Gz3RXP2bxkNlRrR+rHWlV7/WGm0hFfP3XKgeQErnaG6QSDl5uYuEa5G9RBdj03xYQ=",
+        "body": "{\"Records\":[{\"eventVersion\":\"2.1\",\"eventSource\":\"aws:s3\",\"awsRegion\":\"ap-south-1\",\"eventTime\":\"2026-04-01T08:27:12.222Z\",\"eventName\":\"ObjectCreated:Put\",\"userIdentity\":{\"principalId\":\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\"},\"requestParameters\":{\"sourceIPAddress\":\"183.87.254.176\"},\"responseElements\":{\"x-amz-request-id\":\"TWZZ0VC02AVY1XWQ\",\"x-amz-id-2\":\"nAFcxcLMR5+rJuZtKv8nVGWryT71vBW3zyn37K8upmsniuyvgJmJo6aEJxgNU+m9+m2sPiOUMjH3PsAUb58X8SgNwJciy1VzeQCejTtEvGU=\"},\"s3\":{\"s3SchemaVersion\":\"1.0\",\"configurationId\":\"sqs-event-admin\",\"bucket\":{\"name\":\"worko-admin-cand-profile-dev\",\"ownerIdentity\":{\"principalId\":\"A1V0APDMR493SG\"},\"arn\":\"arn:aws:s3:::worko-admin-cand-profile-dev\"},\"object\":{\"key\":\"bulk-cvs/01KN42EMRCJEZYF20SVT5RFHB7.pdf\",\"size\":221340,\"eTag\":\"0f5f0eb793b027f8c1be25cfeade2baf\",\"sequencer\":\"0069CCD6E031AB55E3\"}}}]}",
+        "attributes": {
+            "ApproximateReceiveCount": "1",
+            "SentTimestamp": "1775032032760",
+            "SenderId": "AROAVASDGOGDX2TDMB5GG:S3-PROD-END",
+            "ApproximateFirstReceiveTimestamp": "1775032032765"
+        },
+        "messageAttributes": {},
+        "md5OfBody": "89448abb06910bf345fa5349353dfd82",
+        "eventSource": "aws:sqs",
+        "eventSourceARN": "arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev",
+        "awsRegion": "ap-south-1"
+        },
+        {
+        "messageId": "25af44d5-bf20-4e30-b3ea-9f91699cb13b",
+        "receiptHandle": "AQEBPDtcpo3Y9x5pRvlGJzeTRW/gmape95vZOg0yULmpDTlueyoLFdi47FoC9uKwP5LCAso/7scu3gHwnt9YP9amzQ8xrkkmeATEMUYu/kE3YFs5Kg6/r9yJ5mYU3cNsD3TfUurKoKAac/qMV+X03nCGj2bALLFQvivx+xa8nxGnK1bM5K5xzG4E+3FQm7uNeMcwAvyegk+D/yiuKaakXG16CDdYKO45f2HZn9T/2ttUhgJPXMwOa/9JltoN/VraSLaio+H1+3jeFFMflAWW4zL+UqdrW3nfo910P4ga7Mafsl6cfJlaadmWXD8BSolMIM6mbE087xWSZoX7eBhh7KZk6nXEPf9Z1p8fe70G/PKCFhvahqtOsRW+8LhLpUAHwz4THIQRJI2k2k0Dprr5kcWYg6tyJMlGrKlODKRzc/OvF7o=",
+        "body": "{\"Records\":[{\"eventVersion\":\"2.1\",\"eventSource\":\"aws:s3\",\"awsRegion\":\"ap-south-1\",\"eventTime\":\"2026-04-01T08:27:11.910Z\",\"eventName\":\"ObjectCreated:Put\",\"userIdentity\":{\"principalId\":\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\"},\"requestParameters\":{\"sourceIPAddress\":\"183.87.254.176\"},\"responseElements\":{\"x-amz-request-id\":\"R7VMS9Q9FSD5HW73\",\"x-amz-id-2\":\"O6CvBqqpREf/WND21b/WB8Kp88Pcn/1bjOyCeyhGXLQVnqpRgLKrA7Me+GFcEmMLSdIZNFmKZa2Bizln+OUgqiCjUShK4SLoANfibbLlbOA=\"},\"s3\":{\"s3SchemaVersion\":\"1.0\",\"configurationId\":\"sqs-event-admin\",\"bucket\":{\"name\":\"worko-admin-cand-profile-dev\",\"ownerIdentity\":{\"principalId\":\"A1V0APDMR493SG\"},\"arn\":\"arn:aws:s3:::worko-admin-cand-profile-dev\"},\"object\":{\"key\":\"bulk-cvs/01KN42EMRCFF62MYQMNR2Z7XE6.pdf\",\"size\":204675,\"eTag\":\"6936cf44c080f79c528678b96b6c7567\",\"sequencer\":\"0069CCD6DFDBEDD0CE\"}}}]}",
+        "attributes": {
+            "ApproximateReceiveCount": "1",
+            "SentTimestamp": "1775032032761",
+            "SenderId": "AROAVASDGOGDX2TDMB5GG:S3-PROD-END",
+            "ApproximateFirstReceiveTimestamp": "1775032032765"
+        },
+        "messageAttributes": {},
+        "md5OfBody": "bb2ba77b3c4e4142a0e63c028b48b2c3",
+        "eventSource": "aws:sqs",
+        "eventSourceARN": "arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev",
+        "awsRegion": "ap-south-1"
+        }
+    ]
+    }
     lambda_handler(event, None)
