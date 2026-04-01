@@ -699,7 +699,8 @@ def process_parsed_cv_json(cv_obj):
             cv_obj["candidateEmail"] = cv_obj["candidateEmail"].lower()
             cv_obj["candidateLocation"] = cv_obj["candidateLocation"].lower()
         except Exception as e:
-            print("Error: - failed to lowercase name and email or Location of cv parsed results")
+            print(f"Error: -{e} failed to lowercase name and email or Location of cv parsed results : - {cv_obj}")
+            return None
         
         return cv_obj
     except Exception as e:
@@ -954,7 +955,12 @@ def process_cv(processed_text, gpt_models, gemini_models) -> Tuple[str, Dict[str
         if cv_extracted_parsed and cv_extracted_parsed2:
             merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
             merged = process_parsed_cv_json(merged)
-            return merged
+            if merged :
+                return merged
+            else:
+                return "Failed"
+
+                
         else:
             return None
 
@@ -1435,6 +1441,7 @@ def lambda_handler(event, context):
                             retry_counter+=1
                             try:
                                 cvExtractedParsed = process_cv(processed_text,gpt_models,gemini_models)
+                                
                             except Exception as execution_error :
                                 if any(term in str(execution_error) for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']) :
                             
@@ -1446,28 +1453,37 @@ def lambda_handler(event, context):
                                     print(f"Sending to SQS: {body}")
                                     send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds) #send sqs for throttled error
                                     break
-                        
+                            if cvExtractedParsed=="Failed":
+                                status = "Failed"
+
+                                print(f"this is a failed resume, so trigring sqs for this resume and updating as Failed in firestore")
+                                sqs_send_data = {"companyId": company_id,
+                                        "candidateCvAwsS3FileName":file_name,
+                                        "cvExtractedParsed":cvExtractedParsed}
+                                send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                                cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                                updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   
+
                             if cvExtractedParsed:
                                 # send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
                                 dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
 
                                 
                                 if dublicat_data is None:
-                                    print(f"this is a unique resume, so trigring sqs for this resume and updasting as SUCCESS in firestore")
+                                    print(f"this is a unique resume, so trigring sqs for this resume and updating as SUCCESS in firestore")
                                     sqs_send_data = {"companyId": company_id,
                                             "candidateCvAwsS3FileName":file_name,
                                             "cvExtractedParsed":cvExtractedParsed}
                                     send_final_sqs_for_cvExtractparsed(sqs_send_data)
                                     status = "SUCCESS"
                                     cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-                                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
+                                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   
 
                                 elif dublicat_data is not None:
                                     print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
                                     status = "DUPLICATE"
                                     cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-                                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
-
+                                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   
                                     # if company_id:
                                     #     sqs_send_data = {"event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
                                     #         "companyId": company_id,
@@ -1495,8 +1511,9 @@ def lambda_handler(event, context):
             print("This Event is triggered by S3...")
             
             # s3_event = event['Records'][0]['s3']   #old direct s3 triger code
+            print(f" Got batch of {len(event['Records'])} cvs for processing")
             for record_number ,record in enumerate(start= 0, iterable=event['Records']):
-                print(f" Got batch of {len(event['Records'])} cvs for processing")
+                
                 s3_event = json.loads(record['body'])["Records"][0]["s3"]
                 bucket_name = s3_event['bucket']['name']
                 object_key = unquote_plus(s3_event['object']['key'])
@@ -1533,6 +1550,7 @@ def lambda_handler(event, context):
                     #     break
                     # ### test  code
                     cvExtractedParsed = process_cv(processed_text,gpt_models,gemini_models)
+
                 except Exception as execution_error :
                     if any(term in str(execution_error) for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']) :
                     
@@ -1550,8 +1568,19 @@ def lambda_handler(event, context):
                      
             
                 # cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,bucket_name,object_key,0)
+                if cvExtractedParsed=="Failed":
+                    status = "Failed"
 
-                if cvExtractedParsed:
+                    print(f"this is a failed resume, so trigring sqs for this resume and updating as Failed in firestore")
+                    sqs_send_data = {"companyId": company_id,
+                            "candidateCvAwsS3FileName":file_name,
+                            "cvExtractedParsed":cvExtractedParsed}
+                    send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                    cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   
+
+
+                elif cvExtractedParsed:
                     print("cvExtractedParsed",str(cvExtractedParsed)[:100],"...")
                     dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
                     if dublicat_data is not None:
