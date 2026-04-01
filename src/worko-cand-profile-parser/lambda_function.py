@@ -19,6 +19,9 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud.firestore_v1 import Or, And
+from google import genai
+from google.genai import types
+from google.oauth2 import service_account
 import uuid
 from urllib.parse import unquote_plus
 # second deployment11
@@ -196,6 +199,168 @@ def extract_text_from_pdf(pdf_data):
     for page in pdf_document:
         text += page.get_text()
     return text
+
+class GeminiClient:
+    """Client for Google Gemini API with retry logic."""
+    
+    DEFAULT_TEMPERATURE = 0.3
+    DEFAULT_MAX_OUTPUT_TOKENS = 5000
+    
+    def __init__(self, gcp_credentials: Dict[str, str], env: str, model="gemini-2.5-pro"):
+        """Initialize Gemini client.
+        
+        Args:
+            gcp_credentials: Dict containing GCP service account credentials
+            env: Environment (dev/staging/prod)
+            model: Model name (default: gemini-2.5-pro)
+        """
+        self.model = model
+        self.env = env
+        self.project_id = f"worko-{env}"
+        self.location = "global"
+        
+        if not isinstance(gcp_credentials, dict):
+            raise TypeError("gcp_credentials must be a dictionary")
+        
+        # Load credentials
+        self.credentials = service_account.Credentials.from_service_account_info(
+            gcp_credentials,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        
+        # Initialize Google Gen AI client with Vertex AI
+        self.client = genai.Client(
+            vertexai=True,
+            project=self.project_id,
+            location=self.location,
+            credentials=self.credentials
+        )
+    
+    def clean_and_load(self, raw: str) -> dict:
+        """Cleans raw JSON string and loads it into a dictionary."""
+        cleaned = re.sub(r"```json|```", "", raw).strip()
+        try:
+            data = json.loads(cleaned)
+            return data
+        except json.JSONDecodeError as e:
+            print("JSON loading error:", e)
+            print("Cleaned JSON:", cleaned)
+            return None
+    
+    def invoke_model_with_backoff(
+        self,
+        prompt: str,
+        Task="Not specified",
+        system_content: str = "You are a helpful assistant.",
+        max_retries: int = 10,
+        base_delay: int = 2,
+        want_json: bool = True
+    ) -> Union[str, Dict[Any, Any]]:
+        """Invoke model with exponential backoff for rate limiting.
+        
+        Args:
+            prompt: User prompt
+            system_content: System message for the model
+            max_retries: Maximum number of retry attempts
+            base_delay: Base delay for exponential backoff
+            want_json: Whether to parse response as JSON
+            
+        Returns:
+            Model response as string or parsed JSON dict
+        """
+        print("using model :-", self.model)
+        for attempt in range(max_retries):
+            print("Task to Ai is :- ", Task)
+            try:
+                return self.invoke_model(system_content, prompt, want_json)
+            
+            except Exception as e:
+                error_str = str(e).lower()
+                # Check for rate limiting or server errors
+                if any(term in error_str for term in ['quota', 'rate limit', 'resource exhausted', '429', '500', '502', '503', '504']):
+                    if attempt < max_retries - 1:
+                        delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
+                        print(
+                            f"Rate limit or server error. "
+                            f"Retrying in {delay:.2f} seconds..."
+                        )
+                        time.sleep(delay)
+                    else:
+                        raise
+                else:
+                    # Don't retry for other errors
+                    raise
+    
+    def invoke_model(
+        self,
+        system_content: str,
+        prompt: str,
+        want_json: bool = True,
+        max_json_retries: int = 3,
+        temperature: float = DEFAULT_TEMPERATURE
+    ) -> Union[str, Dict[Any, Any]]:
+        """Invoke Gemini model.
+        
+        Args:
+            system_content: System message
+            prompt: User prompt
+            want_json: Whether to parse response as JSON
+            max_json_retries: Max retries for JSON parsing
+            temperature: Model temperature
+            
+        Returns:
+            Model response as string or parsed JSON dict
+        """
+        # Build config
+        generate_config = types.GenerateContentConfig(
+            max_output_tokens=self.DEFAULT_MAX_OUTPUT_TOKENS,
+            temperature=temperature,
+            system_instruction=system_content if system_content else None,
+        )
+        
+        # Build contents
+        contents = [
+            types.Content(
+                role="user",
+                parts=[types.Part(text=prompt)]
+            )
+        ]
+        
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=contents,
+            config=generate_config,
+        )
+        
+        response_text = response.text
+        input_t = response.usage_metadata.prompt_token_count
+        output_t = response.usage_metadata.candidates_token_count
+        cached_t = response.usage_metadata.cached_content_token_count or 0
+        
+        print(f"Token usage details input_tokens :- {input_t}, output_tokens: {output_t}, cached_tokens: {cached_t}")
+        
+        if not want_json:
+            return response_text
+        
+        # JSON mode with retries
+        for attempt in range(max_json_retries):
+            try:
+                cleaned = self.clean_and_load(response_text)
+                if cleaned:
+                    return cleaned
+                else:
+                    raise ValueError("Failed to parse JSON")
+            
+            except (json.JSONDecodeError, ValueError) as e:
+                remaining = max_json_retries - attempt - 1
+                print(f"JSON parse failed. Retries left: {remaining}")
+                print(f"Error: {e}")
+                
+                if remaining == 0:
+                    print(f"Raw content: {response_text}")
+                    raise ValueError(f"Failed to parse JSON after {max_json_retries} attempts") from e
+                
+                time.sleep(2)  # Brief delay before retry
 
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
@@ -617,44 +782,23 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
-def process_cv(processed_text, gpt_models, bucket_name,object_key) -> Tuple[str, Dict[str, str]]:
-    # retry_counter +=1
-
-    # print("Processing cv for cvexractparesed with retry_counter:", retry_counter)
+def process_cv(processed_text, gpt_models, gemini_models, bucket_name, object_key) -> Tuple[str, Dict[str, str]]:
     try:
         processed_text = " ".join(processed_text.split())
 
-        """
-        Process CV text and extract structured information.
-        
-        Args:
-            processed_text: Raw text from CV
-            
-        Returns:
-            Tuple containing:
-            - Extracted CV text in template format
-            - Parsed CV information as structured JSON
-        """
-
         if not processed_text:
             print(f"Error : processed_text is not valid {processed_text}")
-            return "Unfortunately, we are not able to read your resume", processed_text
+            return None
 
-        
-
-            
-        # Second extraction for parsed details
+        # Prompts
         parsed_prompt = (
             f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
-
             f"Resume text:\n{processed_text}\n\n"
-
             f"*** RULE: If you don't find any data in the resume ***\n"
             f"- If the value is a number → use 0\n"
             f"- If the value is a boolean → use false\n"
             f"- If the value is a string → use an empty string \"\"\n"
             f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
-
             f"*** Mandatory data to find in the resume ***\n"
             f"These fields MUST always be present in the output:\n"
             f"1. candidateName\n"
@@ -662,7 +806,6 @@ def process_cv(processed_text, gpt_models, bucket_name,object_key) -> Tuple[str,
             f"3. candidateCurrentCompany\n"
             f"4. candidateTotalYOE\n"
             f"5. candidateLocation\n\n"
-
             f"*** Last Check ***\n"
             f"- All numbers must be integers.\n"
             f"- Ensure ALL mandatory fields are present.\n"
@@ -712,16 +855,14 @@ def process_cv(processed_text, gpt_models, bucket_name,object_key) -> Tuple[str,
             f"  \"isNoticePeriodNegotiable\": false\n"
             f"}}}}\n"
         )
-        cv_extracted_parsed = gpt_models[1].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 ")
-        # cv_extracted_parsed = OpenAIClient.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed step1 " )
+        
         current_timestamp = datetime.now().isoformat()
-        prompt = (
+        skills_prompt = (
             f"**Extract the following details from the resume extract:**\n"
             f"- Core Skills (max 30 chars each)\n"
             f"- Soft Skills (max 30 chars each)\n"
             f"- Preferred departments (0–5, based on experience & skills)\n"
             f"- Years of Experience (YOE)\n\n"
-
             f"**Instructions**:\n"
             f"- Use ONLY information explicitly written in the resume.\n"
             f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
@@ -732,7 +873,6 @@ def process_cv(processed_text, gpt_models, bucket_name,object_key) -> Tuple[str,
             f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
             f"- Add YOE for Core Skills if mentioned, else 0.\n"
             f"- Calculate total YOE from roles or dates.\n\n"
-
             f"**Mandatory Rules**:\n"
             f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
             f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
@@ -742,13 +882,11 @@ def process_cv(processed_text, gpt_models, bucket_name,object_key) -> Tuple[str,
             f"  • Interpersonal traits (Leadership, Mentoring)\n"
             f"  • Tools/software (Excel, SAP, Salesforce)\n"
             f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
-
             f"**STRICT Example**:\n"
             f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
             f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
             f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
             f"technicalSkills: CRM tools\n\n"
-
             f"**STRICT RULES**:\n"
             f"- If more than 20 skills exist, pick the 20 most relevant.\n"
             f"- Do NOT invent skills.\n"
@@ -757,9 +895,7 @@ def process_cv(processed_text, gpt_models, bucket_name,object_key) -> Tuple[str,
             f"- Skills must be concise names.\n"
             f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
             f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
-
             f"Resume extract:\n\n{processed_text}\n\n"
-
             f"Return JSON only:\n"
             f"{{{{\n"
             f"  \"coreSkills\": [\n"
@@ -785,26 +921,48 @@ def process_cv(processed_text, gpt_models, bucket_name,object_key) -> Tuple[str,
             f"  ]\n"
             f"}}}}\n"
         )
-        cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
-        # cv_extracted_parsed2 = OpenAIClient.invoke_model_with_backoff(prompt,Task = "get cvExtractparsed step2")
-        merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
-        merged = process_parsed_cv_json(merged)
-        return merged
         
+        # Try GPT first
+        cv_extracted_parsed = None
+        cv_extracted_parsed2 = None
+        
+        try:
+            print("Trying GPT models for CV parsing...")
+            cv_extracted_parsed = gpt_models[1].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
+            cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
+            print("GPT models succeeded")
+        except Exception as gpt_error:
+            error_message = str(gpt_error).lower()
+            if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
+                print(f"GPT throttled: {gpt_error}. Trying Gemini models...")
+                try:
+                    cv_extracted_parsed = gemini_models[1].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
+                    cv_extracted_parsed2 = gemini_models[0].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
+                    print("Gemini models succeeded")
+                except Exception as gemini_error:
+                    gemini_error_message = str(gemini_error).lower()
+                    if any(term in gemini_error_message for term in ['throttling', 'throttled', 'rate limit', 'quota', 'resource exhausted', '429']):
+                        print(f"Gemini also throttled: {gemini_error}. Raising for retry SQS...")
+                        raise  # This will trigger retry SQS
+                    else:
+                        print(f"Gemini error (non-throttle): {gemini_error}")
+                        return None
+            else:
+                print(f"GPT error (non-throttle): {gpt_error}")
+                return None
+        
+        if cv_extracted_parsed and cv_extracted_parsed2:
+            merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
+            merged = process_parsed_cv_json(merged)
+            return merged
+        else:
+            return None
 
     except Exception as execution_error:
         error_message = str(execution_error).lower()
-        # error_traceback = traceback.format_exc()# Check if this is a throttling error
-        if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
-            
+        if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429', 'quota', 'resource exhausted']):
             raise
-            # print(f"Error of {execution_error} now sending sqs for startuing again in next 60 seconds")
-            # delay_seconds = 90*retry_counter
-            # body = {"bucket_name": bucket_name,"object_key": object_key,"from":"SQS throttling error","retry_counter":retry_counter }
-            # send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds) #send sqs for throttled error
-            # return None 
         else:
-            # For all other errors, just log and continue
             print(f"Error processing CV: {execution_error}")
             return None 
 
@@ -1205,110 +1363,134 @@ def lambda_handler(event, context):
     DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
     collection_name_for_firstore_updating_counts = "bulkSourceTypeResumes"
     env=os.environ.get("ENVIRONMENT", "dev")
+    
+    # Comment out Azure OpenAI - Use Gemini instead
     azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
     azure_openai_secret = get_secret(azure_openai_secret_name)
     gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
     gpt4_1_mini = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
     gpt_models = [gpt4,gpt4_1_mini]
+    
+    # Use Gemini models
+    gcp_credentials = get_secret(GCP_secret_name)
+    gemini_pro_2_5_pro = GeminiClient(gcp_credentials, env, model="gemini-2.5-pro")
+   
+    gemini_models = [gemini_pro_2_5_pro, gemini_pro_2_5_pro]
+    
     retry_queue_name = "worko-cand-profile-parser-retry-queue-"+env
     
     try:
         if json.loads(event.get("Records",[])[0].get("body", "{}")).get("eventType", "")=="RetrySQS":
         # if 'Records' in event and event.get('Records', []) and 'eventSource' in event['Records'][0] and json.loads(event['Records'][0].get('body', '{}')).get('Records', [{}])[0].get('eventSource') != 'aws:s3':
             #condition 1 will check sqs event condition will check its a retry or sqs-s3 event if sqs-s3 event the it will say false i=and s3 flow will be run
-            print("This Event is triggered by SQS...")
+            print("This Event is triggered by retry SQS...")
             retry_body = json.loads(event["Records"][0]["body"])
-            records = retry_body["records"]
-            try:
-                for record in records:
-                    # Parse the S3 event from the record body
-                    s3_event_str = record.get("body", "{}")
-                    s3_event = json.loads(s3_event_str)
-                    
-                    # Extract bucket and key from S3 event
-                    s3_bucket_name = s3_event["Records"][0]["s3"]["bucket"]["name"]
-                    object_key = unquote_plus(s3_event["Records"][0]["s3"]["object"]["key"])
-                    
-                    metadata = get_meta_data(s3_bucket_name, object_key)
-                    print("meta data for sqs-s3 triger", metadata)
-                    company_id = metadata.get("company_id", "")
-                    bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid","")
+            retry_counter = retry_body.get("retry_counter", 1)
+            print(f"retry_counter for this batch : {retry_counter}")
+            if retry_counter >= 5:
+                print(f"Message received {retry_counter} times, sending to DLQ")
+                dlq_name = f"worko-cand-profile-parser-dlq-{env}"
+                dlq_url = get_queue_url(dlq_name)
+                body["bulksourcetyperesumeid"] =bulksourcetyperesumeid
+                sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(body))
 
-                    
-                    if not bulksourcetyperesumeid:
-                        print(f"Missing bulksourcetyperesumeid in SQS message. Skipping processing.")
-                        return {'statusCode': 400, 'body': json.dumps('Missing bulksourcetyperesumeid')}
-                    
-                    doc = get_counts(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
+                cand_data = {"status": "FAILED"}  # send staus failed in ase of max retry>3
+                processingStatus = "FAILED"
+                updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager) 
 
-                
-                    retry_counter = record.get("retry_counter", 0)
-                    print(f"Message receved with retry counter: {retry_counter}")
-                    
-                    # processed_text = body.get("processed_text","")
-                    processed_text = get_text_from_cv(s3_bucket_name,object_key)
-                    
-                    file_name = object_key.split("/")[-1]
-                    
-                    if retry_counter >= 5:
-                        print(f"Message received {retry_counter} times, sending to DLQ")
-                        dlq_name = f"worko-cand-profile-parser-dlq-{env}"
-                        dlq_url = get_queue_url(dlq_name)
-                        body["bulksourcetyperesumeid"] =bulksourcetyperesumeid
-                        sqs.send_message(QueueUrl=dlq_url, MessageBody=json.dumps(body))
+                return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
+            else:
+                records = retry_body["records"]
+                print(f"Processing {len(records)} records from retry SQS with retry_counter {retry_counter}")
+                try:
+                    for record_number, record in enumerate(records):
+                        # Parse the S3 event from the record body
+                        s3_event_str = record.get("body", "{}")
+                        s3_event = json.loads(s3_event_str)
+                        
+                        # Extract bucket and key from S3 event
+                        s3_bucket_name = s3_event["Records"][0]["s3"]["bucket"]["name"]
+                        object_key = unquote_plus(s3_event["Records"][0]["s3"]["object"]["key"])
+                        
+                        metadata = get_meta_data(s3_bucket_name, object_key)
+                        print("meta data for sqs-s3 triger", metadata)
+                        company_id = metadata.get("company_id", "")
+                        bulksourcetyperesumeid = metadata.get("bulksourcetyperesumeid","")
 
-                        cand_data = {"status": "FAILED"}  # send staus failed in ase of max retry>3
-                        processingStatus = "FAILED"
-                        updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager) 
+                        
+                        if not bulksourcetyperesumeid:
+                            print(f"Missing bulksourcetyperesumeid in SQS message. Skipping processing.")
+                            return {'statusCode': 400, 'body': json.dumps('Missing bulksourcetyperesumeid')}
+                        
+                        doc = get_counts(collection_name_for_firstore_updating_counts,bulksourcetyperesumeid,DBManager)
+                        
+                        # processed_text = body.get("processed_text","")
+                        processed_text = get_text_from_cv(s3_bucket_name,object_key)
+                        
+                        file_name = object_key.split("/")[-1]
+                        
 
-                        return {'statusCode': 200, 'body': json.dumps('Moved to DLQ')}
-                    
-                    elif processed_text:
-                        cvExtractedParsed = process_cv(metadata,retry_queue_name,processed_text,gpt_models,s3_bucket_name,object_key,retry_counter)
-                        if cvExtractedParsed:
-                            # send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
-                            dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
-
+                        
+                        if processed_text:
+                            retry_counter+=1
+                            try:
+                                cvExtractedParsed = process_cv(processed_text,gpt_models,s3_bucket_name,object_key)
+                            except Exception as execution_error :
+                                if any(term in str(execution_error) for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']) :
                             
-                            if dublicat_data is None:
-                                print(f"this is a unique resume, so trigring sqs for this resume and updasting as SUCCESS in firestore")
-                                sqs_send_data = {"companyId": company_id,
-                                        "candidateCvAwsS3FileName":file_name,
-                                        "cvExtractedParsed":cvExtractedParsed}
-                                send_final_sqs_for_cvExtractparsed(sqs_send_data)
-                                status = "SUCCESS"
-                                cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-                                updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
+                                    print(f"Error of {execution_error} now sending sqs for startuing again in next 60 seconds")
+                                    delay_seconds = 90*retry_counter
+                                    # delay_seconds = 2
+                                    # body = {"bucket_name": bucket_name,"object_key": object_key,"from":"SQS throttling error","retry_counter":retry_counter }
+                                    body = {"retry_counter": retry_counter, "eventType" : "RetrySQS", "records": records[record_number:]}
+                                    print(f"Sending to SQS: {body}")
+                                    send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds) #send sqs for throttled error
+                                    break
+                        
+                            if cvExtractedParsed:
+                                # send_final_cv_sqs(cvExtractedParsed,file_name,object_key,DBManager)
+                                dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
 
-                            elif dublicat_data is not None:
-                                print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
-                                status = "DUPLICATE"
-                                cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
-                                updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
+                                
+                                if dublicat_data is None:
+                                    print(f"this is a unique resume, so trigring sqs for this resume and updasting as SUCCESS in firestore")
+                                    sqs_send_data = {"companyId": company_id,
+                                            "candidateCvAwsS3FileName":file_name,
+                                            "cvExtractedParsed":cvExtractedParsed}
+                                    send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                                    status = "SUCCESS"
+                                    cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
 
-                                # if company_id:
-                                #     sqs_send_data = {"event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
-                                #         "companyId": company_id,
-                                #         "candidateCvAwsS3FileName":file_name,
-                                #         "cvExtractedParsed":cvExtractedParsed}
-                                    
+                                elif dublicat_data is not None:
+                                    print(f"Found dublicate record in firstore, Not trigring sqs for this resume and updating status as DUPLICATE in firestore:- {dublicat_data}")
+                                    status = "DUPLICATE"
+                                    cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                                    updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   #make this function
 
-                                # else:
-                                #     sqs_send_data = {
-                                #         "candidateCvAwsS3FileName":file_name,
-                                #         "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
-                                #         "cvExtractedParsed":cvExtractedParsed
-                                #     }
-                            else:
-                                print(f"Error in checking dublicacy in firstore for this resume with email {cvExtractedParsed.get('candidateEmail','')} and phone number {cvExtractedParsed.get('candidatePhoneNumber','')}")    
+                                    # if company_id:
+                                    #     sqs_send_data = {"event": "CORPORATE_CAND_PROFILE_BULK_UPLOAD",
+                                    #         "companyId": company_id,
+                                    #         "candidateCvAwsS3FileName":file_name,
+                                    #         "cvExtractedParsed":cvExtractedParsed}
+                                        
 
-                    else:
-                        print(f"Missing processed_text in SQS message body. Marking as FAILED.")
-                        cand_data = {"status": "FAILED"}
-                        processingStatus = "FAILED"
-                        updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager)
-            except Exception as e :
-                print(f"errore with sqs retry event :- {e}")
+                                    # else:
+                                    #     sqs_send_data = {
+                                    #         "candidateCvAwsS3FileName":file_name,
+                                    #         "event":"ADMIN_CAND_PROFILE_BULK_UPLOAD",
+                                    #         "cvExtractedParsed":cvExtractedParsed
+                                    #     }
+                                else:
+                                    print(f"Error in checking dublicacy in firstore for this resume with email {cvExtractedParsed.get('candidateEmail','')} and phone number {cvExtractedParsed.get('candidatePhoneNumber','')}")    
+
+                        else:
+                            print(f"Missing processed_text in SQS message body. Marking as FAILED.")
+                            cand_data = {"status": "FAILED"}
+                            processingStatus = "FAILED"
+                            updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager)
+                except Exception as e :
+                    print(f"errore with sqs retry event :- {e}")
         else:
             print("This Event is triggered by S3...")
             
@@ -1340,19 +1522,16 @@ def lambda_handler(event, context):
             
                 try:
                     retry_counter =1
-                    ### test  code
-                    if record["messageId"]=="b290c4fe-ab76-4477-9af6-a5678f81224d":
-                        # delay_seconds = 90*retry_counter
-                        delay_seconds = 2
-                        # body = {"bucket_name": bucket_name,"object_key": object_key,"from":"SQS throttling error","retry_counter":retry_counter }
-                        body = {"eventType" : "RetrySQS", "records": event['Records'][record_number:]}
-                        print(f"Sending to SQS: {body}")
-                        send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds) #send sqs for throttled error
-                        break
-                    ### test  code
-
-                    
-                    print("Processing cv for cvexractparesed with retry_counter:", retry_counter)
+                    # ### test  code
+                    # if record["messageId"]=="b290c4fe-ab76-4477-9af6-a5678f81224d":
+                    #     # delay_seconds = 90*retry_counter
+                    #     delay_seconds = 2
+                    #     # body = {"bucket_name": bucket_name,"object_key": object_key,"from":"SQS throttling error","retry_counter":retry_counter }
+                    #     body = { "eventType" : "RetrySQS", "records": event['Records'][record_number:]}
+                    #     print(f"Sending to SQS: {body}")
+                    #     send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds) #send sqs for throttled error
+                    #     break
+                    # ### test  code
                     cvExtractedParsed = process_cv(processed_text,gpt_models,bucket_name,object_key)
                 except Exception as execution_error :
                     if any(term in str(execution_error) for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']) :
@@ -1525,7 +1704,7 @@ if __name__ == "__main__":
             {
             "messageId": "f02f0854-2adb-4b52-ad34-421b871875c7",
             "receiptHandle": "AQEB8AflVF3Shy1N6piIlAiKZS3m4dW6yZqGrTIxcVAsuqRujZmo2QAnLml+fYZg6NHNN90cLsVY35nCWgNHnRCO9W7/HeuSwBZvRsdh8Df3La8T0+7GnAm2ClvcklqAyec2kZ5LhXIIkn/3HShh4/t7XK7BoHV6JtI4qFI2r6BpeiIi5DqPXGKvu6/wixHGnldQPnLn8xq3+W4k29aiIAI26qFaHrUfs0w4p7PRUZe70UCG7epMaYy0dN1Y6D/Y+45/Mtvn7SN4EvUzuoxqZwpoMz7ORpFVWmxZ7MseaFgF5x6LYKHPWXQOT1LIejZguvnSwhwUXpZmXG5mwIvTgpw+DP0GoO6pzPqCG+1NEToJMKevJR6WPeDqV8uPitnP5p/Nnz7SfLkFsZFDujxJGrgLrJC5TI0Z7vys+s33Pdo8sNtq8W5ydswoe9aoOMmE1ZRe",
-            "body": "{\"eventType\":\"RetrySQS\",\"records\":[{\"messageId\":\"b290c4fe-ab76-4477-9af6-a5678f81224d\",\"receiptHandle\":\"AQEBEakYB3D4uV8ySsrnyNeDl3zyGNduXKKYRH6/b8qFH5iRJ1fFYxod1sFPNCsrw4+mZZKIqxH8Vikgl+bJVDwl1zgy5IUQ/r4c2p2TiV/QKFZllCwM3XpiFafiui4VRdbKiQX1C3b3oHGmCAmBKklZZ1BUgMoPxCl7VNHnykhW2hOK3Se59JwvGSeFXJmku/VaQVUM7zLFqu9ASiNxhsXDbXcs54LXCGkicWc/p3MMGpbLX0YLAfOVgkJG/2hQZWph7N0znoWX2YrWbuF8hhtdp4yDjjgMtRUxaw+Bp2Ttd6r5WHY3JS3e1db8UrKegKfjHxv0Fll7gT6oCUR84jZGf036PktQxLki9qV2JZIw6N9NSJDBasMLBMfAJRhW0xkagCo/NCC8MH6KFQ9sVZd0i9rZ1A96Jj9FR560dYI6DgM=\",\"body\":\"{\\\"Records\\\":[{\\\"eventVersion\\\":\\\"2.1\\\",\\\"eventSource\\\":\\\"aws:s3\\\",\\\"awsRegion\\\":\\\"ap-south-1\\\",\\\"eventTime\\\":\\\"2026-04-01T08:27:12.043Z\\\",\\\"eventName\\\":\\\"ObjectCreated:Put\\\",\\\"userIdentity\\\":{\\\"principalId\\\":\\\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\\\"},\\\"requestParameters\\\":{\\\"sourceIPAddress\\\":\\\"183.87.254.176\\\"},\\\"responseElements\\\":{\\\"x-amz-request-id\\\":\\\"TWZWERG9N00P5B35\\\",\\\"x-amz-id-2\\\":\\\"OzgZKMUJPf2NTA2JGGHVm6rN0CBu+l0TWcn4dmjLPTLSMVqJMELnHrxyf716ZmlIiDxrOGFlF0nCzzmtd6ttGg3N+0bIUU0SP3bWaQi+PK4=\\\"},\\\"s3\\\":{\\\"s3SchemaVersion\\\":\\\"1.0\\\",\\\"configurationId\\\":\\\"sqs-event-admin\\\",\\\"bucket\\\":{\\\"name\\\":\\\"worko-admin-cand-profile-dev\\\",\\\"ownerIdentity\\\":{\\\"principalId\\\":\\\"A1V0APDMR493SG\\\"},\\\"arn\\\":\\\"arn:aws:s3:::worko-admin-cand-profile-dev\\\"},\\\"object\\\":{\\\"key\\\":\\\"bulk-cvs/01KN42EMRC8DGFM7S2FSM6HKEZ.pdf\\\",\\\"size\\\":6727,\\\"eTag\\\":\\\"ffef798071f9c87a48c942bd88b75990\\\",\\\"sequencer\\\":\\\"0069CCD6E0039C47C9\\\"}}}]}\"},{\"messageId\":\"92471e0a-f434-42b9-845e-89727b5b9c59\",\"receiptHandle\":\"AQEBXCkW6ttTntVLgyQn2FCilDQO6488gsucJZYqo9tzr6Vfr8D6AqGV0UopJ11JsgQaFB+tqE+9XYIbjqTEmjCgkRKJ2/AQu9ioBTiJuXbZnpxDTwYfkYYZONIRSm0wZGCiHWKc3insebgxpj5bBORFQkfU+8WjITZaFgPwk2EDq09SsJn6jpMrkoBQ41E5pmsB5hjywJGy2l/+jxE3HHCDUCXuQtPiWWQ4h8YafKQzskPsiiXZlpc7d6TvupzLDV9XYnR61gNgaVtOnkpb1LT4aEP9PfbpBilWjymRtSZqeL0Io0wST5mhLXDd+l20ZQmMxGYhCfgb3eiAZgrqZg1lHOyzjmS4j1RV0ZwmCpw6l6Gz3RXP2bxkNlRrR+rHWlV7/WGm0hFfP3XKgeQErnaG6QSDl5uYuEa5G9RBdj03xYQ=\",\"body\":\"{\\\"Records\\\":[{\\\"eventVersion\\\":\\\"2.1\\\",\\\"eventSource\\\":\\\"aws:s3\\\",\\\"awsRegion\\\":\\\"ap-south-1\\\",\\\"eventTime\\\":\\\"2026-04-01T08:27:12.222Z\\\",\\\"eventName\\\":\\\"ObjectCreated:Put\\\",\\\"userIdentity\\\":{\\\"principalId\\\":\\\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\\\"},\\\"requestParameters\\\":{\\\"sourceIPAddress\\\":\\\"183.87.254.176\\\"},\\\"responseElements\\\":{\\\"x-amz-request-id\\\":\\\"TWZZ0VC02AVY1XWQ\\\",\\\"x-amz-id-2\\\":\\\"nAFcxcLMR5+rJuZtKv8nVGWryT71vBW3zyn37K8upmsniuyvgJmJo6aEJxgNU+m9+m2sPiOUMjH3PsAUb58X8SgNwJciy1VzeQCejTtEvGU=\\\"},\\\"s3\\\":{\\\"s3SchemaVersion\\\":\\\"1.0\\\",\\\"configurationId\\\":\\\"sqs-event-admin\\\",\\\"bucket\\\":{\\\"name\\\":\\\"worko-admin-cand-profile-dev\\\",\\\"ownerIdentity\\\":{\\\"principalId\\\":\\\"A1V0APDMR493SG\\\"},\\\"arn\\\":\\\"arn:aws:s3:::worko-admin-cand-profile-dev\\\"},\\\"object\\\":{\\\"key\\\":\\\"bulk-cvs/01KN42EMRCJEZYF20SVT5RFHB7.pdf\\\",\\\"size\\\":221340,\\\"eTag\\\":\\\"0f5f0eb793b027f8c1be25cfeade2baf\\\",\\\"sequencer\\\":\\\"0069CCD6E031AB55E3\\\"}}}]}\"},{\"messageId\":\"25af44d5-bf20-4e30-b3ea-9f91699cb13b\",\"receiptHandle\":\"AQEBPDtcpo3Y9x5pRvlGJzeTRW/gmape95vZOg0yULmpDTlueyoLFdi47FoC9uKwP5LCAso/7scu3gHwnt9YP9amzQ8xrkkmeATEMUYu/kE3YFs5Kg6/r9yJ5mYU3cNsD3TfUurKoKAac/qMV+X03nCGj2bALLFQvivx+xa8nxGnK1bM5K5xzG4E+3FQm7uNeMcwAvyegk+D/yiuKaakXG16CDdYKO45f2HZn9T/2ttUhgJPXMwOa/9JltoN/VraSLaio+H1+3jeFFMflAWW4zL+UqdrW3nfo910P4ga7Mafsl6cfJlaadmWXD8BSolMIM6mbE087xWSZoX7eBhh7KZk6nXEPf9Z1p8fe70G/PKCFhvahqtOsRW+8LhLpUAHwz4THIQRJI2k2k0Dprr5kcWYg6tyJMlGrKlODKRzc/OvF7o=\",\"body\":\"{\\\"Records\\\":[{\\\"eventVersion\\\":\\\"2.1\\\",\\\"eventSource\\\":\\\"aws:s3\\\",\\\"awsRegion\\\":\\\"ap-south-1\\\",\\\"eventTime\\\":\\\"2026-04-01T08:27:11.910Z\\\",\\\"eventName\\\":\\\"ObjectCreated:Put\\\",\\\"userIdentity\\\":{\\\"principalId\\\":\\\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\\\"},\\\"requestParameters\\\":{\\\"sourceIPAddress\\\":\\\"183.87.254.176\\\"},\\\"responseElements\\\":{\\\"x-amz-request-id\\\":\\\"R7VMS9Q9FSD5HW73\\\",\\\"x-amz-id-2\\\":\\\"O6CvBqqpREf/WND21b/WB8Kp88Pcn/1bjOyCeyhGXLQVnqpRgLKrA7Me+GFcEmMLSdIZNFmKZa2Bizln+OUgqiCjUShK4SLoANfibbLlbOA=\\\"},\\\"s3\\\":{\\\"s3SchemaVersion\\\":\\\"1.0\\\",\\\"configurationId\\\":\\\"sqs-event-admin\\\",\\\"bucket\\\":{\\\"name\\\":\\\"worko-admin-cand-profile-dev\\\",\\\"ownerIdentity\\\":{\\\"principalId\\\":\\\"A1V0APDMR493SG\\\"},\\\"arn\\\":\\\"arn:aws:s3:::worko-admin-cand-profile-dev\\\"},\\\"object\\\":{\\\"key\\\":\\\"bulk-cvs/01KN42EMRCFF62MYQMNR2Z7XE6.pdf\\\",\\\"size\\\":204675,\\\"eTag\\\":\\\"6936cf44c080f79c528678b96b6c7567\\\",\\\"sequencer\\\":\\\"0069CCD6DFDBEDD0CE\\\"}}}]}\"}]}",
+            "body": "{\"retry_counter\":1,\"eventType\":\"RetrySQS\",\"records\":[{\"messageId\":\"b290c4fe-ab76-4477-9af6-a5678f81224d\",\"receiptHandle\":\"AQEBEakYB3D4uV8ySsrnyNeDl3zyGNduXKKYRH6/b8qFH5iRJ1fFYxod1sFPNCsrw4+mZZKIqxH8Vikgl+bJVDwl1zgy5IUQ/r4c2p2TiV/QKFZllCwM3XpiFafiui4VRdbKiQX1C3b3oHGmCAmBKklZZ1BUgMoPxCl7VNHnykhW2hOK3Se59JwvGSeFXJmku/VaQVUM7zLFqu9ASiNxhsXDbXcs54LXCGkicWc/p3MMGpbLX0YLAfOVgkJG/2hQZWph7N0znoWX2YrWbuF8hhtdp4yDjjgMtRUxaw+Bp2Ttd6r5WHY3JS3e1db8UrKegKfjHxv0Fll7gT6oCUR84jZGf036PktQxLki9qV2JZIw6N9NSJDBasMLBMfAJRhW0xkagCo/NCC8MH6KFQ9sVZd0i9rZ1A96Jj9FR560dYI6DgM=\",\"body\":\"{\\\"Records\\\":[{\\\"eventVersion\\\":\\\"2.1\\\",\\\"eventSource\\\":\\\"aws:s3\\\",\\\"awsRegion\\\":\\\"ap-south-1\\\",\\\"eventTime\\\":\\\"2026-04-01T08:27:12.043Z\\\",\\\"eventName\\\":\\\"ObjectCreated:Put\\\",\\\"userIdentity\\\":{\\\"principalId\\\":\\\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\\\"},\\\"requestParameters\\\":{\\\"sourceIPAddress\\\":\\\"183.87.254.176\\\"},\\\"responseElements\\\":{\\\"x-amz-request-id\\\":\\\"TWZWERG9N00P5B35\\\",\\\"x-amz-id-2\\\":\\\"OzgZKMUJPf2NTA2JGGHVm6rN0CBu+l0TWcn4dmjLPTLSMVqJMELnHrxyf716ZmlIiDxrOGFlF0nCzzmtd6ttGg3N+0bIUU0SP3bWaQi+PK4=\\\"},\\\"s3\\\":{\\\"s3SchemaVersion\\\":\\\"1.0\\\",\\\"configurationId\\\":\\\"sqs-event-admin\\\",\\\"bucket\\\":{\\\"name\\\":\\\"worko-admin-cand-profile-dev\\\",\\\"ownerIdentity\\\":{\\\"principalId\\\":\\\"A1V0APDMR493SG\\\"},\\\"arn\\\":\\\"arn:aws:s3:::worko-admin-cand-profile-dev\\\"},\\\"object\\\":{\\\"key\\\":\\\"bulk-cvs/01KN42EMRC8DGFM7S2FSM6HKEZ.pdf\\\",\\\"size\\\":6727,\\\"eTag\\\":\\\"ffef798071f9c87a48c942bd88b75990\\\",\\\"sequencer\\\":\\\"0069CCD6E0039C47C9\\\"}}}]}\"},{\"messageId\":\"92471e0a-f434-42b9-845e-89727b5b9c59\",\"receiptHandle\":\"AQEBXCkW6ttTntVLgyQn2FCilDQO6488gsucJZYqo9tzr6Vfr8D6AqGV0UopJ11JsgQaFB+tqE+9XYIbjqTEmjCgkRKJ2/AQu9ioBTiJuXbZnpxDTwYfkYYZONIRSm0wZGCiHWKc3insebgxpj5bBORFQkfU+8WjITZaFgPwk2EDq09SsJn6jpMrkoBQ41E5pmsB5hjywJGy2l/+jxE3HHCDUCXuQtPiWWQ4h8YafKQzskPsiiXZlpc7d6TvupzLDV9XYnR61gNgaVtOnkpb1LT4aEP9PfbpBilWjymRtSZqeL0Io0wST5mhLXDd+l20ZQmMxGYhCfgb3eiAZgrqZg1lHOyzjmS4j1RV0ZwmCpw6l6Gz3RXP2bxkNlRrR+rHWlV7/WGm0hFfP3XKgeQErnaG6QSDl5uYuEa5G9RBdj03xYQ=\",\"body\":\"{\\\"Records\\\":[{\\\"eventVersion\\\":\\\"2.1\\\",\\\"eventSource\\\":\\\"aws:s3\\\",\\\"awsRegion\\\":\\\"ap-south-1\\\",\\\"eventTime\\\":\\\"2026-04-01T08:27:12.222Z\\\",\\\"eventName\\\":\\\"ObjectCreated:Put\\\",\\\"userIdentity\\\":{\\\"principalId\\\":\\\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\\\"},\\\"requestParameters\\\":{\\\"sourceIPAddress\\\":\\\"183.87.254.176\\\"},\\\"responseElements\\\":{\\\"x-amz-request-id\\\":\\\"TWZZ0VC02AVY1XWQ\\\",\\\"x-amz-id-2\\\":\\\"nAFcxcLMR5+rJuZtKv8nVGWryT71vBW3zyn37K8upmsniuyvgJmJo6aEJxgNU+m9+m2sPiOUMjH3PsAUb58X8SgNwJciy1VzeQCejTtEvGU=\\\"},\\\"s3\\\":{\\\"s3SchemaVersion\\\":\\\"1.0\\\",\\\"configurationId\\\":\\\"sqs-event-admin\\\",\\\"bucket\\\":{\\\"name\\\":\\\"worko-admin-cand-profile-dev\\\",\\\"ownerIdentity\\\":{\\\"principalId\\\":\\\"A1V0APDMR493SG\\\"},\\\"arn\\\":\\\"arn:aws:s3:::worko-admin-cand-profile-dev\\\"},\\\"object\\\":{\\\"key\\\":\\\"bulk-cvs/01KN42EMRCJEZYF20SVT5RFHB7.pdf\\\",\\\"size\\\":221340,\\\"eTag\\\":\\\"0f5f0eb793b027f8c1be25cfeade2baf\\\",\\\"sequencer\\\":\\\"0069CCD6E031AB55E3\\\"}}}]}\"},{\"messageId\":\"25af44d5-bf20-4e30-b3ea-9f91699cb13b\",\"receiptHandle\":\"AQEBPDtcpo3Y9x5pRvlGJzeTRW/gmape95vZOg0yULmpDTlueyoLFdi47FoC9uKwP5LCAso/7scu3gHwnt9YP9amzQ8xrkkmeATEMUYu/kE3YFs5Kg6/r9yJ5mYU3cNsD3TfUurKoKAac/qMV+X03nCGj2bALLFQvivx+xa8nxGnK1bM5K5xzG4E+3FQm7uNeMcwAvyegk+D/yiuKaakXG16CDdYKO45f2HZn9T/2ttUhgJPXMwOa/9JltoN/VraSLaio+H1+3jeFFMflAWW4zL+UqdrW3nfo910P4ga7Mafsl6cfJlaadmWXD8BSolMIM6mbE087xWSZoX7eBhh7KZk6nXEPf9Z1p8fe70G/PKCFhvahqtOsRW+8LhLpUAHwz4THIQRJI2k2k0Dprr5kcWYg6tyJMlGrKlODKRzc/OvF7o=\",\"body\":\"{\\\"Records\\\":[{\\\"eventVersion\\\":\\\"2.1\\\",\\\"eventSource\\\":\\\"aws:s3\\\",\\\"awsRegion\\\":\\\"ap-south-1\\\",\\\"eventTime\\\":\\\"2026-04-01T08:27:11.910Z\\\",\\\"eventName\\\":\\\"ObjectCreated:Put\\\",\\\"userIdentity\\\":{\\\"principalId\\\":\\\"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp\\\"},\\\"requestParameters\\\":{\\\"sourceIPAddress\\\":\\\"183.87.254.176\\\"},\\\"responseElements\\\":{\\\"x-amz-request-id\\\":\\\"R7VMS9Q9FSD5HW73\\\",\\\"x-amz-id-2\\\":\\\"O6CvBqqpREf/WND21b/WB8Kp88Pcn/1bjOyCeyhGXLQVnqpRgLKrA7Me+GFcEmMLSdIZNFmKZa2Bizln+OUgqiCjUShK4SLoANfibbLlbOA=\\\"},\\\"s3\\\":{\\\"s3SchemaVersion\\\":\\\"1.0\\\",\\\"configurationId\\\":\\\"sqs-event-admin\\\",\\\"bucket\\\":{\\\"name\\\":\\\"worko-admin-cand-profile-dev\\\",\\\"ownerIdentity\\\":{\\\"principalId\\\":\\\"A1V0APDMR493SG\\\"},\\\"arn\\\":\\\"arn:aws:s3:::worko-admin-cand-profile-dev\\\"},\\\"object\\\":{\\\"key\\\":\\\"bulk-cvs/01KN42EMRCFF62MYQMNR2Z7XE6.pdf\\\",\\\"size\\\":204675,\\\"eTag\\\":\\\"6936cf44c080f79c528678b96b6c7567\\\",\\\"sequencer\\\":\\\"0069CCD6DFDBEDD0CE\\\"}}}]}\"}]}",
             "attributes": {
                 "ApproximateReceiveCount": "1",
                 "SentTimestamp": "1775040395164",
