@@ -696,8 +696,10 @@ def process_parsed_cv_json(cv_obj):
         
         try:
             cv_obj["candidateName"] = cv_obj["candidateName"].lower()
-            cv_obj["candidateEmail"] = cv_obj["candidateEmail"].lower()
-            cv_obj["candidateLocation"] = cv_obj["candidateLocation"].lower()
+            if cv_obj.get("candidateEmail",""):
+                cv_obj["candidateEmail"] = cv_obj["candidateEmail"].lower()
+            if cv_obj.get("candidateLocation",""):
+                cv_obj["candidateLocation"] = cv_obj["candidateLocation"].lower()
         except Exception as e:
             print(f"Error: -{e} failed to lowercase name and email or Location of cv parsed results : - {cv_obj}")
             return None
@@ -1454,14 +1456,14 @@ def lambda_handler(event, context):
                                     send_sqs_for_throttling_error(retry_queue_name,body,delay_seconds) #send sqs for throttled error
                                     break
                             if cvExtractedParsed=="Failed":
-                                status = "Failed"
+                                status = "FAILED"
 
                                 print(f"this is a failed resume, so trigring sqs for this resume and updating as Failed in firestore")
                                 sqs_send_data = {"companyId": company_id,
                                         "candidateCvAwsS3FileName":file_name,
                                         "cvExtractedParsed":cvExtractedParsed}
                                 send_final_sqs_for_cvExtractparsed(sqs_send_data)
-                                cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                                cand_data = {"status": status}
                                 updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   
 
                             if cvExtractedParsed:
@@ -1569,14 +1571,14 @@ def lambda_handler(event, context):
             
                 # cvExtractedParsed = process_cv(retry_queue_name,processed_text,gpt_models,bucket_name,object_key,0)
                 if cvExtractedParsed=="Failed":
-                    status = "Failed"
+                    status = "FAILED"
 
                     print(f"this is a failed resume, so trigring sqs for this resume and updating as Failed in firestore")
                     sqs_send_data = {"companyId": company_id,
                             "candidateCvAwsS3FileName":file_name,
                             "cvExtractedParsed":cvExtractedParsed}
                     send_final_sqs_for_cvExtractparsed(sqs_send_data)
-                    cand_data = get_data_to_update_in_firstore(cvExtractedParsed,status)
+                    cand_data = {"status": status}
                     updated_firstore_resume_status(status,bulksourcetyperesumeid,cand_data,DBManager)   
 
 
