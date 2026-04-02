@@ -139,6 +139,7 @@ Resources:
             Queue: !GetAtt CandProfileParserQueue.Arn
             BatchSize: 1
             MaximumBatchingWindowInSeconds: 0
+            Enabled: true
             FunctionResponseTypes:
               - ReportBatchItemFailures
         RetryQueueEvent:
@@ -147,6 +148,7 @@ Resources:
             Queue: !GetAtt CandProfileParserRetryQueue.Arn
             BatchSize: 1
             MaximumBatchingWindowInSeconds: 0
+            Enabled: true
             FunctionResponseTypes:
               - ReportBatchItemFailures
 

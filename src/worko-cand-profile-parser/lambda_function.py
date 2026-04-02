@@ -293,8 +293,12 @@ def lambda_handler(event, context):
                         return {'status': 'no_data', 'file': file_name}
                         
                 except Exception as e:
+                    import traceback
+                    error_details = traceback.format_exc()
                     print(f"Unexpected error processing record: {e}")
-                    return {'status': 'error', 'file': 'unknown', 'error': str(e)}
+                    print(f"Full traceback: {error_details}")
+                    print(f"Record data: {record}")
+                    return {'status': 'error', 'file': 'unknown', 'error': str(e), 'traceback': error_details}
             
             # Process all CVs in parallel
             with ThreadPoolExecutor(max_workers=10) as executor:
@@ -306,8 +310,11 @@ def lambda_handler(event, context):
                         results.append(result)
                         print(f"Completed processing: {result}")
                     except Exception as e:
+                        import traceback
+                        error_details = traceback.format_exc()
                         print(f"Error in parallel processing: {e}")
-                        results.append({'status': 'error', 'error': str(e)})
+                        print(f"Full traceback: {error_details}")
+                        results.append({'status': 'error', 'error': str(e), 'traceback': error_details})
             
             print(f"Parallel processing completed. Results: {results}")
                 
@@ -335,10 +342,17 @@ def lambda_handler(event, context):
 
 
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         print(f"Error in lambda_handler: {e}")
+        print(f"Full traceback: {error_details}")
+        print(f"Event data: {json.dumps(event, default=str)}")
         cand_data = {"status": "FAILED"}  # send staus failed in ase of max retry>3
         processingStatus = "FAILED"
-        updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager) 
+        try:
+            updated_firstore_resume_status(processingStatus,bulksourcetyperesumeid,cand_data,DBManager)
+        except Exception as firestore_error:
+            print(f"Failed to update Firestore status: {firestore_error}")
         return {'statusCode': 500, 'body': json.dumps(f'Error: {e}')}
 
 
