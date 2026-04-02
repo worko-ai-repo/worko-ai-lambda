@@ -1382,9 +1382,10 @@ def lambda_handler(event, context):
     
     # Use Gemini models
     gcp_credentials = get_secret(GCP_secret_name)
-    gemini_pro_2_5_pro = GeminiClient(gcp_credentials, env, model="gemini-2.5-pro")
+    # gemini_pro_2_5_pro = GeminiClient(gcp_credentials, env, model="gemini-2.5-pro")
+    gemini_pro_2_5_flash = GeminiClient(gcp_credentials, env, model="gemini-2.5-flash")
    
-    gemini_models = [gemini_pro_2_5_pro, gemini_pro_2_5_pro]
+    gemini_models = [gemini_pro_2_5_flash, gemini_pro_2_5_flash]
     
     retry_queue_name = "worko-cand-profile-parser-retry-queue-"+env
     
@@ -1547,7 +1548,7 @@ def lambda_handler(event, context):
                         return {'status': 'retry', 'file': file_name}
                 
                     try:
-                        cvExtractedParsed = process_cv(processed_text, gemini_models, gpt_models)
+                        cvExtractedParsed = process_cv(processed_text, gpt_models, gemini_models)
 
                     except Exception as execution_error:
                         if any(term in str(execution_error).lower() for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429', 'quota', 'resource exhausted']):
