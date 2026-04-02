@@ -359,6 +359,201 @@ class GeminiClient:
                 response_text = response.text
                 print(f"Retry attempt {attempt + 1}: Got new response (output_tokens: {response.usage_metadata.candidates_token_count})")
 
+# class AzureOpenAIClient:
+#     """Client for Azure OpenAI API with retry logic."""
+    
+#     DEFAULT_TEMPERATURE = 0.3
+#     DEFAULT_API_VERSION = "2024-05-01-preview"
+#     # REQUEST_TIMEOUT = 20  # seconds
+    
+#     def __init__(self, azure_openai_secret: Dict[str, str],model="gpt-4o"):
+        
+#         """Initialize Azure OpenAI client.
+        
+#         Args:
+#             azure_openai_secret: Dict containing:
+#                 - AZURE_OPENAI_ENDPOINT
+#                 - deployment_name
+#                 - api_key
+#                 - AZURE_OPENAI_API_VERSION (optional)
+#         """
+#         self.model = model
+#         if not isinstance(azure_openai_secret, dict):
+#             raise TypeError("azure_openai_secret must be a dictionary")
+        
+#         self.endpoint = azure_openai_secret.get("AZURE_OPENAI_ENDPOINT", "")
+#         self.api_key = azure_openai_secret.get("AZURE_OPENAI_API_KEY", "")
+#         if model=="gpt-4o":
+#             self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4o", "")
+#             self.api_version = azure_openai_secret.get(
+#                 "AZURE_OPENAI_API_VERSION_gpt-4o", 
+#                 self.DEFAULT_API_VERSION
+#             )
+#         elif model=="gpt-4.1-mini":
+#             self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-4.1-mini", "")
+#             self.api_version = azure_openai_secret.get(
+#                 "AZURE_OPENAI_API_VERSION_gpt-4.1-mini", 
+#                 self.DEFAULT_API_VERSION
+#             )
+
+        
+        
+#         # Validate required fields
+#         if not all([self.endpoint, self.deployment_name, self.api_key]):
+#             raise ValueError(
+#                 "Missing required Azure OpenAI configuration: "
+#                 "AZURE_OPENAI_ENDPOINT, deployment_name, and api_key are required"
+#             )
+    
+#     def invoke_model_with_backoff(
+#         self,
+#         prompt: str,
+#         Task="Not specified",
+#         system_content: str = "You are a helpful assistant.",
+#         max_retries: int = 10,
+#         base_delay: int = 2,
+#         want_json: bool = True
+#     ) -> Union[str, Dict[Any, Any]]:
+#         """Invoke model with exponential backoff for rate limiting.
+        
+#         Args:
+#             prompt: User prompt
+#             system_content: System message for the model
+#             max_retries: Maximum number of retry attempts
+#             base_delay: Base delay for exponential backoff
+#             want_json: Whether to parse response as JSON
+            
+#         Returns:
+#             Model response as string or parsed JSON dict
+#         """
+#         print("using model :-", self.model)
+#         for attempt in range(max_retries):
+#             print("Task to Ai is :- ",Task)
+#             try:
+#                 return self.invoke_model(system_content, prompt, want_json)
+            
+#             except requests.exceptions.HTTPError as e:
+#                 # Check for rate limiting (429) or server errors (5xx)
+#                 if e.response.status_code in [500, 502, 503, 504]:
+#                     if attempt < max_retries - 1:
+#                         delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
+#                         print(
+#                             f"Rate limit or server error (status {e.response.status_code}). "
+#                             f"Retrying in {delay:.2f} seconds..."
+#                         )
+#                         time.sleep(delay)
+#                     else:
+#                         raise
+#                 else:
+#                     # Don't retry for other HTTP errors (auth, not found, etc.)
+#                     raise
+            
+#             except requests.exceptions.RequestException as e:
+#                 # Network errors - retry
+#                 if attempt < max_retries - 1:
+#                     delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
+#                     print(f"Network error: {e}. Retrying in {delay:.2f} seconds...")
+#                     time.sleep(delay)
+#                 else:
+#                     raise
+    
+#     def invoke_model(
+#         self,
+#         system_content: str,
+#         prompt: str,
+#         want_json: bool = True,
+#         max_json_retries: int = 3,
+#         temperature: float = DEFAULT_TEMPERATURE
+#     ) -> Union[str, Dict[Any, Any]]:
+#         """Invoke Azure OpenAI model.
+        
+#         Args:
+#             system_content: System message
+#             prompt: User prompt
+#             want_json: Whether to parse response as JSON
+#             max_json_retries: Max retries for JSON parsing
+#             temperature: Model temperature
+            
+#         Returns:
+#             Model response as string or parsed JSON dict
+#         """
+#         url = (
+#             f"{self.endpoint}/openai/deployments/{self.deployment_name}/"
+#             f"chat/completions?api-version={self.api_version}"
+#         )
+        
+#         headers = {
+#             "Content-Type": "application/json",
+#             "api-key": self.api_key
+#         }
+        
+#         data = {
+#             "messages": [
+#                 {"role": "system", "content": system_content},
+#                 {"role": "user", "content": prompt}
+#             ],
+#             "temperature": temperature
+#         }
+        
+#         if not want_json:
+#             response = requests.post(
+#                 url=url, 
+#                 headers=headers, 
+#                 json=data
+                
+#             )
+#             response.raise_for_status()
+#             result = response.json()
+#             return result["choices"][0]["message"]["content"]
+        
+#         # JSON mode with retries
+#         for attempt in range(max_json_retries):
+#             try:
+#                 response = requests.post(
+#                     url=url, 
+#                     headers=headers, 
+#                     json=data
+                    
+#                 )
+#                 response.raise_for_status()
+#                 result = response.json()
+#                 try :
+#                     tokens = result["usage"]
+#                     output_tokens= tokens["completion_tokens"]
+#                     input_tokens= tokens["prompt_tokens"]
+#                     total = tokens["total_tokens"]
+#                     print(" Token usage details input_tokens :-",input_tokens,"output_tokens",output_tokens,"total",total)
+
+#                 except Exception as e :
+#                     print("errore occured input output token not found :--",e)
+                
+#                 # Extract and clean content
+#                 content = result["choices"][0]["message"]["content"]
+#                 content = content.strip()
+                
+#                 # Remove markdown code blocks
+#                 if content.startswith("```"):
+#                     content = content.removeprefix("```json").removeprefix("```")
+#                     content = content.removesuffix("```").strip()
+                
+#                 return json.loads(content)
+            
+#             except json.JSONDecodeError as e:
+#                 remaining = max_json_retries - attempt - 1
+#                 print(f"JSON parse failed. Retries left: {remaining}")
+#                 print(f"Error: {e}")
+                
+#                 if remaining == 0:
+#                     print(f"Raw content: {content}")
+#                     raise ValueError(f"Failed to parse JSON after {max_json_retries} attempts") from e
+                
+#                 time.sleep(2)  # Brief delay before retry
+            
+#             except (KeyError, IndexError) as e:
+#                 print(f"Unexpected response structure: {result}")
+#                 raise ValueError("Invalid response format from Azure OpenAI") from e
+       
+
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
     
@@ -395,6 +590,17 @@ class AzureOpenAIClient:
                 "AZURE_OPENAI_API_VERSION_gpt-4.1-mini", 
                 self.DEFAULT_API_VERSION
             )
+        elif model=="gpt-5.2":
+            self.endpoint = azure_openai_secret.get("AZURE_OPENAI_ENDPOINT_gpt-5.2", "")
+            # Remove trailing slash if present
+            if self.endpoint.endswith("/"):
+                self.endpoint = self.endpoint.rstrip("/")
+            self.api_key = azure_openai_secret.get("AZURE_OPENAI_API_KEY_gpt-5.2", "")
+            self.deployment_name = azure_openai_secret.get("AZURE_OPENAI_DEPLOYMENT_gpt-5.2", "")
+            self.api_version = azure_openai_secret.get(
+                "AZURE_OPENAI_API_VERSION_gpt-5.2", 
+                self.DEFAULT_API_VERSION
+            )
 
         
         
@@ -423,7 +629,7 @@ class AzureOpenAIClient:
             base_delay: Base delay for exponential backoff
             want_json: Whether to parse response as JSON
             
-        Returns:
+        Returns:RE_OPENAI_API_VERSION_gpt-4.1-mi
             Model response as string or parsed JSON dict
         """
         print("using model :-", self.model)
@@ -477,10 +683,7 @@ class AzureOpenAIClient:
         Returns:
             Model response as string or parsed JSON dict
         """
-        url = (
-            f"{self.endpoint}/openai/deployments/{self.deployment_name}/"
-            f"chat/completions?api-version={self.api_version}"
-        )
+        url = f"{self.endpoint}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}"
         
         headers = {
             "Content-Type": "application/json",
@@ -492,8 +695,11 @@ class AzureOpenAIClient:
                 {"role": "system", "content": system_content},
                 {"role": "user", "content": prompt}
             ],
-            "temperature": temperature
+            "max_completion_tokens": 16384
         }
+        
+        if self.model != "gpt-5.2":
+            data["temperature"] = temperature
         
         if not want_json:
             response = requests.post(
@@ -504,6 +710,17 @@ class AzureOpenAIClient:
             )
             response.raise_for_status()
             result = response.json()
+            
+            # Print token usage for all models
+            try:
+                tokens = result["usage"]
+                output_tokens = tokens["completion_tokens"]
+                input_tokens = tokens["prompt_tokens"]
+                total = tokens["total_tokens"]
+                print(" Token usage details input_tokens :-", input_tokens, "output_tokens :-", output_tokens, "total :-", total)
+            except Exception as e:
+                print("error occurred input output token not found :--", e)
+            
             return result["choices"][0]["message"]["content"]
         
         # JSON mode with retries
@@ -522,7 +739,7 @@ class AzureOpenAIClient:
                     output_tokens= tokens["completion_tokens"]
                     input_tokens= tokens["prompt_tokens"]
                     total = tokens["total_tokens"]
-                    print(" Token usage details input_tokens :-",input_tokens,"output_tokens",output_tokens,"total",total)
+                    print(" Token usage details input_tokens :-", input_tokens, "output_tokens :-", output_tokens, "total :-", total)
 
                 except Exception as e :
                     print("errore occured input output token not found :--",e)
@@ -535,6 +752,14 @@ class AzureOpenAIClient:
                 if content.startswith("```"):
                     content = content.removeprefix("```json").removeprefix("```")
                     content = content.removesuffix("```").strip()
+                
+                # Unescape HTML entities
+                import html
+                content = html.unescape(content)
+                
+                # Fix formattedHTML field - replace newline+quote pattern
+                import re
+                content = re.sub(r'"formattedHTML":\s*"[^"]*"\n\s*"[^}]*"', '"formattedHTML": ""', content, flags=re.DOTALL)
                 
                 return json.loads(content)
             
@@ -552,7 +777,8 @@ class AzureOpenAIClient:
             except (KeyError, IndexError) as e:
                 print(f"Unexpected response structure: {result}")
                 raise ValueError("Invalid response format from Azure OpenAI") from e
-       
+         
+        
 class FirestoreManager:
     def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
         self.GCP_secret_name = GCP_secret_name
@@ -784,7 +1010,7 @@ def get_secret(secret_name):
                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
             }
 
-def process_cv(processed_text, gpt_models, gemini_models) -> Tuple[str, Dict[str, str]]:
+def process_cv(processed_text, gpt_models, gpt5_models, gemini_models) -> Tuple[str, Dict[str, str]]:
     try:
         processed_text = " ".join(processed_text.split())
 
@@ -925,7 +1151,7 @@ def process_cv(processed_text, gpt_models, gemini_models) -> Tuple[str, Dict[str
             f"}}}}\n"
         )
         
-        # Try GPT first
+        # Try GPT-4 first
         cv_extracted_parsed = None
         cv_extracted_parsed2 = None
         
@@ -935,20 +1161,30 @@ def process_cv(processed_text, gpt_models, gemini_models) -> Tuple[str, Dict[str
         except Exception as gpt_error:
             error_message = str(gpt_error).lower()
             if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
-                print("GPT throttled, trying Gemini...")
+                print("GPT-4 throttled, trying GPT-5...")
                 try:
-                    cv_extracted_parsed = gemini_models[1].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
-                    cv_extracted_parsed2 = gemini_models[0].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
-                except Exception as gemini_error:
-                    gemini_error_message = str(gemini_error).lower()
-                    if any(term in gemini_error_message for term in ['throttling', 'throttled', 'rate limit', 'quota', 'resource exhausted', '429']):
-                        print("Gemini throttled, sending to retry SQS...")
-                        raise
+                    cv_extracted_parsed = gpt5_models[1].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
+                    cv_extracted_parsed2 = gpt5_models[0].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
+                except Exception as gpt5_error:
+                    gpt5_error_message = str(gpt5_error).lower()
+                    if any(term in gpt5_error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
+                        print("GPT-5 throttled, trying Gemini...")
+                        try:
+                            cv_extracted_parsed = gemini_models[1].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
+                            cv_extracted_parsed2 = gemini_models[0].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
+                        except Exception as gemini_error:
+                            gemini_error_message = str(gemini_error).lower()
+                            if any(term in gemini_error_message for term in ['throttling', 'throttled', 'rate limit', 'quota', 'resource exhausted', '429']):
+                                print("Gemini throttled, sending to retry SQS...")
+                                raise
+                            else:
+                                print(f"Gemini error (non-throttle): {gemini_error}")
+                                return None
                     else:
-                        print(f"Gemini error (non-throttle): {gemini_error}")
+                        print(f"GPT-5 error (non-throttle): {gpt5_error}")
                         return None
             else:
-                print(f"GPT error (non-throttle): {gpt_error}")
+                print(f"GPT-4 error (non-throttle): {gpt_error}")
                 return None
         
         if cv_extracted_parsed and cv_extracted_parsed2:
@@ -1370,12 +1606,16 @@ def lambda_handler(event, context):
     collection_name_for_firstore_updating_counts = "bulkSourceTypeResumes"
     env=os.environ.get("ENVIRONMENT", "dev")
     
-    # Comment out Azure OpenAI - Use Gemini instead
+    # Initialize Azure OpenAI models
     azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
     azure_openai_secret = get_secret(azure_openai_secret_name)
     gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
     gpt4_1_mini = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
     gpt_models = [gpt4,gpt4_1_mini]
+    
+    # Initialize GPT-5 models
+    gpt52_client = AzureOpenAIClient(azure_openai_secret, model="gpt-5.2")
+    gpt5_models = [gpt52_client, gpt52_client]
     
     # Use Gemini models
     gcp_credentials = get_secret(GCP_secret_name)
@@ -1441,7 +1681,7 @@ def lambda_handler(event, context):
                         if processed_text:
                             retry_counter+=1
                             try:
-                                cvExtractedParsed = process_cv(processed_text,gpt_models,gemini_models)
+                                cvExtractedParsed = process_cv(processed_text,gpt_models,gpt5_models,gemini_models)
                                 
                             except Exception as execution_error :
                                 if any(term in str(execution_error) for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']) :
@@ -1545,7 +1785,7 @@ def lambda_handler(event, context):
                         return {'status': 'retry', 'file': file_name}
                 
                     try:
-                        cvExtractedParsed = process_cv(processed_text, gpt_models, gemini_models)
+                        cvExtractedParsed = process_cv(processed_text, gpt_models, gpt5_models, gemini_models)
 
                     except Exception as execution_error:
                         if any(term in str(execution_error).lower() for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429', 'quota', 'resource exhausted']):
