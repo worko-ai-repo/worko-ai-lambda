@@ -17,7 +17,7 @@ bedrock = boto3.client(service_name='bedrock', region_name = region)
 bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name = region)
 sqs = boto3.client('sqs')
 from utils import *
-
+# best deployment1
 
 def lambda_handler(event, context):
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
