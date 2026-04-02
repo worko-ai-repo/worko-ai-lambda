@@ -82,6 +82,13 @@ Resources:
       Role: !GetAtt ResumeParserRole.Arn
       Layers:
         - !Ref PythonDependenciesLayer
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:worko-cand-profile-parser-queue-${Environment}"
+            BatchSize: 10
+            Enabled: true
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
@@ -92,14 +99,7 @@ Resources:
           AZURE_OPENAI_API_KEY: "REDACTED"
           AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
 
-  # Permission for SQS to invoke Lambda
-  SQSInvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref ResumeParserFunction
-      Action: lambda:InvokeFunction
-      Principal: sqs.amazonaws.com
-      SourceArn: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*"
+
 
 
 Outputs:
