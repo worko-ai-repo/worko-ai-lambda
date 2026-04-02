@@ -133,7 +133,15 @@ Resources:
           SQS_REGION: ap-south-1
           EVENT_QUEUE_NAME: worko-corp-app-event-queue
       Events:
-        SQSEvent:
+        MainQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt CandProfileParserQueue.Arn
+            BatchSize: 1
+            MaximumBatchingWindowInSeconds: 0
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+        RetryQueueEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt CandProfileParserRetryQueue.Arn
