@@ -10,7 +10,7 @@ Parameters:
 
 Globals:
   Function:
-    Timeout: 40
+    Timeout: 300
     MemorySize: 512
     Runtime: python3.11
 
@@ -72,17 +72,47 @@ Resources:
       BuildMethod: python3.11
       BuildArchitecture: x86_64
 
-  CandProfileParserDLQ:
+  CandProfileParserQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub "worko-cand-profile-parser-dlq-${Environment}"
+      QueueName: !Sub "worko-cand-profile-parser-queue-${Environment}"
+      VisibilityTimeout: 300
       MessageRetentionPeriod: 1209600
+
+  CandProfileParserQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref CandProfileParserQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: '__default_policy_ID'
+        Statement:
+          - Sid: '__owner_statement'
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'SQS:*'
+            Resource: !GetAtt CandProfileParserQueue.Arn
+          - Sid: 'AllowS3ToSendMessage'
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: 'SQS:SendMessage'
+            Resource: !GetAtt CandProfileParserQueue.Arn
+            Condition:
+              StringEquals:
+                'aws:SourceAccount': !Ref AWS::AccountId
+              ArnLike:
+                'aws:SourceArn':
+                  - !Sub 'arn:aws:s3:::worko-corporate-cand-profile-${Environment}'
+                  - !Sub 'arn:aws:s3:::worko-admin-cand-profile-${Environment}'
 
   CandProfileParserRetryQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub "worko-cand-profile-parser-retry-queue-${Environment}"
-      VisibilityTimeout: 60
+      VisibilityTimeout: 300
       MessageRetentionPeriod: 345600
       DelaySeconds: 0
       MaximumMessageSize: 262144
@@ -136,6 +166,18 @@ Outputs:
     Value: !GetAtt CandProfileParserFunction.Arn
     Export:
       Name: !Sub "${AWS::StackName}-CandProfileParserFunctionArn"
+  
+  CandProfileParserQueueArn:
+    Description: Main Queue ARN
+    Value: !GetAtt CandProfileParserQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-QueueArn"
+  
+  CandProfileParserQueueUrl:
+    Description: Main Queue URL
+    Value: !Ref CandProfileParserQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-QueueUrl"
   
   CandProfileParserRetryQueueArn:
     Description: Retry Queue ARN
