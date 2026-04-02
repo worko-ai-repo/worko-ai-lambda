@@ -32,6 +32,31 @@ Actions:
             STACK_NAME="worko-cand-profile-parser-${ENV}-stack"
             FUNCTION_NAME="worko-cand-profile-parser-${ENV}"
             
+            # ============================================================
+            # TEMPORARY: Clean up orphaned event source mappings
+            # TODO: Remove this section after successful deployment
+            # ============================================================
+            echo "Cleaning up orphaned event source mappings..."
+            RETRY_QUEUE_ARN="arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-retry-queue-${ENV}"
+            
+            MAPPINGS=$(aws lambda list-event-source-mappings \
+              --event-source-arn $RETRY_QUEUE_ARN \
+              --region $AWS_REGION \
+              --query 'EventSourceMappings[].UUID' \
+              --output text 2>/dev/null || echo "")
+            
+            if [ ! -z "$MAPPINGS" ]; then
+              for UUID in $MAPPINGS; do
+                echo "Deleting orphaned event source mapping: $UUID"
+                aws lambda delete-event-source-mapping --uuid $UUID --region $AWS_REGION || true
+              done
+              echo "Waiting for mappings to be deleted..."
+              sleep 10
+            else
+              echo "No orphaned event source mappings found"
+            fi
+            # ============================================================
+            
             # Delete broken stack if it exists
             echo "Checking for existing stack..."
             if aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION 2>/dev/null; then
