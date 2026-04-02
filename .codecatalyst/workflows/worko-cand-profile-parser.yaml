@@ -33,27 +33,47 @@ Actions:
             FUNCTION_NAME="worko-cand-profile-parser-${ENV}"
             
             # ============================================================
-            # TEMPORARY: Clean up orphaned event source mappings
-            # TODO: Remove this section after successful deployment
+            # Clean up ALL existing event source mappings for this Lambda
             # ============================================================
-            echo "Cleaning up orphaned event source mappings..."
+            echo "Cleaning up existing event source mappings..."
+            MAIN_QUEUE_ARN="arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-${ENV}"
             RETRY_QUEUE_ARN="arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-retry-queue-${ENV}"
             
-            MAPPINGS=$(aws lambda list-event-source-mappings \
+            # Delete main queue mappings
+            MAIN_MAPPINGS=$(aws lambda list-event-source-mappings \
+              --function-name $FUNCTION_NAME \
+              --event-source-arn $MAIN_QUEUE_ARN \
+              --region $AWS_REGION \
+              --query 'EventSourceMappings[].UUID' \
+              --output text 2>/dev/null || echo "")
+            
+            if [ ! -z "$MAIN_MAPPINGS" ]; then
+              for UUID in $MAIN_MAPPINGS; do
+                echo "Deleting main queue event source mapping: $UUID"
+                aws lambda delete-event-source-mapping --uuid $UUID --region $AWS_REGION || true
+              done
+            fi
+            
+            # Delete retry queue mappings
+            RETRY_MAPPINGS=$(aws lambda list-event-source-mappings \
+              --function-name $FUNCTION_NAME \
               --event-source-arn $RETRY_QUEUE_ARN \
               --region $AWS_REGION \
               --query 'EventSourceMappings[].UUID' \
               --output text 2>/dev/null || echo "")
             
-            if [ ! -z "$MAPPINGS" ]; then
-              for UUID in $MAPPINGS; do
-                echo "Deleting orphaned event source mapping: $UUID"
+            if [ ! -z "$RETRY_MAPPINGS" ]; then
+              for UUID in $RETRY_MAPPINGS; do
+                echo "Deleting retry queue event source mapping: $UUID"
                 aws lambda delete-event-source-mapping --uuid $UUID --region $AWS_REGION || true
               done
-              echo "Waiting for mappings to be deleted..."
-              sleep 10
+            fi
+            
+            if [ ! -z "$MAIN_MAPPINGS" ] || [ ! -z "$RETRY_MAPPINGS" ]; then
+              echo "Waiting for event source mappings to be deleted..."
+              sleep 15
             else
-              echo "No orphaned event source mappings found"
+              echo "No existing event source mappings found"
             fi
             # ============================================================
             
