@@ -205,7 +205,7 @@ class GeminiClient:
     """Client for Google Gemini API with retry logic."""
     
     DEFAULT_TEMPERATURE = 0.3
-    DEFAULT_MAX_OUTPUT_TOKENS = 5000
+    DEFAULT_MAX_OUTPUT_TOKENS = 10000
     
     def __init__(self, gcp_credentials: Dict[str, str], env: str, model="gemini-2.5-pro"):
         """Initialize Gemini client.
@@ -245,8 +245,8 @@ class GeminiClient:
             return data
         except json.JSONDecodeError as e:
             print("JSON loading error:", e)
-            print("Cleaned JSON:", cleaned)
-            return None
+            print("Cleaned JSON (first 500 chars):", cleaned[:500])
+            raise ValueError(f"Invalid JSON response from Gemini: {str(e)}") from e
     
     def invoke_model_with_backoff(
         self,
@@ -257,40 +257,21 @@ class GeminiClient:
         base_delay: int = 2,
         want_json: bool = True
     ) -> Union[str, Dict[Any, Any]]:
-        """Invoke model with exponential backoff for rate limiting.
+        """Invoke model without retry logic - throttling handled at Lambda level.
         
         Args:
             prompt: User prompt
             system_content: System message for the model
-            max_retries: Maximum number of retry attempts
-            base_delay: Base delay for exponential backoff
+            max_retries: Not used (kept for compatibility)
+            base_delay: Not used (kept for compatibility)
             want_json: Whether to parse response as JSON
             
         Returns:
             Model response as string or parsed JSON dict
         """
         print("using model :-", self.model)
-        for attempt in range(max_retries):
-            print("Task to Ai is :- ", Task)
-            try:
-                return self.invoke_model(system_content, prompt, want_json)
-            
-            except Exception as e:
-                error_str = str(e).lower()
-                # Check for rate limiting or server errors
-                if any(term in error_str for term in ['quota', 'rate limit', 'resource exhausted', '429', '500', '502', '503', '504']):
-                    if attempt < max_retries - 1:
-                        delay = (2 ** attempt) * base_delay + random.uniform(0, 1)
-                        print(
-                            f"Rate limit or server error. "
-                            f"Retrying in {delay:.2f} seconds..."
-                        )
-                        time.sleep(delay)
-                    else:
-                        raise
-                else:
-                    # Don't retry for other errors
-                    raise
+        print("Task to Ai is :- ", Task)
+        return self.invoke_model(system_content, prompt, want_json)
     
     def invoke_model(
         self,
@@ -340,6 +321,10 @@ class GeminiClient:
         
         print(f"Token usage details input_tokens :- {input_t}, output_tokens: {output_t}, cached_tokens: {cached_t}")
         
+        # Check if response was truncated
+        if output_t >= self.DEFAULT_MAX_OUTPUT_TOKENS - 100:
+            print(f"WARNING: Response may be truncated (output_tokens: {output_t}, limit: {self.DEFAULT_MAX_OUTPUT_TOKENS})")
+        
         if not want_json:
             return response_text
         
@@ -347,10 +332,7 @@ class GeminiClient:
         for attempt in range(max_json_retries):
             try:
                 cleaned = self.clean_and_load(response_text)
-                if cleaned:
-                    return cleaned
-                else:
-                    raise ValueError("Failed to parse JSON")
+                return cleaned
             
             except (json.JSONDecodeError, ValueError) as e:
                 remaining = max_json_retries - attempt - 1
@@ -358,10 +340,24 @@ class GeminiClient:
                 print(f"Error: {e}")
                 
                 if remaining == 0:
-                    print(f"Raw content: {response_text}")
-                    raise ValueError(f"Failed to parse JSON after {max_json_retries} attempts") from e
+                    print(f"Raw content (first 500 chars): {response_text[:500]}")
+                    print(f"Raw content (last 200 chars): {response_text[-200:]}")
+                    raise ValueError(f"Failed to parse JSON after {max_json_retries} attempts: {str(e)}") from e
                 
-                time.sleep(2)  # Brief delay before retry
+                # Re-invoke model for retry with slightly higher temperature for variation
+                retry_config = types.GenerateContentConfig(
+                    max_output_tokens=self.DEFAULT_MAX_OUTPUT_TOKENS,
+                    temperature=min(temperature + 0.1, 1.0),
+                    system_instruction=system_content if system_content else None,
+                )
+                
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=contents,
+                    config=retry_config,
+                )
+                response_text = response.text
+                print(f"Retry attempt {attempt + 1}: Got new response (output_tokens: {response.usage_metadata.candidates_token_count})")
 
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
@@ -819,6 +815,7 @@ def process_cv(processed_text, gpt_models, gemini_models) -> Tuple[str, Dict[str
             f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
             f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
             f"- if Phone number is give the you must fill all three variables"
+            f" -output must always contain candidateName and candidateEmail as it will be always present in given data"
             f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int),4.candidateNoticePeriod int or Null"
             f"Rule to return null values:\n"
             f" if any str key is not given in in resume text just return Null for that partcular fild "
@@ -1550,7 +1547,7 @@ def lambda_handler(event, context):
                         return {'status': 'retry', 'file': file_name}
                 
                     try:
-                        cvExtractedParsed = process_cv(processed_text, gpt_models, gemini_models)
+                        cvExtractedParsed = process_cv(processed_text, gemini_models, gpt_models)
 
                     except Exception as execution_error:
                         if any(term in str(execution_error).lower() for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429', 'quota', 'resource exhausted']):
@@ -1753,4 +1750,7 @@ if __name__ == "__main__":
             }
         ]
         }
+    
+    #s3
+    event = {'Records': [{'messageId': 'a130c11c-620f-45c5-83f0-9adfd40e0469', 'receiptHandle': 'AQEBjBqKam59tWsoE9+T0W8Khm1oxuAiEbdXZsmUfvEmk050KGh6Azn9Ifcs1Hq2PcyFnNFYKm3odxD6zA9sAkqyHGIeQF0cd88ZySZoPo+hGkIZil9UBbHVNwwx8u3YWsugIAxyZyj1ir30G7Pj93zEh2jfccSIACy/cE0bsBUJ34UHtF8vIGzHfGcer66xBJDZI1c+DKOIClxjGdzUQegrBHGxZEdnSoq3Gr5ORRzAViPM7NUbAO0K42ftc2tmZqhS5VCTUEuUKmqcbSd/raob5WsACZgFas+Xeocx1PttzWELoNBA8hyPL6MQYFQPv0KrjvxYIt2TgVCSaClq3YkOEBFHQ4IKWBuJgloafbCO+KrSSy9mk4galQIz/eP5ynRV5qUX8wiPjQ3n6R9tkmcpdK+OOMXMMo9Czw1NgnXlKwo=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.555Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PE95VWGS3MEXAJ","x-amz-id-2":"FE9huMj517jZJulH3U1/lyehQ+l6G9BSneIqfEZaq7UMsGqJxTBgWj3MgMbd59w2g5D4w9YEv8dL3Vgsv6bNjsVQXyxKId6QXwtTjQSCdkQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNB0JA2GAE9R9MASF8H.pdf","size":187438,"eTag":"3208a3565002d05e552b50232cdca634","sequencer":"0069CDCF6C831D28C2"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661601', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661604'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'f16019f9932a891b2049cedc7b695a19', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '9006f331-60f8-4b7a-9056-fb2eac039dbc', 'receiptHandle': 'AQEBA6KDz1PRrMeDFdpRUyuzJVaVXE53CmOMyrQN1h+Edm+EGuW8773fTl/X9Tn7qFb1t8idZJKvuPm4vLzF+ZaVr+IvUpD+XDWJiMNnUAE276xKprFpgi9h7ov1+Fp4xs3Yg7Aq1ZQ+lX0sSOJCAhlvzd63KQIh0lpnLNSVxrh2x/Fpk+1nnPWDsP3nYfqWlI/zpMjt/2qMcHJSlA9pEdtst4+De2mzbkb6QUciL2iSml/2/mPALpkrTING3mQXuqRp/33TKVB/EajSGTaDR+7k0X9C9ghcFnmjwOxG2V1Ss75aHjmD2/ONNTRKJNwGO07YQ8OiXsRJkUtrO3ntiRRovba6wGb+gsWEw0GklfY1gSLqB/xoaItT3HU2Js4sJHplxLzik0cqgxr2bS1bPeQwlqzcRQZrpvnLGzzzlz8eOaQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.586Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PA7Z4EJX3W5ZDS","x-amz-id-2":"BjHFu5DEt+tFs1TbjSxHudFoQmo5KkriHtDpGj+thbqUbU4veeVYlXbVyufR9fOQXre3agCXePpxOxpHXToxC0cxLluNt9AI3uNCc4v+62c="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNCR663FRTEFJM5ZYQP.pdf","size":225470,"eTag":"b92b80d17b604743574cdcfcc3ec4fe2","sequencer":"0069CDCF6C89EF8975"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661597', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661600'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '587c9606b9d18abf52bc4c231d0b7b54', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '338371da-285a-4669-b5cf-dc040999305f', 'receiptHandle': 'AQEBc8rp4KnKLzonOlSIJGIoyXbW63vAoJwALk0zSOOIfo85Mt55Pcd53LhrBqR6cz6sxQTrQxkX9MVq6yo88dfr6PAYecpMk4Kmig0yGpGxWIp1ikLtzGkMCk/bH3DTkClJhsfM9EEfzMmfyMwa3yTAgMhjAqG6v9WCaIix/kl75M986+2qUh5i7pMdKK/BiT5iVXg69yRAloisy52a3g2hPxaAa8/RWuADiTo/4lPycrrDxiFhgLYVR4skQ/t+mYHuT5EPjT6UL6C3Nl6ekvbgndxl3nDmGf3GSgHIvZ1uuRCKwFfUAPw5yFK58iSmGOHhSy3GEIS4YPXgCwI5eo2cL22IKlYecH9dTL4PXpQOR8vBWt3wfXaVpsJjnPdJ4HANe+m3f2aw+eiSfru7SZ6GhZJPYeM1VMTz5pHBthwfaN8=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.559Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PBSJBB71PFW6KZ","x-amz-id-2":"DDtFYMi7E11HUtr/Un6YGCaR2l8HnQ9txhCtZvN87SNBUiSfJt0kFSOnm8irsnea8LdABbZby1AFdengHFqB3rfIAmLKCEjugbV9YZTONYQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNCC45360G3JK2W076W.pdf","size":167286,"eTag":"51d9846cd02ac6aa0c450d18502692ef","sequencer":"0069CDCF6C843BC33C"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661602', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661603'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'b8a13d76b1ff314f28d53bed6b0a8b34', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
     lambda_handler(event, None)
