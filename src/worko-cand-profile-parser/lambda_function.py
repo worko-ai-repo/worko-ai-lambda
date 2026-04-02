@@ -930,23 +930,20 @@ def process_cv(processed_text, gpt_models, gemini_models) -> Tuple[str, Dict[str
         cv_extracted_parsed2 = None
         
         try:
-            print("Trying GPT models for CV parsing...")
             cv_extracted_parsed = gpt_models[1].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
             cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
-            print("GPT models succeeded")
         except Exception as gpt_error:
             error_message = str(gpt_error).lower()
             if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
-                print(f"GPT throttled: {gpt_error}. Trying Gemini models...")
+                print("GPT throttled, trying Gemini...")
                 try:
                     cv_extracted_parsed = gemini_models[1].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
                     cv_extracted_parsed2 = gemini_models[0].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
-                    print("Gemini models succeeded")
                 except Exception as gemini_error:
                     gemini_error_message = str(gemini_error).lower()
                     if any(term in gemini_error_message for term in ['throttling', 'throttled', 'rate limit', 'quota', 'resource exhausted', '429']):
-                        print(f"Gemini also throttled: {gemini_error}. Raising for retry SQS...")
-                        raise  # This will trigger retry SQS
+                        print("Gemini throttled, sending to retry SQS...")
+                        raise
                     else:
                         print(f"Gemini error (non-throttle): {gemini_error}")
                         return None
