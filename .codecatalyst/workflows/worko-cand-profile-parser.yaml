@@ -32,51 +32,6 @@ Actions:
             STACK_NAME="worko-cand-profile-parser-${ENV}-stack"
             FUNCTION_NAME="worko-cand-profile-parser-${ENV}"
             
-            # ============================================================
-            # Clean up ALL existing event source mappings for this Lambda
-            # ============================================================
-            echo "Cleaning up existing event source mappings..."
-            MAIN_QUEUE_ARN="arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-${ENV}"
-            RETRY_QUEUE_ARN="arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-retry-queue-${ENV}"
-            
-            # Delete main queue mappings
-            MAIN_MAPPINGS=$(aws lambda list-event-source-mappings \
-              --function-name $FUNCTION_NAME \
-              --event-source-arn $MAIN_QUEUE_ARN \
-              --region $AWS_REGION \
-              --query 'EventSourceMappings[].UUID' \
-              --output text 2>/dev/null || echo "")
-            
-            if [ ! -z "$MAIN_MAPPINGS" ]; then
-              for UUID in $MAIN_MAPPINGS; do
-                echo "Deleting main queue event source mapping: $UUID"
-                aws lambda delete-event-source-mapping --uuid $UUID --region $AWS_REGION || true
-              done
-            fi
-            
-            # Delete retry queue mappings
-            RETRY_MAPPINGS=$(aws lambda list-event-source-mappings \
-              --function-name $FUNCTION_NAME \
-              --event-source-arn $RETRY_QUEUE_ARN \
-              --region $AWS_REGION \
-              --query 'EventSourceMappings[].UUID' \
-              --output text 2>/dev/null || echo "")
-            
-            if [ ! -z "$RETRY_MAPPINGS" ]; then
-              for UUID in $RETRY_MAPPINGS; do
-                echo "Deleting retry queue event source mapping: $UUID"
-                aws lambda delete-event-source-mapping --uuid $UUID --region $AWS_REGION || true
-              done
-            fi
-            
-            if [ ! -z "$MAIN_MAPPINGS" ] || [ ! -z "$RETRY_MAPPINGS" ]; then
-              echo "Waiting for event source mappings to be deleted..."
-              sleep 15
-            else
-              echo "No existing event source mappings found"
-            fi
-            # ============================================================
-            
             # Delete broken stack if it exists
             echo "Checking for existing stack..."
             if aws cloudformation describe-stacks --stack-name $STACK_NAME --region $AWS_REGION 2>/dev/null; then

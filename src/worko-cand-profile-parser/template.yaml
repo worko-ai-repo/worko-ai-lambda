@@ -137,8 +137,8 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt CandProfileParserQueue.Arn
-            BatchSize: 1
-            MaximumBatchingWindowInSeconds: 0
+            BatchSize: 25
+            MaximumBatchingWindowInSeconds: 15
             Enabled: true
             FunctionResponseTypes:
               - ReportBatchItemFailures
