@@ -92,6 +92,15 @@ Resources:
           AZURE_OPENAI_API_KEY: "REDACTED"
           AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
 
+  # Permission for SQS to invoke Lambda
+  SQSInvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ResumeParserFunction
+      Action: lambda:InvokeFunction
+      Principal: sqs.amazonaws.com
+      SourceArn: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*"
+
 
 Outputs:
   ResumeParserFunctionArn:
