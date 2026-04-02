@@ -1553,7 +1553,8 @@ def lambda_handler(event, context):
                             send_sqs_for_throttling_error(retry_queue_name, record, 1, 90)
                             return {'status': 'throttled', 'file': file_name}
                         else:
-                            print(f"Error processing CV {file_name}: {execution_error}")
+                            print(f"ERROR: Non-throttling exception in process_cv() for {file_name}: {execution_error}")
+                            print(f"ERROR: CV {file_name} failed during process_cv() - marking as FAILED and updating Firestore")
                             cand_data = {"status": "FAILED"}
                             updated_firstore_resume_status("FAILED", bulksourcetyperesumeid, cand_data, DBManager)
                             return {'status': 'error', 'file': file_name}
@@ -1571,24 +1572,33 @@ def lambda_handler(event, context):
 
                     elif cvExtractedParsed:
                         print(f"Successfully parsed {file_name}")
-                        dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
-                        if dublicat_data is not None:
-                            print(f"Found duplicate record for {file_name}, updating status as DUPLICATE")
-                            status = "DUPLICATE"
-                            cand_data = get_data_to_update_in_firstore(cvExtractedParsed, status)
-                            updated_firstore_resume_status(status, bulksourcetyperesumeid, cand_data, DBManager)
-                            return {'status': 'duplicate', 'file': file_name}
-                        else:
-                            sqs_send_data = {"companyId": company_id,
-                                        "candidateCvAwsS3FileName": file_name,
-                                        "cvExtractedParsed": cvExtractedParsed}
-                            send_final_sqs_for_cvExtractparsed(sqs_send_data)
-                            status = "SUCCESS"
-                            cand_data = get_data_to_update_in_firstore(cvExtractedParsed, status)
-                            updated_firstore_resume_status(status, bulksourcetyperesumeid, cand_data, DBManager)
-                            return {'status': 'success', 'file': file_name}
+                        try:
+                            dublicat_data = check_firstore_dubliacy(cvExtractedParsed, object_key, DBManager)
+                            if dublicat_data is not None:
+                                print(f"Found duplicate record for {file_name}, updating status as DUPLICATE")
+                                status = "DUPLICATE"
+                                cand_data = get_data_to_update_in_firstore(cvExtractedParsed, status)
+                                updated_firstore_resume_status(status, bulksourcetyperesumeid, cand_data, DBManager)
+                                return {'status': 'duplicate', 'file': file_name}
+                            else:
+                                sqs_send_data = {"companyId": company_id,
+                                            "candidateCvAwsS3FileName": file_name,
+                                            "cvExtractedParsed": cvExtractedParsed}
+                                send_final_sqs_for_cvExtractparsed(sqs_send_data)
+                                status = "SUCCESS"
+                                cand_data = get_data_to_update_in_firstore(cvExtractedParsed, status)
+                                updated_firstore_resume_status(status, bulksourcetyperesumeid, cand_data, DBManager)
+                                return {'status': 'success', 'file': file_name}
+                        except Exception as e:
+                            print(f"ERROR: Exception in process_parsed_cv_json() or Firestore operations for {file_name}: {e}")
+                            print(f"ERROR: CV {file_name} failed during post-processing - marking as FAILED and updating Firestore")
+                            cand_data = {"status": "FAILED"}
+                            updated_firstore_resume_status("FAILED", bulksourcetyperesumeid, cand_data, DBManager)
+                            return {'status': 'error', 'file': file_name}
                     else:
-                        print(f"No parsed data for {file_name}")
+                        print(f"ERROR: process_cv() returned None for {file_name} - marking as FAILED and updating Firestore")
+                        cand_data = {"status": "FAILED"}
+                        updated_firstore_resume_status("FAILED", bulksourcetyperesumeid, cand_data, DBManager)
                         return {'status': 'no_data', 'file': file_name}
                         
                 except Exception as e:
