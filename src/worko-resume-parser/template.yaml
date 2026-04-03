@@ -82,6 +82,13 @@ Resources:
       Role: !GetAtt ResumeParserRole.Arn
       Layers:
         - !Ref PythonDependenciesLayer
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:worko-cand-profile-parser-queue-${Environment}"
+            BatchSize: 10
+            Enabled: true
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
@@ -91,6 +98,8 @@ Resources:
           AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
           AZURE_OPENAI_API_KEY: "REDACTED"
           AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
+
+
 
 
 Outputs:
