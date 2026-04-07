@@ -35,5 +35,6 @@ src/worko-cand-profile-parser/download_logs.py
 machingflow.md
 # src/worko-jd-resume-matching
 exp
+src2
 # Exclude sourcetype lambda template.yaml from push
 # src/worko-sourcetype-jd-resume-matching/template.y

@@ -336,8 +336,8 @@ def lambda_handler(event, context):
         yoe_sort_key = "ID#"
         sort_key_Preff = "PREF#"
 
-        S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
-        table_name = os.environ.get('DYNAMO_TABLE_NAME')
+        S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME',"worko-app-dev")
+        table_name = os.environ.get('DYNAMO_TABLE_NAME',"worko")
         reset_skills_if_partition_exists(table_name, partition_key_value, skill_sort_key) #reset Skills to empty array
         
 
@@ -485,9 +485,12 @@ def lambda_handler(event, context):
 
 
 
-                content = invoke_model_with_backoff(prompt)
-                print_completion_text(content)
-                core_skills,technical_skills,soft_skills,Prefered_departments, yoe = extract_skill_data_nova(content)
+                # content = invoke_model_with_backoff(prompt)
+                # print_completion_text(content)
+                # core_skills,technical_skills,soft_skills,Prefered_departments, yoe = extract_skill_data_nova(content)
+                
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task = "skill extraction for upadating or sign up cv" )
+                core_skills,technical_skills,soft_skills,Prefered_departments, yoe = extract_skill_data_from_json(content)
 
                 updated_core_skills = update_core_skills_years(core_skills)  ##
                 print_completion_text(updated_core_skills)
@@ -606,7 +609,8 @@ def lambda_handler(event, context):
                         f"  }},\n"
                         f"}}"
                     )
-                completion_text = invoke_model_with_backoff_OpenAI(prompt,Task = "Generate cvExtractparsed")
+                # completion_text = invoke_model_with_backoff_OpenAI(prompt,Task = "Generate cvExtractparsed")
+                completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task = "Generate cvExtractparsed")
                 # completion_text=clean_json_response(completion_text)
                 try:
                     completion_text = json.loads(completion_text)
@@ -717,8 +721,8 @@ if __name__ == "__main__":
     # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
     # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
 
-
-    event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
+    event = {'USER_PK': 'USR#EML#shaukatdatascience+1@gmail.com', 'USER_DETAIL_SK': 'ID#'}
+    # event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
 
     #prod
     # event = {'event': 'SOURCE_TYPE_REFRESH_CV', 'candidateParsedCvAwsS3FileName': '01KHBKEBFF6P3WJK3YMRZQY9WK.pdf', 'cvAwsS3FilePath': 'bulk-cvs', 'cvAwsS3ResourceType': 'ADMIN_CAND_BULK_CV_UPLOAD', 'cvAwsS3BucketName': 'worko-admin-cand-profile-prod'}
