@@ -506,6 +506,7 @@ def lambda_handler(event, context):
                 update_yoe_in_dynamodb(table_name, partition_key_value, yoe_sort_key, yoe)
                 update_pref_department_in_dynamo(table_name, partition_key_value, sort_key_Preff, sort_key_value,Prefered_departments)
 
+
                 end_time = time.time()
                 print(f'Step 2 Skils is saved in dynamo time took :- {end_time-start_time}')
             
