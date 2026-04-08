@@ -2831,7 +2831,7 @@ def lambda_handler(event, context):
                 else:
                     # Fallback to original function if there are more steps than defined functions
                     print("enumeration number",i)
-                    content = invoke_model_with_backoff_nova(prompt)
+                    # content = invoke_model_with_backoff_nova(prompt)
                     emailFeedback =gpt_models[0].invoke_model_with_backoff(prompt,Task= "Fallback to original function if there are more steps than defined functions",want_json=False)
 
                 # If temp_score is coming from the JSON as a list
