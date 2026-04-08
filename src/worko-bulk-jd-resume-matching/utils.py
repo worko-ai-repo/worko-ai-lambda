@@ -9,7 +9,7 @@ import google.auth.transport.requests
 import requests
 from typing import Tuple, Dict, Any, Optional, Union
 import random
-
+import re
 def get_secret(secret_name):
     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
 
@@ -283,15 +283,30 @@ class AzureOpenAIClient:
                     print("errore occured input output token not found :--",e)
                 
                 # Extract and clean content
+
                 content = result["choices"][0]["message"]["content"]
                 content = content.strip()
-                
-                # Remove markdown code blocks
-                if content.startswith("```"):
-                    content = content.removeprefix("```json").removeprefix("```")
-                    content = content.removesuffix("```").strip()
-                
-                return json.loads(content)
+
+                # ✅ Step 1: Remove markdown (if present anywhere)
+                content = re.sub(r"```json\s*", "", content)
+                content = re.sub(r"```", "", content)
+
+                # ✅ Step 2: Extract JSON object ONLY
+                match = re.search(r"\{.*\}", content, re.DOTALL)
+
+                if not match:
+                    print("No JSON found in response")
+                    print("Raw content:", content)
+                    raise ValueError("No valid JSON found in LLM response")
+
+                cleaned_json = match.group(0)
+
+                # ✅ Step 3: Fix common JSON issues
+                cleaned_json = re.sub(r",\s*}", "}", cleaned_json)  # trailing comma
+                cleaned_json = re.sub(r",\s*]", "]", cleaned_json)
+
+                # ✅ Step 4: Parse safely
+                return json.loads(cleaned_json)
             
             except json.JSONDecodeError as e:
                 remaining = max_json_retries - attempt - 1
