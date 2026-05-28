@@ -130,24 +130,24 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
         - Extracted CV text in template format
         - Parsed CV information as structured JSON
     """
-    cv_extract_template = '''
-    Name:
-    Email:
-    Experience in years:
-    Achievements:
-    Technical skills:
-    Soft skills:
-    Core skills:
-    Education:
-    Industry experience:
-    Responsibilities:
-    Achievements against responsibility:
-    Certifications:
-    Strength:
-    Experience type (leadership, Mid management, Senior management, Team lead, Individual contributor):
-    Team handling experience:
-    Industry type (B2B, D2C, C2C, B2C):
-    '''.strip()
+    cv_extract_template = {
+    "Name": "",
+    "Email": "",
+    "Experience in years": "",
+    "Achievements": "",
+    "Technical skills": "",
+    "Soft skills": "",
+    "Core skills": "",
+    "Education": "",
+    "Industry experience": "",
+    "Responsibilities": "",
+    "Achievements against responsibility": "",
+    "Certifications": "",
+    "Strength": "",
+    "Experience type (leadership, Mid management, Senior management, Team lead, Individual contributor)": "",
+    "Team handling experience": "",
+    "Industry type (B2B, D2C, C2C, B2C)": ""
+    }
 
     cv_parsed_template = {
         "candidateName": "Parsing Failed",
@@ -188,10 +188,11 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
                     f"CV TEXT: {processed_text}\n\n"
                     f"EXTRACTION TEMPLATE:\n{cv_extract_template}")
 
-        cv_content = invoke_model_with_backoff_nova_lite(cv_prompt)
-        cv_extract = extract_text_from_nova(cv_content)
+        # cv_content = invoke_model_with_backoff_nova_lite(cv_prompt)
+        # cv_extract = extract_text_from_nova(cv_content)
+        cv_extract = gpt_models[0].invoke_model_with_backoff(cv_prompt,Task= "get cv_extract")
         
-        cv_extract = clean_text(cv_extract)
+        # cv_extract = clean_text(cv_extract)
         print("cv_extract-------",cv_extract)
         
        
@@ -1091,10 +1092,12 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
         f"- Respond with only one word: 'Technical' or 'Non-Technical'"
         )
           
-    content = invoke_model_with_backoff_nova(prompt)
-    print("new content from Nova",content)
-    print_completion_text(content)
-    completion_text = extract_text_from_nova(content)
+    # content = invoke_model_with_backoff_nova(prompt)
+    
+    # print("new content from Nova",content)
+    
+    # completion_text = extract_text_from_nova(content)
+    completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "checking techo r non-tech" ,want_json=False)
     print_completion_text(completion_text)
     print("Checking the completion_text",completion_text)
     
@@ -1132,9 +1135,11 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                         f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
                     )
 
-            content = invoke_model_with_backoff_nova(prompt)
-            print("I am in Non-Tech",content )
-            completion_text = extract_experience_level_nova(content)
+            # content = invoke_model_with_backoff_nova(prompt)
+            # completion_text = extract_experience_level_nova(content)
+            completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "checking experience level", want_json=False)
+
+            print("I am in Non-Tech",completion_text )
             print_completion_text(completion_text)
                       
             if "superior" in completion_text:
@@ -1456,8 +1461,10 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                         f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
                     )
 
-            content = invoke_model_with_backoff_nova(prompt)
-            completion_text = extract_experience_level_nova(content)
+            # content = invoke_model_with_backoff_nova(prompt)
+            # completion_text = extract_experience_level_nova(content)
+            completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "checking experience level", want_json=False)
+
             print_completion_text(completion_text)
             
             if "superior" in completion_text:
@@ -1958,7 +1965,10 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                     temp_score = 18
             else:
                 # Fallback to original function if there are more steps than defined functions
-                content = invoke_model_with_backoff_nova(prompt)
+                print( "enumeration number",i)
+                # content = invoke_model_with_backoff_nova(prompt)
+                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Fallback to original function if there are more steps than defined functions", want_json=False)
+
 
             # If temp_score is coming from the JSON as a list
             if isinstance(temp_score, list) and len(temp_score) > 0:
@@ -2046,8 +2056,10 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                          f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                          f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
 
-                content = invoke_model_with_backoff_nova(prompt)
-                emailFeedback = extract_text_from_nova(content)
+                # content = invoke_model_with_backoff_nova(prompt)
+                # emailFeedback = extract_text_from_nova(content)
+                emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt,Task= "get email feedback", want_json=False)
+
                 print("feedback_for_email:-",emailFeedback)
             
         elif overall_matching_score >= 70:
@@ -2124,8 +2136,10 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
                      f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                      f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
 
-            content = invoke_model_with_backoff_nova(prompt)
-            emailFeedback = extract_text_from_nova(content)
+            # content = invoke_model_with_backoff_nova(prompt)
+            # emailFeedback = extract_text_from_nova(content)
+            emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt,Task= "get email feedback", want_json=False)
+
             print("feedback_for_email:-",emailFeedback)
             
         elif overall_matching_score == 0:
@@ -2399,47 +2413,47 @@ def lambda_handler(event, context):
         'body': json.dumps({'message': 'All CV extracts processed and updated successfully'})}
 
 
-# if __name__ == "__main__":
-#     event = {
+if __name__ == "__main__":
+    event = {
     
-#     "Records": [
-#         {
-#         "eventVersion": "2.1",
-#         "eventSource": "aws:s3",
-#         "awsRegion": "ap-south-1",
-#         "eventTime": "2026-02-02T06:29:44.990Z",
-#         "eventName": "ObjectCreated:Put",
-#         "userIdentity": {
-#             "principalId": "AWS:AROATCKANHWVTI7M7W26H:worko-api-dev-app"
-#         },
-#         "requestParameters": {
-#             "sourceIPAddress": "202.94.161.181"
-#         },
-#         "responseElements": {
-#             "x-amz-request-id": "2AEA5J52FRCR4D7Z",
-#             "x-amz-id-2": "k+8d91OhvVNYGON95mDc6TO3AZpKdKBzd5DKd58VghtdGXL45VqTOFC4LLey7GhkWHuiTQQEpltoRHjRV+OGXVjztLfn9SJ0"
-#         },
-#         "s3": {
-#             "s3SchemaVersion": "1.0",
-#             "configurationId": "7d404d16-3835-42a5-aa87-119edd0a72f4",
-#             "bucket": {
-#             "name": "worko-corporate-dev",
-#             "ownerIdentity": {
-#                 "principalId": "A1V0APDMR493SG"
-#             },
-#             "arn": "arn:aws:s3:::worko-corporate-dev"
-#             },
-#             "object": {
-#             "key": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KGEGNY9EZBR31KKYZJHAT2HC/01KGEGNYHMNAE7K6XZVQCQNXC5.pdf",
-#             "size": 217003,
-#             "eTag": "d0bb5e5b306caa14d2a5175919969d51",
-#             "sequencer": "0069804458EF01349B"
-#             }
-#         }
-#         }
-#     ]
-#     }
+    "Records": [
+        {
+        "eventVersion": "2.1",
+        "eventSource": "aws:s3",
+        "awsRegion": "ap-south-1",
+        "eventTime": "2026-02-02T06:29:44.990Z",
+        "eventName": "ObjectCreated:Put",
+        "userIdentity": {
+            "principalId": "AWS:AROATCKANHWVTI7M7W26H:worko-api-dev-app"
+        },
+        "requestParameters": {
+            "sourceIPAddress": "202.94.161.181"
+        },
+        "responseElements": {
+            "x-amz-request-id": "2AEA5J52FRCR4D7Z",
+            "x-amz-id-2": "k+8d91OhvVNYGON95mDc6TO3AZpKdKBzd5DKd58VghtdGXL45VqTOFC4LLey7GhkWHuiTQQEpltoRHjRV+OGXVjztLfn9SJ0"
+        },
+        "s3": {
+            "s3SchemaVersion": "1.0",
+            "configurationId": "7d404d16-3835-42a5-aa87-119edd0a72f4",
+            "bucket": {
+            "name": "worko-corporate-dev",
+            "ownerIdentity": {
+                "principalId": "A1V0APDMR493SG"
+            },
+            "arn": "arn:aws:s3:::worko-corporate-dev"
+            },
+            "object": {
+            "key": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KGEGNY9EZBR31KKYZJHAT2HC/01KGEGNYHMNAE7K6XZVQCQNXC5.pdf",
+            "size": 217003,
+            "eTag": "d0bb5e5b306caa14d2a5175919969d51",
+            "sequencer": "0069804458EF01349B"
+            }
+        }
+        }
+    ]
+    }
 
 
-#     lambda_handler(event, None)
+    lambda_handler(event, None)
 

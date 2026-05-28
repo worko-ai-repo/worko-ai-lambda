@@ -1976,10 +1976,13 @@ def lambda_handler(event, context):
             f"- Respond with only one word: 'Technical' or 'Non-Technical'"
             )
             
-        content = invoke_model_with_backoff_nova(prompt)
-        print("new content from Nova",content)
-        print_completion_text(content)
-        completion_text = extract_text_from_nova(content)
+        # content = invoke_model_with_backoff_nova(prompt)
+        # print("new content from Nova",content)
+        completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "checking teck or non-teck", want_json=False) 
+
+        
+        print_completion_text(completion_text)
+        # completion_text = extract_text_from_nova(content)
         print_completion_text(completion_text)
         print("Checking the completion_text",completion_text)
         
@@ -2017,9 +2020,11 @@ def lambda_handler(event, context):
                             f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
                         )
 
-                content = invoke_model_with_backoff_nova(prompt)
+                # content = invoke_model_with_backoff_nova(prompt)
+                completion_text =gpt_models[0].invoke_model_with_backoff(prompt,Task= "checking experience level",want_json=False)
+
                 print("I am in Non-Tech",content )
-                completion_text = extract_experience_level_nova(content)
+                # completion_text = extract_experience_level_nova(content)
                 print_completion_text(completion_text)
                         
                 if "superior" in completion_text:
@@ -2340,8 +2345,10 @@ def lambda_handler(event, context):
                             f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
                         )
 
-                content = invoke_model_with_backoff_nova(prompt)
-                completion_text = extract_experience_level_nova(content)
+                # content = invoke_model_with_backoff_nova(prompt)
+                # completion_text = extract_experience_level_nova(content)
+                completion_text =gpt_models[0].invoke_model_with_backoff(prompt,Task= "checking experience level",want_json=False)
+
                 print_completion_text(completion_text)
                 
                 if "superior" in completion_text:
@@ -2692,7 +2699,7 @@ def lambda_handler(event, context):
                                         "- If a keyword appears in multiple sections, use the highest applicable weight"
                                     )
                             ]
-    
+            
             for i, step in enumerate(steps):
                 prompt = create_prompt(processed_text, job_desc, step)
                 
@@ -2823,7 +2830,9 @@ def lambda_handler(event, context):
                         temp_score = 18
                 else:
                     # Fallback to original function if there are more steps than defined functions
-                    content = invoke_model_with_backoff_nova(prompt)
+                    print("enumeration number",i)
+                    # content = invoke_model_with_backoff_nova(prompt)
+                    emailFeedback =gpt_models[0].invoke_model_with_backoff(prompt,Task= "Fallback to original function if there are more steps than defined functions",want_json=False)
 
                 # If temp_score is coming from the JSON as a list
                 if isinstance(temp_score, list) and len(temp_score) > 0:
@@ -3288,8 +3297,9 @@ def lambda_handler(event, context):
                         f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                         f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.do not give output like here is feeback or any thing like this just give feedback no system message")
 
-                content = invoke_model_with_backoff_nova(prompt)
-                emailFeedback = extract_text_from_nova(content)
+                # content = invoke_model_with_backoff_nova(prompt)
+                # emailFeedback = extract_text_from_nova(content)
+                emailFeedback =gpt_models[0].invoke_model_with_backoff(prompt,Task= "generating email feedback",want_json=False)
                 # emailFeedback= invoke_model_with_backoff_OpenAI(prompt,Task= "Cheching Mandatory Requirements",want_json=False) 
                 
                 print("feedback_for_email:-", emailFeedback)
@@ -3562,10 +3572,10 @@ def lambda_handler(event, context):
         }
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     
     
-    # event ={'USER_PK': 'USR#EML#ask.72544@gmail.com', 'USER_DETAIL_SK': 'ID#', 'MATCHING_ENTITY': 'JOB_APP', 'ENTITY_SK': 'JOB#APP#ID#01KJCSD7G4CGQNQYEGWFK3V9VK'}
+    event ={'USER_PK': 'USR#EML#ask.72544@gmail.com', 'USER_DETAIL_SK': 'ID#', 'MATCHING_ENTITY': 'JOB_APP', 'ENTITY_SK': 'JOB#APP#ID#01KJCSD7G4CGQNQYEGWFK3V9VK'}
     
     # form submit flow event
     
@@ -3574,7 +3584,7 @@ def lambda_handler(event, context):
     #request from move to aplicant from my database
     # event = {'USER_PK': 'USR#EML#sahanasgp7@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJPQ9GK51XSH4JBDP6FKJRGB', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KHXASXJ694280F3KY45AK6MR', 'sourceTypeCvAwsS3Details': {'resourceType': 'CORP_CAND_BULK_CV_UPLOAD', 'bucketName': 'worko-corporate-cand-profile-dev', 'filePath': 'companies/01K47MSBKS79ACY0BM6Z8VS3F5/bulk-cvs', 'fileName': '01KHXAS6YPNDWRDTJ1GVECX7G1.pdf'}}
 
-    # lambda_handler(event, None)
+    lambda_handler(event, None)
 
 
 

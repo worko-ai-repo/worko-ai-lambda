@@ -6,6 +6,7 @@ Triggers:
     Branches:
       - main
       - dev
+      - cand-profile-parser-flow-improvement
 
 Actions:
   BuildAndDeploy:

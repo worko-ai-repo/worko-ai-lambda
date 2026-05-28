@@ -1,0 +1,1350 @@
+
+================================================================================
+Stream: 2026/04/02/[$LATEST]57067bce8e6b45b1851962b104f28710
+================================================================================
+[2026-04-02 10:09:39.350000] INIT_START Runtime Version: python:3.11.mainlinev2.v4	Runtime Version ARN: arn:aws:lambda:ap-south-1::runtime:f14046b558b69f092cf3c888cd59ed30350756eb27e125efed3b7a995eb8882d
+
+[2026-04-02 10:09:43.101000] START RequestId: 52c07333-4e56-520a-a7e0-1174bb799927 Version: $LATEST
+
+[2026-04-02 10:09:43.101000] got event: {'Records': [{'messageId': '64fcaaeb-f294-4192-992e-31e7da620100', 'receiptHandle': 'AQEBB5+DWugOYx4zUeBJVVIcbUJ1THCDI++pAJ621oqDp/Pck+HPGETXziw1Ks9EMRelg0n9BgXNcHymzlsi1ehJfBqsWLaHSfb7vPABdqh57tFyKPtonP/mabwtGLulZ9Z9jl/mqJvUOsLshWbO3pTmyBGoWoc/jWEiiAOIoWUFSlPMk099ubhlGl3VPoyyG3hL7Y/YEM3+WxATj5Aj88+YGnbNwcpwb2oxM/5o5NrNpZL0VPYrJgvO12XLgb9vgoi1mpSKShfP9e60qhcv0Ia5W4+qgg1av7j3oVSfvkExs8HzCwtpbapePKRoCvdpk6F0aRRrScUNLEJwnBRhAcVWVQt5P3uND5StEz2Sn6aYjNV5c5Vp0jIqxP8E/Xzg+7Ge6Aym0SuGUMoptuHQWKIAeTJxoYs0fY5Mcg2dRcVOolQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.438Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY17GJ67BEQA1YH4","x-amz-id-2":"nl7gQ/fmGPJLevcf6nDPiETTOFr4jt/cYcB1Vcph+L6KfFMxC2WYHu5xRI4lgVlywxtyhDIz/+1CMODQvOfWPGex6WNY1XRnfeKcbFDQpDg="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STE1N1AVT3595DCQJKJJ.pdf","size":139518,"eTag":"3983e15ac62f7e762e663e79ec112d9f","sequencer":"0069CDF2ED69C3B6DA"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104750195', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751490'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '9142eceac72856d465151541192e7d92', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '809bbc1c-04bb-4404-ab39-c899265fc5e1', 'receiptHandle': 'AQEBMReQc7Pky4RgU3AJLplK/i6hDFnBoJlY/ereAc7EdkMhu5oDpIUewnvLFy7melmO2x/XwqnnPDICLcORndKkZRO/wDz3+YX+gVS7cp9PfPQRDWd48BFQo46Eu8rWU40Hcj+WcwYzJJDb/xXGiIb+YRInYusdODiAQRfjqSVmnmhm1Lak311ion3Vb6PQZ0NjxuPl50t9bA6fXmxYeoGf7s6resuaIdYYJk+jWPHoSsCUsXF6WwmlS3RtNQwWdQvp+ezzMaNLYNuZXny4MjLGANZeAuVfRRH5pooa0geeYeymn5BucN84FAJHxsKsWmSN6lG5APLlHNoVcHhbWYgAC5wYGlqVSBsTmIq1DWtpAFoMQdQlu6BGoswTLM4XotoYpUmWc96Av27yVT8OkO7rUtW9YVsHfWGu9kUYHrGH7Ns=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.465Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY13VNYDMVB830RT","x-amz-id-2":"Zr+9Zxu9pbZeVcPkzaZjgTXngWoSrcCuQ+zr1CM6vjseY02YZnETU9RMvYSzO6iP1ZLZLJAQsKk0Rnh2x+UYc+vpONPJ1S+0y7Yed9SRzmk="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STE1QWSKQ2G05XVJM47P.pdf","size":158654,"eTag":"983524e2bf7465375cee965eec8f762c","sequencer":"0069CDF2ED70CB8F56"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104750196', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751490'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '9a95641322f89fc7d14f1f2f27f4086c', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
+
+[2026-04-02 10:09:43.101000] following normal flow
+
+[2026-04-02 10:09:43.203000] Firestore initialized successfully for project: worko-dev, database: worko-corp-db-dev
+
+[2026-04-02 10:09:43.386000] This Event is triggered by S3...
+
+[2026-04-02 10:09:43.386000] Got batch of 2 cvs for processing in parallel
+
+[2026-04-02 10:09:43.919000] Processing file: 01KN67STE1N1AVT3595DCQJKJJ.pdf
+
+[2026-04-02 10:09:43.923000] Processing file: 01KN67STE1QWSKQ2G05XVJM47P.pdf
+
+[2026-04-02 10:09:44.999000] totalResumesUploaded 304
+
+[2026-04-02 10:09:44.999000] totalResumesSucceeded 7
+
+[2026-04-02 10:09:44.999000] totalResumesFailed 0
+
+[2026-04-02 10:09:44.999000] totalResumesDuplicate 133
+
+[2026-04-02 10:09:45.002000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:45.002000] totalResumesUploadedTask to Ai is :-   get cvExtractparsed step1
+
+[2026-04-02 10:09:45.012000] 304
+
+[2026-04-02 10:09:45.012000] totalResumesSucceeded 7
+
+[2026-04-02 10:09:45.012000] totalResumesFailed 0
+
+[2026-04-02 10:09:45.012000] totalResumesDuplicate 133
+
+[2026-04-02 10:09:45.013000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:45.013000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:45.135000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:45.135000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:45.135000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:45.252000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:45.253000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:45.253000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:10:00.331000] Token usage details input_tokens :- 1413, output_tokens: 544, cached_tokens: 0
+
+[2026-04-02 10:10:00.332000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:10:00.332000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:16.802000] Token usage details input_tokens :- 1872, output_tokens: 826, cached_tokens: 0
+
+[2026-04-02 10:10:16.802000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:10:16.802000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:18.618000] Token usage details input_tokens :- 1488, output_tokens: 754, cached_tokens: 0
+
+[2026-04-02 10:10:18.618000] Successfully parsed 01KN67STE1N1AVT3595DCQJKJJ.pdf
+
+[2026-04-02 10:10:18.618000] query corporate type of path
+
+[2026-04-02 10:10:18.650000] Dublicate data from firstore.. [{'candidateEmail': 'nazeersyed899@gmail.com', 'candidateName': 'syed nazeer', 'id': '01KN5ZX81E2ZR6WSP5V2TSE7AF', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8951350559, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZX81E46FQE87K85AKCYVD', 'createdAt': '2026-04-02T02:21:11.598+00:00', 'updatedAt': '2026-04-02T02:21:11.598+00:00'}]
+
+[2026-04-02 10:10:18.650000] Found duplicate record for 01KN67STE1N1AVT3595DCQJKJJ.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:18.650000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:18.677000] Created document 3e55af15-4535-49aa-a54f-65aeeaac4058 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:18.677000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:18.706000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:18.706000] Completed processing: {'status': 'duplicate', 'file': '01KN67STE1N1AVT3595DCQJKJJ.pdf'}
+
+[2026-04-02 10:10:44.322000] Token usage details input_tokens :- 1947, output_tokens: 1004, cached_tokens: 0
+
+[2026-04-02 10:10:44.322000] Successfully parsed 01KN67STE1QWSKQ2G05XVJM47P.pdf
+
+[2026-04-02 10:10:44.322000] query corporate type of path
+
+[2026-04-02 10:10:44.352000] Dublicate data from firstore.. [{'candidateEmail': 'misbasyeda13@gmail.com', 'candidateName': 'syeda misba', 'id': '01KN5ZXJM67HZW345NSVHJVM51', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 7022283342, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZXJM6S0PT5QAXS7MBHX8C', 'createdAt': '2026-04-02T02:21:22.438+00:00', 'updatedAt': '2026-04-02T02:21:22.438+00:00'}]
+
+[2026-04-02 10:10:44.352000] Found duplicate record for 01KN67STE1QWSKQ2G05XVJM47P.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:44.352000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:44.385000] Created document 92cde217-1ea9-4744-b074-13f5fb1a5310 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:44.385000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:44.412000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:44.412000] Completed processing: {'status': 'duplicate', 'file': '01KN67STE1QWSKQ2G05XVJM47P.pdf'}
+
+[2026-04-02 10:10:44.412000] Parallel processing completed. Results: [{'status': 'duplicate', 'file': '01KN67STE1N1AVT3595DCQJKJJ.pdf'}, {'status': 'duplicate', 'file': '01KN67STE1QWSKQ2G05XVJM47P.pdf'}]
+
+[2026-04-02 10:10:44.436000] totalResumesUploaded 304
+
+[2026-04-02 10:10:44.436000] totalResumesSucceeded 12
+
+[2026-04-02 10:10:44.436000] totalResumesFailed 1
+
+[2026-04-02 10:10:44.436000] totalResumesDuplicate 274
+
+[2026-04-02 10:10:44.438000] END RequestId: 52c07333-4e56-520a-a7e0-1174bb799927
+
+[2026-04-02 10:10:44.438000] REPORT RequestId: 52c07333-4e56-520a-a7e0-1174bb799927	Duration: 61336.82 ms	Billed Duration: 65085 ms	Memory Size: 512 MB	Max Memory Used: 260 MB	Init Duration: 3747.68 ms	
+
+
+================================================================================
+Stream: 2026/04/02/[$LATEST]15f45d6730b0496a8f71ef454763e1e4
+================================================================================
+[2026-04-02 10:09:36.290000] INIT_START Runtime Version: python:3.11.mainlinev2.v4	Runtime Version ARN: arn:aws:lambda:ap-south-1::runtime:f14046b558b69f092cf3c888cd59ed30350756eb27e125efed3b7a995eb8882d
+
+[2026-04-02 10:09:39.968000] START RequestId: 4c866dfe-fc14-5488-976b-0fb90937085b Version: $LATEST
+
+[2026-04-02 10:09:39.969000] got event: {'Records': [{'messageId': '4eab7ab7-02c9-4eac-9fe1-51630f02988a', 'receiptHandle': 'AQEB0iierf6axxtVYgubZ8umLTCk8K7LSAVWF4Hm+IpNgQRAqlkszK/hWdsYN7VECEuxnqxoa2dxiC7gW+8AsRt4LnMYP8R6/Y5+8TOVfJeyd/uBMMJ5B4pVcxGSE0N9IG3MVTKc3xKOFgg0Ssh7jyVLvXirtjzwsz6trtr5YPI5TK8B7tCHviY9ufX4QNVot+VNrfri3uZpW2ew/gzr8tqbhWkrTR/AjugkpglaHJmb3pUxienRRuhc+rfaiU8QE1Z0zcaD4pe0y6JzsNMSOG2fCDcxw98/5WRU5b/s4rjfWubtkPTBi38z7giPyj6C40LY5Ci/W7NcLfTC2LsjVSZKXikrzhjfcWvSCU5ZDNxsGaicTufp+/sYV4aRuB0XqY0VHw0WiAbMC8fOymDR2OuFI5+i3HJ9WGv2krLtlv6f6aQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:38:59.202Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"0GVZFSSH1NTYGHV9","x-amz-id-2":"Ot/ROMZ7XStf8X/kDzY281wRUy8Rc+Jj96G+INhnLfEEAoJSr3xEMCKB6jgE9Lo9WuDXOEofkJLJEmi5iWj4N+a6mHp/7XACYlkhPMc4hTE="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SG8G5GQPWZYWFDMAHZQ4.pdf","size":709325,"eTag":"fb307e7bc51825e29e205d0958ec1e42","sequencer":"0069CDF2E32E39E12F"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104739983', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104740008'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'f0f9fdd2c2d886b4a626151f93514a87', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '79c5faff-4b11-4824-a085-fc68769fffd0', 'receiptHandle': 'AQEBK0LzJfGfbB1LKX4KV9uP8asbsOruUziH9vIlKqAXkdPZDDN3LzuOurZ40VQYo2h/tm9KthL6XJfAs6oX8ihhYC5kpF8OG3RiGRY38n9OqIc17fovEnTBsFmvlDVQVSZkmxo9bA6UERM6Uf6hf4yuciVzq7rXhl7yQ4Wr3TtP3yMfWCes+ttV7qOi2CUxWd1ayw1PMbl9e8DsWaFcsyD5RUVKJWn3qtS80NSgZczQpU4caIwfvlEoTkHOcUTW1NpCW+vIEJvfC5whD6FLs4515kue0uLViM6VJhqHPsmspwJWtOhLd8xm546H/CX5xubhUVZB73mHSSOFWCzkLucvT2tCTAJjHNFJHdhqps7dk02NF89MGhSD5xLmAUroAFRdQ/YicWTuG6NSYUwIvEA85zLBXjYXpRfqELbxkKkg0T0=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:38:59.671Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"0GVMXBAC2JCW8WZK","x-amz-id-2":"G4yawL6vVBS43uqGsdbZLGOXo9nebeJI4r0ARX91Q7QHRbVQhNKED8n3y0d4uCret4ZHS1f7z1OjVeS14uChgYjXRE+NX79HRVAFdKXw8aM="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SG8GZQCQBZ74XX2AVSW3.pdf","size":1582463,"eTag":"7991b813b18aa48779ab98486a0133e6","sequencer":"0069CDF2E3A1AB30E6"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104740151', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104740152'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'fb4ed4a83dd4537156448733cadf0c32', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
+
+[2026-04-02 10:09:39.969000] following normal flow
+
+[2026-04-02 10:09:40.054000] Firestore initialized successfully for project: worko-dev, database: worko-corp-db-dev
+
+[2026-04-02 10:09:40.199000] This Event is triggered by S3...
+
+[2026-04-02 10:09:40.199000] Got batch of 2 cvs for processing in parallel
+
+[2026-04-02 10:09:40.740000] Processing file: 01KN67SG8GZQCQBZ74XX2AVSW3.pdf
+
+[2026-04-02 10:09:40.780000] Processing file: 01KN67SG8G5GQPWZYWFDMAHZQ4.pdf
+
+[2026-04-02 10:09:41.822000] totalResumesUploadedtotalResumesUploaded 304
+
+[2026-04-02 10:09:41.822000] totalResumesSucceeded 6
+
+[2026-04-02 10:09:41.822000] totalResumesFailed 0
+
+[2026-04-02 10:09:41.822000] totalResumesDuplicate 116
+
+[2026-04-02 10:09:41.822000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:41.822000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:41.837000] 304
+
+[2026-04-02 10:09:41.837000] totalResumesSucceeded 6
+
+[2026-04-02 10:09:41.837000] totalResumesFailed 0
+
+[2026-04-02 10:09:41.837000] totalResumesDuplicate 116
+
+[2026-04-02 10:09:41.837000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:41.837000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:41.966000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:41.966000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:41.966000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:41.967000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:42.058000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:42.058000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:46.527000] Token usage details input_tokens :- 691, output_tokens: 153, cached_tokens: 0
+
+[2026-04-02 10:09:46.527000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:46.527000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:51.069000] Token usage details input_tokens :- 766, output_tokens: 129, cached_tokens: 0
+
+[2026-04-02 10:09:51.069000] Error: -'candidateName' failed to lowercase name and email or Location of cv parsed results : - {'candidateNumber': 0, 'candidatePhoneCountryCode': 0, 'candidateExperience': 0, 'candidateTotalYOE': 0, 'candidateRelevantYOE': 0, 'candidateReadyToRelocate': False, 'isNoticePeriodNegotiable': False, 'createdAt': '2026-04-02T04:39:41.822415', 'updatedAt': '2026-04-02T04:39:41.822415'}
+
+[2026-04-02 10:09:51.069000] Failed resume 01KN67SG8GZQCQBZ74XX2AVSW3.pdf, triggering sqs and updating as Failed in firestore
+
+[2026-04-02 10:09:51.127000] event updating in sqs :- {'event': 'CORPORATE_CAND_PROFILE_BULK_UPLOAD', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'candidateCvAwsS3FileName': '01KN67SG8GZQCQBZ74XX2AVSW3.pdf', 'cvExtractedParsed': 'Failed'}
+
+[2026-04-02 10:09:51.199000] Dublicate is not found, sqs (parsed cv) sent to backend
+
+[2026-04-02 10:09:51.199000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:51.226000] Created document 5958e42b-bc4e-4684-8fff-676bbca44fe7 in bulkSourceTypeParseResumes with status FAILED
+
+[2026-04-02 10:09:51.226000] Incrementing totalResumesFailed : FAILED of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:51.251000] Incremented totalResumesFailed for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:51.252000] Completed processing: {'status': 'failed', 'file': '01KN67SG8GZQCQBZ74XX2AVSW3.pdf'}
+
+[2026-04-02 10:09:58.560000] Token usage details input_tokens :- 1235, output_tokens: 729, cached_tokens: 0
+
+[2026-04-02 10:09:58.560000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:58.560000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:24.403000] Token usage details input_tokens :- 1310, output_tokens: 842, cached_tokens: 0
+
+[2026-04-02 10:10:24.403000] Successfully parsed 01KN67SG8G5GQPWZYWFDMAHZQ4.pdf
+
+[2026-04-02 10:10:24.403000] query corporate type of path
+
+[2026-04-02 10:10:24.448000] Dublicate data from firstore.. [{'candidateEmail': 'sharayuofficial@gmail.com', 'candidateName': 'sharayu k mulewar', 'id': '01KN5ZTY7MJHVNQTP0X0C5BV6C', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8329098132, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZTY7J4C04PY42G5AWVPZM', 'createdAt': '2026-04-02T02:19:55.917+00:00', 'updatedAt': '2026-04-02T02:19:55.917+00:00'}]
+
+[2026-04-02 10:10:24.448000] Found duplicate record for 01KN67SG8G5GQPWZYWFDMAHZQ4.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:24.448000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:24.486000] Created document 3189b393-6f4c-44fa-b586-d86002996e5d in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:24.486000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:24.511000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:24.512000] Completed processing: {'status': 'duplicate', 'file': '01KN67SG8G5GQPWZYWFDMAHZQ4.pdf'}
+
+[2026-04-02 10:10:24.512000] Parallel processing completed. Results: [{'status': 'failed', 'file': '01KN67SG8GZQCQBZ74XX2AVSW3.pdf'}, {'status': 'duplicate', 'file': '01KN67SG8G5GQPWZYWFDMAHZQ4.pdf'}]
+
+[2026-04-02 10:10:24.535000] totalResumesUploaded 304
+
+[2026-04-02 10:10:24.535000] totalResumesSucceeded 11
+
+[2026-04-02 10:10:24.535000] totalResumesFailed 1
+
+[2026-04-02 10:10:24.535000] totalResumesDuplicate 230
+
+[2026-04-02 10:10:24.537000] END RequestId: 4c866dfe-fc14-5488-976b-0fb90937085b
+
+[2026-04-02 10:10:24.537000] REPORT RequestId: 4c866dfe-fc14-5488-976b-0fb90937085b	Duration: 44568.41 ms	Billed Duration: 48243 ms	Memory Size: 512 MB	Max Memory Used: 262 MB	Init Duration: 3674.42 ms	
+
+
+================================================================================
+Stream: 2026/04/02/[$LATEST]9263c7b8ec6741c99ffb5ad8c46fe518
+================================================================================
+[2026-04-02 10:09:11.772000] INIT_START Runtime Version: python:3.11.mainlinev2.v4	Runtime Version ARN: arn:aws:lambda:ap-south-1::runtime:f14046b558b69f092cf3c888cd59ed30350756eb27e125efed3b7a995eb8882d
+
+[2026-04-02 10:09:15.559000] START RequestId: 6e8b8c13-7d02-5a97-b2fb-ee54882dd1ba Version: $LATEST
+
+[2026-04-02 10:09:15.561000] got event: {'Records': [{'messageId': '8461d58d-3952-4d66-9ef0-893fb672505f', 'receiptHandle': 'AQEB5lf0VskRgiIz5F7/BdjFCiEDeu6W49U+jgPR+Ihpx0GPFDz4xKKvmFratSsvJET1VClJgWZ8vQ2TYrZAK4f8sJZbNTMRmIAz4VHecY0nc2EJXRrT1t3cOGs/VfKozd2d7cdFcgszbV3fSWc03iWblFS/O/UJO4xWrPDG665wVOm6AdPa745Cj2fVNiqtkgqWx0wr5cXbiJfEJ3xJFmgcaJp2ujxP1Zonv+zTRkSLNmjahTe86zr7QD4T+rrUL0J/g3knIm1OsmXS/MLzupCLQSA2JVLek6n9vlfz+puqm6wo7qTrRKBVCM82m9wEjXB100a7lURv/e2+aC8CihDZJj39GLvEyKwjIjBMbqrYzEQkqPcAUF6S8O81/T2YdODEqEvR2oArySquqZmELPMoDCNcDObq+67KukVVaRMrvr0=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.545Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJA1X2CEYCB4N70D","x-amz-id-2":"nLnCThiDZX/OJzrDFOvXU2k9MyTEtI+TGq5lss9FN6I2hUq2wgi/mGBuHJQg57AUaRaVZBEYuGranrwSMBULdJCZ+RjWGC6LdS/hlZZl9AY="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDC1YN1SED0R89HJ3VF.pdf","size":216669,"eTag":"f7090c89c23685d9688c502ccb89dbce","sequencer":"0069CDF2EC84096E0A"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749288', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751375'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '0c34ab93d5938a2e739ac6d91d18305e', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'c557eb2c-b8b0-4ae7-b3d9-aca12780126c', 'receiptHandle': 'AQEBYLyY1wNzV5l2v/S/o9eYluvP0uDpr+NfnEXf1SFz9yv+1cdoK+El4ozj1U1o42U+BD1h/dOLXnNtzmCkZLnlgxp6Kq25NjLCpKpeEq9xZZZAmrkr3t5U0M4Zn6EDUdIRU8JUobiS5dhicnn7tOXcmJ3u2gvv3Q1TeIWrG4EM+/CY0klbGzBPxKzUse26GyXpZ+eV6rhZD2TwAr5a/8UMJ0ByDrMnGHaHAObHrjbG8pHpmDa4R6g1Cn9qAmhWT+N0FB+KGHKk/lOawa8EZGYPWl4mJvvR8IUmgWrfFCD4ru3KHUJB1TIJL2tuNeS1kpuP6Tu3nmZEcG83EjTiI71CSanYvkGRKsv+nH+AaNh5aur5tcV8gyXbrKDPo2zpVbkvlSpxL06LU7Y+9dBV8zgBAV3OZreWQWehu/Hr+SbztvA=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.547Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJA2VARKFCJDA0WE","x-amz-id-2":"D0vEgJ8zDS80vHy44ebITkWTJyDkjA4ZMnevVzC1Y/BD6sCpT+fihLx5uGyrOuuaFlp/2R+VagMXua8H2Wozz2ljw/FjPQTmkS9YNYNXtzk="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDX5TKV6N320QV51AZ3.pdf","size":611266,"eTag":"d5dc46d65703fdf99a4184fc1bd723c9","sequencer":"0069CDF2EC83137953"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749297', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751375'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '69be995cab5506983f6227a42c3ff509', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'a5782804-faad-4023-9ca9-5772bc0c1194', 'receiptHandle': 'AQEBWVblUB6+9jHBxBdqInRIFA+kw8goWpNAJ8vkTi1GV2WGXAByeOmagfLrF4mDPhtRDPBMItSXtHrCi6XarS+AvtM2ZH3SI7MfjjTEs9BrN/IYWnMRL4m2nir+gTw39hyLBV8qTmehsK7Aml38Ctc6IwRUaBQkAUgsQ3/Q5+MdF3XSX6eSyYls2BaSQQIS8vzD1+omVPLmOCHgw9e85DGdQmi/0KBNQvWkq98xSHyvINwy0UtIhle/spjzkpnw/jlCaT8ap0kf0sXD9wz98O88WK7JxFdIznJhLozqjXV9Onhe3rRzoWq8PehdnA9yUxSx6qDB2e2QSJr+WiVXj+/XXaZkYw7jeTw2hTPBGBdsMh8RJkah7310H3mbO4d7SVN/E3yZCoGqzO5y02mJOzIfEGf3nvRCizMD3vEfhiiGVx4=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.801Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJAEX45S6A3QXK9V","x-amz-id-2":"aII/+2VpTO77mLqbZYg5Qx1a3minIW0Tg1V1/gdvrrmSDjzRegOKN2Yg5EjfR970S/mwdM24uKHAFeZykkGsc99RCllcxtcFqhzCB9EF+lM="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDX2ZDSCPKYXNRKQMSQ.pdf","size":230880,"eTag":"82fc58650250d7b15d696b470c102c63","sequencer":"0069CDF2ECC498F4EA"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749304', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751376'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '48a9b195c2e78450aaecbcd003994c67', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'f49b5165-624f-4dda-83c2-0826f76ef738', 'receiptHandle': 'AQEBZsfWQB0Ti7asdn0X2gEepTF8ESZYNUazCt+oco++QFtZnFOeonpL5lJth0kGqO5j+zcfB8WfktGQ9qmjW3vim0WTl+h51iMPdffjvM6toJA0xcA9GxelCIYWBuBzfOx7S2g2OrJ/1/L6G58Q5RrU4Uu7ca5Qq925W/yDHl5/EKuDMAHjnT3thpzEO8UVF6H3TOXPkXWRWJ0zh5QvXUjzbCmDc7sefaq4Oj6nPeUtHs1wg75/nTKgjioW5HOd4x84y88G2W8OyNxgpWdDJucyvMt/hGVdd01gQtHO4gK81bgsviubGb61F2fv0anV3RaKR8e3Uq0rVdkpW1FlBjgOsRwvf281WFu9vN4v6o4IUKrd7Hzc0ZYR11EcilF4C3lclcAzAIaIi/6M9ssj1S6Bx4OmeIG4AR5r3Qd1IEtzCWM=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.115Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY1FFF5YMM84H9ZJ","x-amz-id-2":"kZVYgkrpXy/5O+BzJ50LoE+oyyHC9/LgL0LPdOs6q4DzYaODc/q/j93GSHNkXA9s4O75jJnPaIQOVhRdocsem+ECOBthqDl4uCu/Y9n8AHI="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDZW2HPHA54T4CD6F1H.pdf","size":184223,"eTag":"d926b9018d57b087974f86ef8c0182a2","sequencer":"0069CDF2ED197A097A"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749308', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751376'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '58f01da8cb52f52f5069e5ed654938af', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'cffd5611-5a5a-413a-aeec-f452200aed4b', 'receiptHandle': 'AQEBS7fhDWFu8O8xU6KqBeMau83CCzw9zP3iKlPDAwBX2x/Hu4nO7eTpN2pMHefu3kf8AcMAhscNKNFvJin45OLSDl9M3/f9IuRiOG+vP1cVkIFiAnv7QsyJQGcb+GGVDCZOxu9+jKuM4WgDPHWj2ebcJ9eP0LStd4jcbaa9jexi6bc2KglPzk0HnBQTfxWeNIVY/l3Dse1oN4I/v+DK3saPolH9gkWi6AFoFDZECbLzjFt1gK4XiEcFwfIYksHHLBKKEU4A32/wfy2Oi4J3Ew5KagZhhmgu3GnVhe7lYN30YSpeOY+AyzYNNr5g7Q0UarXWx6bvPaIlJfSNOrmwJWGW6odZciwsafkTzFv9HH47JeM6MpMy8/ESqrL5MqmIwArYmMrD0FsnvR+Cj+Thihc1ukJ13OqW6VQf8XyWDqLo5FA=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.033Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY1FF5DWB51RY4A3","x-amz-id-2":"97fBMLj6t3JgvZ0CQVE19I2HJAvl+DuWF1YwReW4wJYWpxDDPurB26Bc0eZqbBV7Sx4i9PYGQr6Q2IPY/kzIpqDwiP6Gl1/9eEuFEUms9m8="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDZ5AW4GBHF4S5EA133.pdf","size":49701,"eTag":"464d7283a88495f5d44808e10543eae7","sequencer":"0069CDF2ED053654CB"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749315', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751376'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'f46d922440caeaa52e542786b4ac17bb', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '25c94fee-92a0-42f4-8b07-1fd6652fb761', 'receiptHandle': 'AQEBitB7m8rOiRmdty8c6ZHLvwQL35x/C+Yax22Nppwwi84Hj1Wf7cGVSkDzuqan1RG+9nJEMqCEaT0a1v3DbksX+4+ozTYTdDpRm6BJya9nDBKVwreR6zkQ62KGXM1Dxua5ZaB+hdw/DjMwgM/t9cjONqZ4swwEK1GwqRY1GuqBV4wM60/Rht0+v7wDLEvHU9/kZZJZQRT43ddDRJzsGlg8OXp0HTQMUw0uInw+9tzePOdl4uO8o9BDpMBhapfC96QnfaCWxEKCmL96VLZz/AfLfr1LT9FBZewmjmJh/1aM9V87U4SPy+3vnUi9S2vCccHCWIyjDsMl0ZZspo+g8sat31vg5QZDb7VRsPbjCEIj7097OwDOexCJSmGJFlDhS+6VtfbOtcSzJ0XaJ48LXWvpSWgnPGiiqLd09/t7Kr2XAus=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.235Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY12Y88MVJWRZJZF","x-amz-id-2":"kzMpxXTRvwzfX0yvwlHcpqF9AT0EsRyo8XD4D966H1b3R8DFcmWZxvpWUdt/qpRTLTkQFog2yB9pOHaaApBaDJSCWPsTytydpVUuMt6rGWU="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STE0SMSFJQX7ZH40ZF7H.pdf","size":371888,"eTag":"bf9c431239284c4054a927766c08a780","sequencer":"0069CDF2ED36B2AB06"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104750189', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751376'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'cc5829aedd77284f24a464a4023d6a81', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '6c0e7390-c134-4f91-bc42-ac1db756ba44', 'receiptHandle': 'AQEBXJfank0CUKQ/rc7iDI/8+KfFNo0Qg/C5wpcpL+Ln3xjIzirE5WhCXQXHfRIrr00Kl39jWjDc0YOsNhOd1Fm+t+PbuOk/ePuUyH7L01SSuz5LSvD0x674VUj12qEzlU5UATydPKGAHuxQ9DYzuzSskiq8C90Rem/nbZUO4qDQToYK6VZ9X1SNWDT5oL9qE5PV3uWv37ObCZ2jAlLisst8T4EPW9/9LoE+UIrF8ga003aThlpqWXow+YMDMewiernuRIhP7E17tNLLia/q/i4J7Xa1344xPmTYHaP9nMOymNwzXVB2HJ8o1hI+YbOhiNJAv0N714H3NKrkb9O5zX2l5ry7ZzP+KkWfgeYggLmoRnhHKpdVVDi4s/0CJgTiEccS1fc4r5fBHdXJAXORYrjiDCbjukSUR4eO2hJ5LHi3SWo=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.483Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY13GYBGDJQ0KF3Y","x-amz-id-2":"uUWjn1dC99WjNDQWYmu2xdBiZiOVRJ5YRM+bZ+WWj4m5JWba6Yv3nspCe1TtXNyMBKXoC38fJDnFHiZaS0y/DfAED3qs2IjOSLZvx2RXkao="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STE1WD5CVG767MRTFCDS.pdf","size":492334,"eTag":"69c76ec5cc5fbb4ee813359fe959ebe9","sequencer":"0069CDF2ED74F23DA9"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104750194', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751376'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '6b3cee108b40210ac02d4c193837fd50', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '2160e720-e80a-4530-adb8-60dc91c56443', 'receiptHandle': 'AQEBL7d3GDH4a+SiGDtZovRS8/DpoS+lasvd25HTX2GbVta5TNhV3OiohRm9s1hzrFhD19dbW21GLkWhvbDk4bmrz5lxnAIqH+rMFW/nlKuQLGuXB6bpOHBK6scOTtkzYSa6hrxBQw6HrEYVSD65PEHRvX5S7B2wVTaUgI+clY8snodK6JyglzLWsVbhIaY94Dywg6lcH4U0KWzjNgckm7O1fiqef5b35+PP5/FeYf/6x+42/5R3K4fVr081Q1IvLwlaLZwr4gtDHrfDnWsTA/ZbCZdCO60B5Aqpa7Ynoe+HvGiFk7PbwMeh1vYuad+2Oz4E+EJlfBoe7b4HwX5feqpd5rK5Zy+XPScK+OdNS6F6wsFDwkjW70oeFVt9XJfgSW+yXB4xDYQybyA6fRskhFA97bgaHnA5lKsIRoGtKrj3neI=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.767Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY1FTJ1YAG0P7NCG","x-amz-id-2":"EHpiIieK/0bt9p7tn55bgX7ZMkzY0zc+mWNvKnYlpp3bgOrfjkwvqfkuqBCK/g30vRjP3k/S4LiRWYy8Bndzz5UQN2HkN1a3+lNd2deTPLk="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SW18087TR2SCC73JXV6D.pdf","size":66823,"eTag":"36daa067e0e76c4eaa1f50f1a9681bac","sequencer":"0069CDF2EDBBE28FBF"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104750207', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751376'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '6624e86340546aa6a04b037a7b254845', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'ca3230ee-cc33-4594-97a9-31f3a5c39d90', 'receiptHandle': 'AQEB6+KWEWdWWcK5iHkjdVBAbmYp3aUL2xYRhj6bhAgU6C495S5z9lZwTA1S1xxDiDJuRUeTUSaMqEwGCdRyrOSChyfM6Qv/+uLocF3aGXk+kyEHiZ5e49nI0EeqRtXIGs3OPjfN0A+2tP/oMPG5128bAOHT+TIo+kpbLPH5VEDCKywHURsXe45VX+OCYeunD2vROv0vZgzROWXOv0T+862oK8Luzzg7wq/h6H8jKnj7/JonBJT4TQkxAu0P7tDAoGhD5E3BnBuzUNi8FTTY36U4+Om9MkfWilFRQujW09DALsdETpTicve9wvTbLtZ0DzovsrNTBvwr2kSZYELv6fVpuHj7M02vgdO45J+8b319ltmVgNmRW78UFdnd12EFreWwwiVKwbMqb52YhJrTFnZIrjrf7FTwWsFYOYWF9ZoZhyw=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:07.350Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"C8WP04SWHH962F3R","x-amz-id-2":"Yy9eQyz4znk9ZDBLW8rz0Ajxpla1FmY84SO50Qx5b+17D/SWqFXYoI7yBOMXbofUUOrnMvIkUvQN+dIPJIYUGrL6v1Copgll9IBbPKUiSzI="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SR0FSA0PP8DTQEHDFHPG.pdf","size":402360,"eTag":"bf97b63b956dc195f87ec06581fb3642","sequencer":"0069CDF2EB53B0E38F"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104747707', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '734f7435641769b398a8c4dd441e3da0', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '67e19d4b-150c-41f5-9c71-321a32c1a934', 'receiptHandle': 'AQEBzGIt6X0w3//N1TUi1p7KRvEiRixmD6koe/Emg5P7vyeMc/Ewvc4vKECwnz/AHwGvReIrkUZj0G3B1HSUSyFhqhzsZrMzkIM/h1gWomsRISoYLRsDR7op8H8EH7LMkGCIt6R4ZSVYF6Gi6Kaaoz48eR1CmkIoAQEIzh6VIsr0pu/MU3QsB1ex2Fr9Uxr/NGmQy2Y/KbEGGYYRULuUYWG6Khju2C1YtAz1PwJTzpE4MOdhCulcOQH4Qw4DeTSWK2w7VwcZkl/yya0mVk9F/UU5qMB1W8MhvMjgHUKq8+bXJUdCKwzpAGjWUiriKxbEFmS3z2y2VrCxVSaB+/rK3TeNRYTfu6M8IUh/Wbe8Jhrv6U3K268VxEHTHLfkWVJ+nqi2B4wYtGeYi6Ge3hMo/7ay4kVJnJdIQHZNwCMX1sNz/MA=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.894Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJADRBH5HC91CEQD","x-amz-id-2":"Cext+Kfr/bwmZSfbhOpjujU6C0EkTCQz3wR1UEiuhxkAEKbh60remAv6jpktPDtzsSjJ50HqzpL6bs+AictSFv6scWD8/Eq7B6CJpnc632w="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDY1AGYXCFZFG30ZGFM.pdf","size":92223,"eTag":"c0d2ac8d80faaf7387614d2cb867287e","sequencer":"0069CDF2ECDC261C0D"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749289', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'c91a6fa40435c09621fb2f1e90a11b44', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'b9a3a6f2-a9dc-4be9-a46c-243577e26db0', 'receiptHandle': 'AQEBud+sh4DCwQc4gQFefflzepdP3UVaV11hhtNM0jkjNYSJDKhymddrz8MWECM+q54BISkSaYBupF2e749sg0wP8S0/H5ikzV25OLy4a8wlr5P/qoE23Eb2b5iv/OEpyGpx7Z55vc1qU02ELY5ZaIiAzG92pY0FJQT1id8kzR3TTikz7inJHsuXtdp9F7OStIHbtGSELibLhWce2t87Uw0si/S/bzW6edcqjAGsOWur3q4o5atDD+61jRfXl3qkedOZwP46PG1Ehc+vsAVx1zxlgyXud9nFVLsF/9LFRew9xK3E8wNT/xY7oxtaPivpnmFJVdlixrypYaB33UqawfiMeO/ujQ80kN/52rUPfrVKB4Wl3NhbSJ47c/Dk3c0/QldNK6C0KoGdxp998faQGXMcIBYVpNh5hpGsrIjxFpggLes=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.800Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJA4MW132BT9AS85","x-amz-id-2":"Sexh3wypp6dHysDkns+QL0ISPlnDKForvXzxr1kLSA/pVEblYh9msgYICmr1P7NW94qcgt8u9cghImSCTweVbhHr/uRt/Jk5ONPSy9ryA8s="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDX2CGZVCCH107952CX.pdf","size":226895,"eTag":"60d9e26ab0e8b8f6e015ea8e745c6027","sequencer":"0069CDF2ECC3A7344B"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749293', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'f5bcc6124551687e6c57e61ccfe62919', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '0d2eaace-980a-4bfb-ad01-b507bb66632e', 'receiptHandle': 'AQEBSbRt2uRS11u4Qh1wUR4AhEvWZfLOslF4iDR7pf7GOJCHlj0NrtezdmHJyCMIa2KBCZBrk/5Uu95yDEu7k+ODeVOaOA+sgSzWJ9YixZLjnVpaekIfro01fzeZ9GS1bVutBeyy4T2BrGyStlWVxX/SblXhpuSmv/Qt0jlGHcao+zhNuqJ357GSpE3lYEq7PcLIwzugBX1VJv1disWlOb4wkDV94n+VDZe+I8jbwiaEbhLbLc90Rp0WuapGSDySHwNWMdgGK2uKsDrfE3Mjtz9AETZ0esdRbeMNfttFmbYHK+qkEgiTv3C0NkMnmJEISEftUHTM9UBA5KqjQWcjNzEgiKvzifOVB8r/RWeSFZEKvn2pDijOHyrSDASq5YAahlilDT+O9z4IC+kX05F2k1kmXhGPnGJxvHiF67dsF1TqKJ8=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.909Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJABKD4E1QZNX3MG","x-amz-id-2":"4u5qqBHVmqt9Z42JMcIpO/8kYNQA8kl7Zgycd/BkyHYpYNTggWJuHBESkJZUZa/nensaxKiMbM3TzXllqxZvi+3jKXxXFha+nvdRY/Z7VcM="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDYABQ50M8N0E02STFM.pdf","size":87818,"eTag":"3eed404854080ca7435e9d09d5749ec0","sequencer":"0069CDF2ECDF728863"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749297', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'f26ae6de408178ccf11e2c5373131826', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '846423c7-122c-47b9-b2e2-b8b4833231f1', 'receiptHandle': 'AQEBwajsDmxScZDliNgSMRwE0N2NN5StiGkJXpRIJhOzhGG7lFaoEeWpjjds2DUvhVjYWY1HZyks3Oi4m9E0y4KGeLWvwnTjCQ6AdbhddyhprHTSlMjgWgRdp0epSVYEZt+60+wHXFnTqYJoGeJoCsae7rBvW/DMU9KShnLDdQm6sEkTmOHMoVrS9R5pQcBKQ/iIAs0JhpO0wFQ7Nc2U1PqP2eCSDvY/dsDuOUyw42c2WzlJU5suNm/iiBJ2XCoEa0eLIquMh0Zm7926u1k6gRZ8TNaJVSFzyn9YrJ8DpZOHXsxezkn31qDgQQp4OCNoHa9BHptTIC/pfs0EWrmxSkXJxJfzQUR5ohEa6LNxGztuB22ij7mMRBiyTbRLditH6aqKiqZV1blY/6kr+tRnFwEwS5K0a5EuR6JTZ9fpdmsMU28=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.803Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJA59G9N063YTHH6","x-amz-id-2":"uQZnbvE+Nl8fZIj4mrtB6LnGrCZpXkLoMgM3o+dL9aFNEwSAMs4qEn+JY0CX784h7adfDZpnVlQG/uznDiSH+w8P9C6UNvrfdpCVIevjR8Q="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDXTPCXVWGRKKDP0Q0R.pdf","size":232554,"eTag":"e60276da8f772592ec0ae4ee22e4c1d1","sequencer":"0069CDF2ECC4A9E70B"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749301', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '5e02f2686c6f4b62a119ca5818324d5b', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '20a87462-b597-449f-8454-4ff00b3709f6', 'receiptHandle': 'AQEB1wmikSVYu+3uFAxpU7/acq692VJaXIEAsi74Ks2Ru5aAyJ5FAI/dOYJ9Usz2BjeWXZfBP8BxUHBUxJ5kvDK7L8zb2XUf1v6obB6H2IGXUc/Xt46+3J0hk8CNXFWfIHmtiqGxVhamYU5JqFPxU3buWG1hbtYF6k/Dm241fUkS3Bd/QISbOngyl5oeH8HBTzVkXJ/9/dSNaPb732q4O+ItzYXTGoCEAaDNCgCMXsTGbULhe/pLO20bs19QHfjk14UsdPiiYAHF0fsBe/+InlIHb5lKhQXXFsK2jL/9e9eHSFGBW5vTuNlF4jBBuJTkKXE130YY+d2Qfjsj+4oUTXrzbSNIVl0X+FlL5mzRsp/sfa3nrK37L9kLmf6wsiangcYi3bU3XmGauCXOPBk/f+iwkkchym2SNGs9+Aw1WNlNG5I=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.769Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJA24SQEPT86FDFN","x-amz-id-2":"ru3BFLciOguy/WpZGeSphPF7tBwIJ5GwzOrRLFFg4mCbt1HY0TSn02uPDYVfm+qykeqndhzGyTOe6xWFmukw8RTGFHsdfBAN7Q7YDXjHRyo="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDX76XAQ49N167EW0B4.pdf","size":191709,"eTag":"3734f7057c6cf289c0dd1f4ceb18117b","sequencer":"0069CDF2ECBBA4EC11"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749303', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '84c5aefd857b2b3523931396900bad43', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '56de9c06-a1f7-4985-85ca-c80f5a4221b4', 'receiptHandle': 'AQEBWRNoFAm43MjrTwfCM91EfvJpV5bZongkTLb9P5WNN1N6BbEfuomP9O9LHnlrbHUA6MXdHjSk6jRC/qKbOmLJEldzQe+xUBGWqzsND6Brc0D+hFWKffCPN8Tbbkg3AAdNL8WzQ6aSij6zTG+92QG0Zw2FdXkVwHKqQmuZRDPPbk6Eq5HA77Vt9ncKI1vr8v/OX4/5mqdoIl7BdhaklJpWwX8xa8/fUQXkk2DGR6iH87SombE/EB2Ly7TO2ZyloRNy3lKykIktRZK47RqN8FlvfkogErT00geW24GPbBhr7439JWaB3dVCIzv8PUCBUhi+FvM84XK+gqluqqrmo6bGUdEzLUoaaPgM4RqhVm5tKCcAhQI23mLpKnG7O6hhujfisMm+XXgfHc5U1bKw7mZE+TN7B0WpDsAu/LzVVrJfcrA=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:08.810Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"NJAB9H3G5WRGX1T3","x-amz-id-2":"O8N1hTCnx0ZTR306NGHhnxrRW2CPvgNYA+3MPtLmjI6IS/75ivxNzZsqZ8v2DW6uf+HyE0PHNkFPy2uNiL8HRixA9bmsEQMqUf+mN8FPxFQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDYCSDY66J41EYM60AR.pdf","size":44512,"eTag":"91470576cd098cdf995e3e479e7b4dad","sequencer":"0069CDF2ECC2588032"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749305', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'ea0d9b074022de3a217c9df644b4de1f', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '6498647a-8b93-47e9-802d-9b8eb684743e', 'receiptHandle': 'AQEB2BjkJL53N+mezh2fC5lnfmMJthjrNu9GzKbnuvynuCWL779dpiaVXWq0QSRNTXDfL7Jb2ml3Hw2Ixhr/ZS5jl54FMTdvs1jYpnkAa2kfS3w/u9Rslidm0612QaooMcaP8apai1NpNy5Xfn3jIRV5ejc6pmbeM55lYv7IuQu8N7w/nHS+Qpbf1Wxyp/kTeUbPTyt9pGfVBZI4SQPM4OOBkNr0FePXG1+DhqYBo0a2OgPK11VobQQtVoeVwvTrlVGwSKYAgoOzSPx869S0MSU/Rt0MrZpWY+SOrbA8zWa1YZdp/tcVvtLLBrmprr13S2/qzILMg3wN4DPYbz9MWz/NMTP1nEQU3QmLA5UK76XS5CKqpr9Hj+WKGb3+pspumjFjF86On+SMBXS1RdMPqDvUMBIw9xAueJeKw+VvPBSY6rw=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.040Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY13C8BVK95PA2AN","x-amz-id-2":"C1OTI6muAfGgN8W7mviCFkn11VWikt1Uval09ToJkIiCyBMXLHX/ZXdlb6BNlIpOj4g0OgR0fFv8RHpRhOt3fWq+tUDclS4UtBDarSIeQvg="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STDZXD281NK59YCK25QE.pdf","size":110280,"eTag":"2bd7a57f5d041be5bbac33fc99450c6a","sequencer":"0069CDF2ED05F881DC"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104749306', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '43028cf64f7134fe220325440ad9e85e', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'b9917bd5-39db-4de2-971f-06505ab625d1', 'receiptHandle': 'AQEBg2Hill6VMeojgd14AjFlbXn+UgXTL3GGxldiWT2QHT0ZmK9iHXVyqa9ykNISZZTrrqks9qt1+uViy2fUgZdRVYO/gDpcZm9o2Dg6YIUV72MNRvvwrcu35nBoijMw6QwTA1dL3OOM2+K9fSIuHr44nobFLFkTSdbYVvLs8An+JBRiUe0XHo9EN8eESf+1iKfsb1zfC2OrrhJPkqoxY1D93/dxJXxr/ndJCeGXIECsOH4y2VBjYt2kV8lOjx0I2RUSUg5mYTbu49T06MB1+kFh/0qAQAlzl/ktaCgQvByzNHR49/KILzL4Et0BGVcsdk+Oz5pm9Fcl2r3TR4cgjqZgwtpfH/dogpgH5GAtfr9iswTe9RXHvqF4II9BHbr/+mGhRgB6Qrip5rbZdcY1088nt2wE2cciVBr2+UVFvidH6VY=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:09.281Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"TY1406ZSD454YZ31","x-amz-id-2":"al5ldKaNkjkunckEjLJyTs42qoysOwDeq76jHEa9ibI65qpNitaRiEmQ5ZbKNeO5YZfP9apK27J+80Qc06G3+ABZTFQS+jK3FgJsM4h7zhI="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67STE07TWG3F0TBB8Z4B7Z.pdf","size":225707,"eTag":"cb4132852cd430ccd5fedf112a4c85e0","sequencer":"0069CDF2ED424B745C"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104750178', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751412'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'a006dde9524e1e18b3a85e43c14950af', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '4da6fd3b-027b-48f2-8010-f986fbc794f2', 'receiptHandle': 'AQEBwHKT1pwKoMfp4Y+3Z1hp0RMRP6MHzpZD/CoKvDgp1+jiPieK4jWyGMoU4BAOi6/KKzprv1bb7ktTi2nDO94Czz8Ujzc0nzbw3KW+pQUXskZM80TVGa0GL50dN2slDrLvNUsZZD4C2T+Je8JHHIUHNW+MOyZ3T6mCFxJhWvhAcOwX8iUEvY3+ai2allITtFbHDCrUnV+QzC3oybpW90mfQvGh7IrggXNuQHXfjo9pAmy42b5X/mfkX6aZ8AjQJyL2z26tHjPvWwiPNN+tl5OQ9YK57ienXoHXI3z5KXQEzQm1giEtvw38tNMbS1hu84WaEJ4sgDn6qfSH1z1L7rAqnG41TAC0w5UoQEUlZxj9TrG3/9l1dNy02lLJRxdjFw14QWIWryXZk7HnJ3DkhHeq/d/hByEq/MgTI8grlC3aojY=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:02.704Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"QD4NBEAZ910SXPJA","x-amz-id-2":"N+sX6Y8l0cb578YRh4kswAOZKhsbPVVcv0nwwmNPwieFgviv6KaTw3MhTeEtmUNCxjViQE3RlIw0SokC447OZ5usKT+eak6YLV28WYa/dXE="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SME3Z5H6PH91MVPJ2R8E.pdf","size":58775,"eTag":"33ea3e0176edc714c6e17ac25d235fd8","sequencer":"0069CDF2E6AC94708C"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104743386', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751446'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '0add7bfbda8089b9364bc5442269ae2c', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '5838036c-396c-4fe2-b114-9c19cb741003', 'receiptHandle': 'AQEB2snNPgeeEHAlKlx+5DTfGUevgdHTtlEIc0/Ft81KN6vp96g5b+WcN3Q7ZkeMg9SUO3oAWLZtzgUi+DSabRWZaPDA8DTQ63DgPXy1WXBLwGrjkHZ2tt1dk47KjtwkF/X/IaYdLhZwSDDLpUPHG5dtKtVB58qqxSZqGPUDgivO8QCV5I6gbdn9u5jgSdRd8OHtm8LJ9PimdBsi7R7IrpKm8S6vbWBpFb3533fL87vF00SD3B7coFRPJnUD83HCR6eaDliyP3m1UKlKGEjpgcnZexgHKxFpFJZAGQxnsyTWZJBeujatjkUEtZtPUk2I5y6ybYRz9mISO99TKN5G8CvzZtIv77G7w5j9WzYxin3tFqTTRzgJ6rP46g0ljqUWGv/w/a505iS9jDS3QQkFFZkzZGvvYmAz3evan7LmYFbyCQU=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:03.023Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"K5QAA2TCX382SRWW","x-amz-id-2":"srfYNSE+gbzzKBDNEfEdXGz0PWsTmRMC+LZTD58ozshUKE0epItbVuHnPZAPepjdswzFqvTzxM0PQ+eN8lFUsNT0zUNRn57bZAbU3I1k6ZY="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SME42KB8FWBDRKWZZ2JY.pdf","size":104355,"eTag":"faf857aba7f9651d8e6ab1a24eaf6372","sequencer":"0069CDF2E701C68FBE"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104743394', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751446'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '0ade2a433cf110684d9790fbf21130f1', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '6ca09d30-ed53-4b93-8696-4a2d7d3817cf', 'receiptHandle': 'AQEBTzn5CHjnA8uMF4TjCETk63ZhnUxxYqHhx48TU8yCs0aeQCjdX6Yc41ZvzmvwWlIEEkQDeDrSpv9eXwe5AhmWrAnBV1HCIDMEgZz9RgUMix2If75JDiUks2WDVDK+r7VnHovPvn3PExhY4UiYCApwUAuO3FF6FPK6uhx0jSQe7XoU5kP5qPpeoEnYND11UVrdVIq29UQk/XoFQ1zEYiROKe9WTdgydkPX9OjuwTzBYRda4id6DQbKMA1Sx+0K9+9aVopM/30GIiA7u4eHkTZwgsPMW6mXq/L2TsORqGU71X9ULh6mHixKCh3xiE2mIH7yEOcXPGS2Ll/5NFByAC3VMhLGqUDmNlsxRfM0wQ2Bge8oo+KLdZcB0Le92dYAQogzLiVSp1t6Dr8EDv63ebUCUSIvYMTdG7y/5PS0WSajLxQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:02.961Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"QD4Q3146K0K4MH54","x-amz-id-2":"rsDfBpoSsIHGkZ6QtTgJn2wmzyPzbf/7fFUveNj4022BvFHrYV8cQnWromoI1EOHSXpUd1SXFsIGFax/Ai7R3pNUPW3egfC3cLBFYq/+oyI="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SME4KWDESRN3Q6V0HXAZ.pdf","size":94267,"eTag":"0c2667be9a868a78978bd08343348425","sequencer":"0069CDF2E6ECB07B06"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104743396', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751447'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'ff574cb831588253c6f99c64bccf355f', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'a218f7b8-5822-45a7-a6b0-318e7b955bf5', 'receiptHandle': 'AQEB8OJ8G7/u7qTmVlN6KcJkl9QRS2Mgbb66ErhJ9ndgICHOOQ8osVyLXsouRgSzgwF6U5yd+ZPQViJwgm7bA91VEzWOBLRyfu2tZLvAeqEMSeBhJlVOlm7qEDeeg+cXIVLsXgctzGjjdaPLa0CP95usujnTy/B47FSgjc8NZ3x1LgRTbr8uK6YSsPPHROIcLquQn4l8xu7WAfecvB1VTFXMzittGva10EuMoREwcMFAuTEeXnES5yhkxLfSd0c4mzBoMrehY6XuFPHd22ZsAZxuQU2SirXJa20Q2WQtV8ogtfaDoUqWFuj/3SSavfVmJPywm5vlz4TXoek3Amxsskqep5NIGyIFVTtGAA2+pTOs2wtDxiJQ+tQUvCGgr2Q6iz8Riie9O/JdsbdtA4sv2pxHY7ikddNqRNwtU9CEOFzztpQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:03.003Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"QD4PMVVN1Y7VAF60","x-amz-id-2":"j98jOheckTeR6tbiTNqj9izBb6CNxqyhIl/KjUD10B3BnN7MD5xbvbgwXUXX55vzkHthhtipg8RvVNBSR6/W2uFPOT5OZxVSEowi0rDnS5s="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SME4QKPT02BQ2TF1AVDF.pdf","size":185876,"eTag":"b30c781dcd5e09ec6c76396c6759ed6f","sequencer":"0069CDF2E6F6B935B7"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104743396', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751447'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '850f6181913bd8ad05d0cc6b6ee17765', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '92346109-3e1e-4516-85ab-96329acdb4d2', 'receiptHandle': 'AQEBcg5/TyflAFcSvZm9iYzRXB9q4r/o6ZUhBDkhOUlAqzN9/NpTL4bn9lkL5xzuVY9QxWPRH5TgH8T9Ft8uwB6Ab2Rmj/B7bOigr/HxbwWQz+iqdGS4uKAqzUBIgWd36+CQxahtX5CMLgWwJtjqefzLVo0gNu8R3SLno929q+GYG2TS76WDEubRCxNoAZBjqFX1gXIzHAoePUWuW0HvTEUyr7THs8tuWenTUuNG3EKExVmjo1tLDeFmJ5dLuv1r72OBiUlfqPJLSrIsfDtvUB/hE6Trrq5MAFase5d1gw5oFtU75382Z/qlqhVBkxFZVLzediKQhBJP+yPv8HTufSQ5m8Q/b0JJJ1j+k+FtXeKmR1hjuRHupG53DTu0INksQusLdVfFDt1c+UqeXo4Do5sOYTUDAYS0kbYAVzUN+x6kl3A=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:03.402Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"K5QB2DPQ27Y0RK8H","x-amz-id-2":"yXKiH2rN6Dei1Ne44f4meaEC7EQPSKoanE6YZr0FXCwLWek+pYJGRd+/3b5k5KV1ehCU2rKE/9T4DWCNgB5/mjkP6E87Fql9Z+lf7opXRpQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SME4AADVHCE9T1BXE91Y.pdf","size":1767421,"eTag":"8c6c1a12f84a1c938c462292a21236a1","sequencer":"0069CDF2E75E515966"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104744294', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751447'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '86fc95ee3704c70651295cf57f461ae5', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '828d53fc-7943-41fa-9b53-dc58a90fda33', 'receiptHandle': 'AQEBG3jVucIGIBazywbLB9k19vp81u8I1hAqgAWysvzdi4la+z9peYCtv5fiw6OOziePwobtG4aLLuiWs5RCUksTM7eObtunB1lPhhOxp/PfCcm1+ShZuiihtdYGipHzifU2K/WJWfE4pOicVbrVTiR730xXUvfv28ZHXghjSh2vlniOhLF80u5c1MNOqYs2os+uxMyw7WsZJ45ZJQQYEwNymtVCJXqYnmpbMC9pzXYTbUw0AEVaWEe7i2VLZGoPAEC5nqRxObBccKaYgDydD4ysTGy0BlXANEaf0mCgSFdyGMOy/7n+vp6RVpHI3VpQu9nnp+SHoZobAsGz6CxMJeZdC0IbEdB2U5j9a42Hy9r0a8irBi9lfSjFuTRA1/cEjxpWi3yECUC9csYwRn502C0lCJmfBoFPrunf28ZeO0WXkzo=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:03.975Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"K5QF547TVXA1RESP","x-amz-id-2":"wsEtyk1skZDb9jTk/Yrpu/jb20t2kimfdXeQcUN1uWK/UntiWI1zkH53dV17lMxvpCs/Mr0Exer/R1Rpy1jDE2d9Sk8jU5tHtTRK8H+gXbY="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SP4FD5DM9Q4TRJY8KKYV.pdf","size":197959,"eTag":"db47ec05d15477681bdd3e4c34041f69","sequencer":"0069CDF2E7EF8811AF"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104744311', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751447'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'c38a17179a9c61791ecb547a1941104b', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': 'c21dd887-8dea-42bd-81f8-1aae08423045', 'receiptHandle': 'AQEBzUHBgZTHmZxfvFzcH6DIC8sD0kcsugHqtqeRK620J5tDjezXsWCUki7l25a3zub2Z0cCtV4/aOpODBBP7Q5v4nvZeueMdEvyQqh8SSKWqyb4qKjlkSjD6jPHlG+MAqT+SONHVlO8PWbRGI5lpaZS0VbCqm2GJ/X/faZXkUcf8jEW/dIX6hIVMqyMCBn1yO0ASVX/JLS2Sz31phAl9KEWpYCn68dLW5AvNlWsy84duDbLb9uu8ewWf/PZy0K2QX+FZ7Y5ItDINB0kLL9bYKgyywvO9BkvRTbVXsYbniO5Zxucf3jeInkrMwVAF2Tcwgv0VIXO189nq/sUlv9XOYBgTubLrgBmAN5y3irLJegCnCDYHBZxqYXvbXCVBgc+w+BZ74YCKpYrLTcoy27pHgu9ehlG2bYCmynC50yoTmS5w0k=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:04.298Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"WYD0WFE69DM3TA6T","x-amz-id-2":"/QUlZawDUOBzNZMJPj/eEJyxy6GDgDzM0OEK37hPXAonNUlGQ858Z+lr/bq6u0x73EbS3TKZ1PfaS34bqsICvfOV8VH987Gn3zIvfzgN3kE="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SP51R6MS1BCAA7SPAG8H.pdf","size":136345,"eTag":"8440b6353281607779121a72e9d6b54d","sequencer":"0069CDF2E84713533B"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104745198', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751447'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '84012e8e58e11b384d988031eaadb455', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '0cd17ed9-473a-47c4-bae8-3f0de1fb0964', 'receiptHandle': 'AQEBbLLm9HyGx89aafa/pRZ2mEJN3Pb5RIhWLmBcKN8rmJY0uXC8kuTElNl+OLptDMwUdfDNNpjy2WcJ3VEnXRTs1rGbL2832rLbcAaXnTY9pnZE6fNHpAQHIqsfOH62LsS7y9lfWlSlyo046yQE3rfnsdbRNVM/WSQn69ZkGz1ucoKIOfyhiu6Mg1WXqpIcO7ZrVQSyGo2R01NbuMO9ysiPZqOqDKVyuq73EkBSBLpzXabCsICwOHVHgjhZYI0w61Y33QmtJxzVovo2LYcjSoLtnW8AQSK07y5Z6uNThYLmueH5NLdAknoDfoR7bEVNoalNckNNK/q6080TgXN9WS8OkZggzPS2BWqpNONKTl/s5Atf3F5mK/qyWnk1IbLWrDsmcpWvoJlAiAFXAs2NfRkzvwn0o+nthmb5sLbtSp4CMX0=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T04:39:04.274Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"WYD597TA403WBKZC","x-amz-id-2":"+ow6seOXV4U5nzjdj3wn5F/lOZsJCZL6eyadZaQST5tXBm5en1G1ExLsYPBPL8ZXU0FQK7hRH6pSdyXW9HBBuuZ3ISUeKZjmjIodQAuzdtE="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN67SP51WTZVW2KAZAD554WJ.pdf","size":254305,"eTag":"ebf6da870495b0916d49855b91d2fb44","sequencer":"0069CDF2E840672262"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775104745206', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775104751447'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'db964c84ea0b98afac62d04749dbcd13', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
+
+[2026-04-02 10:09:15.561000] following normal flow
+
+[2026-04-02 10:09:15.664000] Firestore initialized successfully for project: worko-dev, database: worko-corp-db-dev
+
+[2026-04-02 10:09:15.835000] This Event is triggered by S3...
+
+[2026-04-02 10:09:15.835000] Got batch of 25 cvs for processing in parallel
+
+[2026-04-02 10:09:17] Processing file: 01KN67STDX5TKV6N320QV51AZ3.pdf
+
+[2026-04-02 10:09:17.194000] Processing file: 01KN67STDX2ZDSCPKYXNRKQMSQ.pdf
+
+[2026-04-02 10:09:17.296000] Processing file: 01KN67STDZW2HPHA54T4CD6F1H.pdf
+
+[2026-04-02 10:09:17.396000] Processing file: 01KN67STDC1YN1SED0R89HJ3VF.pdf
+
+[2026-04-02 10:09:17.516000] Processing file: 01KN67STE0SMSFJQX7ZH40ZF7H.pdf
+
+[2026-04-02 10:09:17.595000] Processing file: 01KN67STDZ5AW4GBHF4S5EA133.pdf
+
+[2026-04-02 10:09:17.636000] Processing file: 01KN67STE1WD5CVG767MRTFCDS.pdf
+
+[2026-04-02 10:09:17.755000] Processing file: 01KN67SW18087TR2SCC73JXV6D.pdf
+
+[2026-04-02 10:09:17.774000] Processing file: 01KN67SR0FSA0PP8DTQEHDFHPG.pdf
+
+[2026-04-02 10:09:18.355000] Processing file: 01KN67STDY1AGYXCFZFG30ZGFM.pdf
+
+[2026-04-02 10:09:18.575000] image Based cv processing..
+
+[2026-04-02 10:09:18.674000] called extract_images_from_pdf
+
+[2026-04-02 10:09:18.675000] doc opened
+
+[2026-04-02 10:09:18.695000] started loop
+
+[2026-04-02 10:09:20.134000] images_base64 len 1
+
+[2026-04-02 10:09:20.135000] called invoke_claude_with_image
+
+[2026-04-02 10:09:20.135000] model version from prompt body bedrock-2023-05-31
+
+[2026-04-02 10:09:21.493000] totalResumesUploaded 304
+
+[2026-04-02 10:09:21.494000] totalResumesSucceeded 0
+
+[2026-04-02 10:09:21.494000] totalResumesFailed 0
+
+[2026-04-02 10:09:21.494000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.495000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:21.495000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:21.555000] totalResumesUploaded 304
+
+[2026-04-02 10:09:21.577000] totalResumesSucceeded 0
+
+[2026-04-02 10:09:21.595000] totalResumesFailedtotalResumesUploaded 304
+
+[2026-04-02 10:09:21.595000] totalResumesSucceeded 0totalResumesUploaded totalResumesUploaded 304
+
+[2026-04-02 10:09:21.595000] totalResumesSucceeded 
+
+[2026-04-02 10:09:21.596000] totalResumesUploadedtotalResumesUploaded 304
+
+[2026-04-02 10:09:21.596000] totalResumesSucceeded 0
+
+[2026-04-02 10:09:21.596000] totalResumesFailed totalResumesUploaded 304
+
+[2026-04-02 10:09:21.596000] totalResumesSucceeded 0totalResumesFailed
+
+[2026-04-02 10:09:21.596000] 00
+
+[2026-04-02 10:09:21.597000] totalResumesDuplicate 3040
+
+[2026-04-02 10:09:21.597000] totalResumesFailed 0
+
+[2026-04-02 10:09:21.597000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.597000] totalResumesFailed 0
+
+[2026-04-02 10:09:21.597000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.597000] 304
+
+[2026-04-02 10:09:21.597000] totalResumesSucceeded
+
+[2026-04-02 10:09:21.597000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.598000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:21.598000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:21.599000] 02
+
+[2026-04-02 10:09:21.614000] using model :-
+
+[2026-04-02 10:09:21.614000] totalResumesFailed 0
+
+[2026-04-02 10:09:21.614000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.616000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:21.616000] Task to Ai is :-  using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:21.616000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:21.617000] totalResumesUploaded 304
+
+[2026-04-02 10:09:21.617000] totalResumesSucceeded 00
+
+[2026-04-02 10:09:21.617000] totalResumesFailed 0
+
+[2026-04-02 10:09:21.617000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.634000] gpt-4.1-mini
+
+[2026-04-02 10:09:21.635000] using model :-
+
+[2026-04-02 10:09:21.635000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.635000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:21.635000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:21.637000] totalResumesSucceeded 0
+
+[2026-04-02 10:09:21.637000] totalResumesFailed 0
+
+[2026-04-02 10:09:21.637000] totalResumesDuplicate 2
+
+[2026-04-02 10:09:21.637000] gpt-4.1-mini
+
+[2026-04-02 10:09:21.637000] Task to Ai is :-  get cvExtractparsed step1Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:21.656000] get cvExtractparsed step1
+
+[2026-04-02 10:09:21.677000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:21.677000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:21.694000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:21.694000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:28.565000] Token usage details input_tokens :- 2016 output_tokens 596 total 2612
+
+[2026-04-02 10:09:28.565000] using model :- gpt-4o
+
+[2026-04-02 10:09:28.565000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:28.908000] Token usage details input_tokens :- 1958 output_tokens 629 total 2587
+
+[2026-04-02 10:09:28.908000] using model :- gpt-4o
+
+[2026-04-02 10:09:28.908000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:29.013000] Token usage details input_tokens :- 1064 output_tokens 689 total 1753
+
+[2026-04-02 10:09:29.014000] using model :- gpt-4o
+
+[2026-04-02 10:09:29.014000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:29.196000] Token usage details input_tokens :- 1092 output_tokens 556 total 1648
+
+[2026-04-02 10:09:29.196000] using model :- gpt-4o
+
+[2026-04-02 10:09:29.196000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:29.652000] Token usage details input_tokens :- 2057 output_tokens 700 total 2757
+
+[2026-04-02 10:09:29.652000] using model :- gpt-4o
+
+[2026-04-02 10:09:29.652000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:32.779000] Result: {'ResponseMetadata': {'RequestId': 'e8742fa1-5692-4260-9557-fc7935749744', 'HTTPStatusCode': 200, 'HTTPHeaders': {'date': 'Thu, 02 Apr 2026 04:39:32 GMT', 'content-type': 'application/json', 'content-length': '3778', 'connection': 'keep-alive', 'x-amzn-requestid': 'e8742fa1-5692-4260-9557-fc7935749744', 'x-amzn-bedrock-invocation-latency': '11378', 'x-amzn-bedrock-output-token-count': '854', 'x-amzn-bedrock-input-token-count': '1716'}, 'RetryAttempts': 0}, 'contentType': 'application/json', 'body': <botocore.response.StreamingBody object at 0x7feb145c44c0>}
+
+[2026-04-02 10:09:32.779000] image Based cv process completed
+
+[2026-04-02 10:09:32.810000] totalResumesUploaded 304
+
+[2026-04-02 10:09:32.810000] totalResumesSucceeded 1
+
+[2026-04-02 10:09:32.810000] totalResumesFailed 0
+
+[2026-04-02 10:09:32.810000] totalResumesDuplicate 29
+
+[2026-04-02 10:09:32.810000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:32.810000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:33.458000] Token usage details input_tokens :- 1237 output_tokens 722 total 1959
+
+[2026-04-02 10:09:33.458000] using model :- gpt-4o
+
+[2026-04-02 10:09:33.458000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:33.530000] Token usage details input_tokens :- 1120 output_tokens 452 total 1572
+
+[2026-04-02 10:09:33.530000] Successfully parsed 01KN67STDX2ZDSCPKYXNRKQMSQ.pdf
+
+[2026-04-02 10:09:33.530000] query corporate type of path
+
+[2026-04-02 10:09:33.566000] Dublicate data from firstore.. [{'candidateEmail': 'surbhiwords@gmail.com', 'candidateName': 'surbhi shrivastava', 'id': '01KN5ZXRRSK99B270KY21X70GG', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8904346006, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZXRRSVYXYY50SS83BQVMZ', 'createdAt': '2026-04-02T02:21:28.729+00:00', 'updatedAt': '2026-04-02T02:21:28.729+00:00'}]
+
+[2026-04-02 10:09:33.566000] Found duplicate record for 01KN67STDX2ZDSCPKYXNRKQMSQ.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:33.566000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:33.583000] Token usage details input_tokens :- 2148 output_tokens 819 total 2967
+
+[2026-04-02 10:09:33.583000] using model :- gpt-4o
+
+[2026-04-02 10:09:33.583000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:33.593000] Created document 97f92c95-25a6-4e64-99b5-c10211ba7ad6 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:33.593000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:33.623000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:33.635000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDX2ZDSCPKYXNRKQMSQ.pdf'}
+
+[2026-04-02 10:09:33.655000] Token usage details input_tokens :- 1148 output_tokens 541 total 1689
+
+[2026-04-02 10:09:33.655000] Successfully parsed 01KN67STDZ5AW4GBHF4S5EA133.pdf
+
+[2026-04-02 10:09:33.655000] query corporate type of path
+
+[2026-04-02 10:09:33.706000] Token usage details input_tokens :- 2072 Dublicate data from firstore.. [{'candidateEmail': 'majumdersweta1999@gmail.com', 'candidateName': 'susweta majumder', 'id': '01KN5ZX57TT2H57F1WEA1Q1P6D', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9681098243, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZX57TCFN1M94NTY8TZP83', 'createdAt': '2026-04-02T02:21:08.730+00:00', 'updatedAt': '2026-04-02T02:21:08.730+00:00'}]
+
+[2026-04-02 10:09:33.706000] Found duplicate record for 01KN67STDZ5AW4GBHF4S5EA133.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:33.706000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:33.714000] output_tokens 621 total 2693
+
+[2026-04-02 10:09:33.715000] Successfully parsed 01KN67SW18087TR2SCC73JXV6D.pdf
+
+[2026-04-02 10:09:33.715000] query corporate type of path
+
+[2026-04-02 10:09:33.722000] Processing file: 01KN67STDX2CGZVCCH107952CX.pdf
+
+[2026-04-02 10:09:33.775000] Dublicate data from firstore.. Created document b4a64cde-9de4-4340-9f71-da5d219e1ae4 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:33.775000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:33.776000] [{'candidateEmail': 'gouthamtg13@gmail.com', 'candidateName': 't g goutham', 'id': '01KN5ZXGVTTT9NNTBBYD8CA2BP', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9880578081, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZXGVTZW793JA35M0FQHF8', 'createdAt': '2026-04-02T02:21:20.634+00:00', 'updatedAt': '2026-04-02T02:21:20.634+00:00'}]
+
+[2026-04-02 10:09:33.776000] Found duplicate record for 01KN67SW18087TR2SCC73JXV6D.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:33.777000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:33.795000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:33.815000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDZ5AW4GBHF4S5EA133.pdf'}
+
+[2026-04-02 10:09:33.815000] Created document 468c4e26-a742-4f6f-b743-eefaac69b275 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:33.815000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:33.875000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:33.914000] Completed processing: {'status': 'duplicate', 'file': '01KN67SW18087TR2SCC73JXV6D.pdf'}
+
+[2026-04-02 10:09:34.054000] Processing file: 01KN67STDYABQ50M8N0E02STFM.pdf
+
+[2026-04-02 10:09:34.135000] totalResumesUploaded 304
+
+[2026-04-02 10:09:34.135000] totalResumesSucceeded 3
+
+[2026-04-02 10:09:34.135000] totalResumesFailed 0
+
+[2026-04-02 10:09:34.135000] totalResumesDuplicate 48
+
+[2026-04-02 10:09:34.136000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:34.136000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:34.174000] Processing file: 01KN67STDXTPCXVWGRKKDP0Q0R.pdf
+
+[2026-04-02 10:09:34.315000] totalResumesUploaded 304
+
+[2026-04-02 10:09:34.315000] totalResumesSucceeded 3
+
+[2026-04-02 10:09:34.315000] totalResumesFailed 0
+
+[2026-04-02 10:09:34.315000] totalResumesDuplicate 51
+
+[2026-04-02 10:09:34.315000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:34.315000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:34.433000] totalResumesUploaded 304
+
+[2026-04-02 10:09:34.433000] totalResumesSucceeded 3
+
+[2026-04-02 10:09:34.433000] totalResumesFailed 0
+
+[2026-04-02 10:09:34.433000] totalResumesDuplicate 51
+
+[2026-04-02 10:09:34.433000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:34.433000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:35.232000] Token usage details input_tokens :- 1902 output_tokens 828 total 2730
+
+[2026-04-02 10:09:35.232000] using model :- gpt-4o
+
+[2026-04-02 10:09:35.232000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:35.630000] Token usage details input_tokens :- 2014 output_tokens 872 total 2886
+
+[2026-04-02 10:09:35.631000] Successfully parsed 01KN67STDY1AGYXCFZFG30ZGFM.pdf
+
+[2026-04-02 10:09:35.631000] query corporate type of path
+
+[2026-04-02 10:09:35.650000] Dublicate data from firstore.. [{'candidateEmail': 'sushantshankar08@gmail.com', 'candidateName': 'sushant kumar', 'id': '01KN629JQ64MT39TF1DX1048MN', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 7022147699, 'countryCode': 91}, 'candidateParsedCvId': '01KN629JQ33NXCY4VSME4TAFDG', 'createdAt': '2026-04-02T03:02:52.898+00:00', 'updatedAt': '2026-04-02T03:02:52.898+00:00'}]
+
+[2026-04-02 10:09:35.650000] Found duplicate record for 01KN67STDY1AGYXCFZFG30ZGFM.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:35.650000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:35.678000] Created document 7091f57e-9d4a-44a4-bef7-0efe04340e08 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:35.678000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:35.694000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:35.714000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDY1AGYXCFZFG30ZGFM.pdf'}
+
+[2026-04-02 10:09:35.782000] Processing file: 01KN67STDX76XAQ49N167EW0B4.pdf
+
+[2026-04-02 10:09:35.994000] totalResumesUploaded 304
+
+[2026-04-02 10:09:35.994000] totalResumesSucceeded 3
+
+[2026-04-02 10:09:35.994000] totalResumesFailed 0
+
+[2026-04-02 10:09:35.994000] totalResumesDuplicate 67
+
+[2026-04-02 10:09:35.995000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:35.995000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:37.457000] Token usage details input_tokens :- 1921 output_tokens 1175 total 3096
+
+[2026-04-02 10:09:37.457000] using model :- gpt-4o
+
+[2026-04-02 10:09:37.457000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:38.451000] Token usage details input_tokens :- 1321 output_tokens 548 total 1869
+
+[2026-04-02 10:09:38.451000] using model :- gpt-4o
+
+[2026-04-02 10:09:38.451000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:38.924000] Token usage details input_tokens :- 2113 output_tokens 866 total 2979
+
+[2026-04-02 10:09:38.925000] Successfully parsed 01KN67STDC1YN1SED0R89HJ3VF.pdf
+
+[2026-04-02 10:09:38.925000] query corporate type of path
+
+[2026-04-02 10:09:38.946000] Dublicate data from firstore.. [{'candidateEmail': 'sumanthhamsa@gmail.com', 'candidateName': 'sumanth kashyap', 'id': '01KN5ZXB2MTY35HXXGMF2KTRFB', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9844260722, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZXB2MHN3G0YE1G1X1BEWD', 'createdAt': '2026-04-02T02:21:14.708+00:00', 'updatedAt': '2026-04-02T02:21:14.708+00:00'}]
+
+[2026-04-02 10:09:38.946000] Found duplicate record for 01KN67STDC1YN1SED0R89HJ3VF.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:38.946000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:38.970000] Created document d9ff6b12-b891-4f5b-982e-3385b1bb1948 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:38.970000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:38.986000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:38.994000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDC1YN1SED0R89HJ3VF.pdf'}
+
+[2026-04-02 10:09:39.060000] Processing file: 01KN67STDYCSDY66J41EYM60AR.pdf
+
+[2026-04-02 10:09:39.215000] totalResumesUploaded 304
+
+[2026-04-02 10:09:39.215000] totalResumesSucceeded 4
+
+[2026-04-02 10:09:39.215000] totalResumesFailed 0
+
+[2026-04-02 10:09:39.215000] totalResumesDuplicate 94
+
+[2026-04-02 10:09:39.215000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:39.215000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:39.341000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:39.341000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:39.341000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:40.197000] Token usage details input_tokens :- 1293 output_tokens 454 total 1747
+
+[2026-04-02 10:09:40.197000] Successfully parsed 01KN67SR0FSA0PP8DTQEHDFHPG.pdf
+
+[2026-04-02 10:09:40.198000] query corporate type of path
+
+[2026-04-02 10:09:40.225000] Dublicate data from firstore.. [{'candidateEmail': 'suhas.sunny25@gmail.com', 'candidateName': 'y v siva sai suhas', 'id': '01KN62B2WMRS8Q6TKRPAM3WD54', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 7675861808, 'countryCode': 91}, 'candidateParsedCvId': '01KN62B2WKAFXPAG7DN3SY4GAC', 'createdAt': '2026-04-02T03:03:42.227+00:00', 'updatedAt': '2026-04-02T03:03:42.227+00:00'}]
+
+[2026-04-02 10:09:40.225000] Found duplicate record for 01KN67SR0FSA0PP8DTQEHDFHPG.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:40.225000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:40.241000] Created document 4925d7e0-e608-491f-ac29-190ce0266f79 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:40.241000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:40.257000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:40.274000] Completed processing: {'status': 'duplicate', 'file': '01KN67SR0FSA0PP8DTQEHDFHPG.pdf'}
+
+[2026-04-02 10:09:40.346000] Processing file: 01KN67STDZXD281NK59YCK25QE.pdf
+
+[2026-04-02 10:09:40.515000] totalResumesUploaded 304
+
+[2026-04-02 10:09:40.515000] totalResumesSucceeded 5
+
+[2026-04-02 10:09:40.515000] totalResumesFailed 0
+
+[2026-04-02 10:09:40.515000] totalResumesDuplicate 108
+
+[2026-04-02 10:09:40.515000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:40.515000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:40.528000] Token usage details input_tokens :- 2204 output_tokens 483 total 2687
+
+[2026-04-02 10:09:40.529000] Successfully parsed 01KN67STDZW2HPHA54T4CD6F1H.pdf
+
+[2026-04-02 10:09:40.529000] query corporate type of path
+
+[2026-04-02 10:09:40.551000] Dublicate data from firstore.. [{'candidateEmail': 'agarwalswarnaraj@gmail.com', 'candidateName': 'swarna raj agarwal', 'id': '01KN5ZXS3W2CD22BFH4N7S0W2B', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8876668037, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZXS3WNK3CR4HECY5M0J80', 'createdAt': '2026-04-02T02:21:29.084+00:00', 'updatedAt': '2026-04-02T02:21:29.084+00:00'}]
+
+[2026-04-02 10:09:40.551000] Found duplicate record for 01KN67STDZW2HPHA54T4CD6F1H.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:40.551000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:40.569000] Created document 3c840184-01f1-467f-bb7d-b26123bc9d93 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:40.569000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:40.587000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:40.595000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDZW2HPHA54T4CD6F1H.pdf'}
+
+[2026-04-02 10:09:40.661000] Processing file: 01KN67STE07TWG3F0TBB8Z4B7Z.pdf
+
+[2026-04-02 10:09:40.923000] totalResumesUploaded 304
+
+[2026-04-02 10:09:40.923000] totalResumesSucceeded 6
+
+[2026-04-02 10:09:40.923000] totalResumesFailed 0
+
+[2026-04-02 10:09:40.923000] totalResumesDuplicate 112
+
+[2026-04-02 10:09:40.924000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:40.924000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:41.061000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:41.061000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:41.061000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:41.546000] Token usage details input_tokens :- 1958 output_tokens 708 total 2666
+
+[2026-04-02 10:09:41.546000] Successfully parsed 01KN67STE1WD5CVG767MRTFCDS.pdf
+
+[2026-04-02 10:09:41.547000] query corporate type of path
+
+[2026-04-02 10:09:41.565000] Dublicate data from firstore.. [{'candidateEmail': 'waseemvtjobs@gmail.com', 'candidateName': 'syed waseem', 'id': '01KN5ZX4DW31BDEJ34D6WNTPFQ', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9738853341, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZX4DWGG7HFQMTW41B1Z3B', 'createdAt': '2026-04-02T02:21:07.900+00:00', 'updatedAt': '2026-04-02T02:21:07.900+00:00'}]
+
+[2026-04-02 10:09:41.565000] Found duplicate record for 01KN67STE1WD5CVG767MRTFCDS.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:41.565000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:41.582000] Created document 16429ee6-f7ad-4f4d-8026-3165be6124c4 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:41.582000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:41.600000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:41.614000] Completed processing: {'status': 'duplicate', 'file': '01KN67STE1WD5CVG767MRTFCDS.pdf'}
+
+[2026-04-02 10:09:41.675000] Processing file: 01KN67SME3Z5H6PH91MVPJ2R8E.pdf
+
+[2026-04-02 10:09:41.815000] totalResumesUploaded 304
+
+[2026-04-02 10:09:41.815000] totalResumesSucceeded 6
+
+[2026-04-02 10:09:41.815000] totalResumesFailed 0
+
+[2026-04-02 10:09:41.815000] totalResumesDuplicate 116
+
+[2026-04-02 10:09:41.815000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:41.815000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:42.275000] Token usage details input_tokens :- 3045 output_tokens 539 total 3584
+
+[2026-04-02 10:09:42.275000] using model :- gpt-4o
+
+[2026-04-02 10:09:42.275000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:43.923000] Token usage details input_tokens :- 1377 output_tokens 539 total 1916
+
+[2026-04-02 10:09:43.923000] Successfully parsed 01KN67STE0SMSFJQX7ZH40ZF7H.pdf
+
+[2026-04-02 10:09:43.923000] query corporate type of path
+
+[2026-04-02 10:09:43.946000] Dublicate data from firstore.. [{'candidateEmail': 'sweetyparida123@gmail.com', 'candidateName': 'sweety parida', 'id': '01KN5ZWBYBAVKM06A0SPFJTS7A', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8249850256, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZWBYBSS4KCTBJCH2AKE2M', 'createdAt': '2026-04-02T02:20:42.827+00:00', 'updatedAt': '2026-04-02T02:20:42.827+00:00'}]
+
+[2026-04-02 10:09:43.946000] Found duplicate record for 01KN67STE0SMSFJQX7ZH40ZF7H.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:43.946000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:43.964000] Created document bf730c53-0d1a-4529-8f01-3381f475b856 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:43.964000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:43.980000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:43.994000] Completed processing: {'status': 'duplicate', 'file': '01KN67STE0SMSFJQX7ZH40ZF7H.pdf'}
+
+[2026-04-02 10:09:44.024000] Token usage details input_tokens :- 1233 output_tokens 476 total 1709
+
+[2026-04-02 10:09:44.025000] using model :- gpt-4o
+
+[2026-04-02 10:09:44.025000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:44.077000] Processing file: 01KN67SME42KB8FWBDRKWZZ2JY.pdf
+
+[2026-04-02 10:09:44.283000] totalResumesUploaded 304
+
+[2026-04-02 10:09:44.283000] totalResumesSucceeded 7
+
+[2026-04-02 10:09:44.283000] totalResumesFailed 0
+
+[2026-04-02 10:09:44.283000] totalResumesDuplicate 127
+
+[2026-04-02 10:09:44.283000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:44.283000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:44.375000] Token usage details input_tokens :- 1411 output_tokens 646 total 2057
+
+[2026-04-02 10:09:44.376000] using model :- gpt-4o
+
+[2026-04-02 10:09:44.376000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:44.407000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:44.407000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:44.407000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:45.374000] Token usage details input_tokens :- 1977 output_tokens 862 total 2839
+
+[2026-04-02 10:09:45.375000] Successfully parsed 01KN67STDX5TKV6N320QV51AZ3.pdf
+
+[2026-04-02 10:09:45.375000] query corporate type of path
+
+[2026-04-02 10:09:45.397000] Dublicate data from firstore.. [{'candidateEmail': 'kakadesunil@gmail.com', 'candidateName': 'sunil kakade', 'id': '01KN62B4DYMYEPF1EGKJ9320MH', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9448852957, 'countryCode': 91}, 'candidateParsedCvId': '01KN62B4DY3PNJ5PXDH3QH4JZC', 'createdAt': '2026-04-02T03:03:43.806+00:00', 'updatedAt': '2026-04-02T03:03:43.806+00:00'}]
+
+[2026-04-02 10:09:45.397000] Found duplicate record for 01KN67STDX5TKV6N320QV51AZ3.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:45.397000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:45.414000] Created document 24bddb32-8bc2-4280-9916-0a62b799955a in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:45.414000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:45.430000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:45.439000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDX5TKV6N320QV51AZ3.pdf'}
+
+[2026-04-02 10:09:45.505000] Processing file: 01KN67SME4KWDESRN3Q6V0HXAZ.pdf
+
+[2026-04-02 10:09:45.704000] totalResumesUploaded 304
+
+[2026-04-02 10:09:45.704000] totalResumesSucceeded 7
+
+[2026-04-02 10:09:45.704000] totalResumesFailed 0
+
+[2026-04-02 10:09:45.704000] totalResumesDuplicate 134
+
+[2026-04-02 10:09:45.704000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:45.704000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:46.109000] Token usage details input_tokens :- 1589 output_tokens 890 total 2479
+
+[2026-04-02 10:09:46.109000] using model :- gpt-4o
+
+[2026-04-02 10:09:46.109000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:47.393000] Token usage details input_tokens :- 3101 output_tokens 681 total 3782
+
+[2026-04-02 10:09:47.393000] Successfully parsed 01KN67STDX2CGZVCCH107952CX.pdf
+
+[2026-04-02 10:09:47.393000] query corporate type of path
+
+[2026-04-02 10:09:47.412000] Dublicate data from firstore.. [{'candidateEmail': 'tsureshrao05@gmail.com', 'candidateName': 'suresh rao tummenapalli', 'id': '01KN5ZXKX5MFHQG8YJ5ZHQ8HR8', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9490183720, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZXKX5TC975PYRGEQ5MH6Q', 'createdAt': '2026-04-02T02:21:23.749+00:00', 'updatedAt': '2026-04-02T02:21:23.749+00:00'}]
+
+[2026-04-02 10:09:47.412000] Found duplicate record for 01KN67STDX2CGZVCCH107952CX.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:47.412000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:47.430000] Created document 387d8da2-6c0f-4649-98bd-40b44a641dbd in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:47.430000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:47.445000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:47.454000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDX2CGZVCCH107952CX.pdf'}
+
+[2026-04-02 10:09:47.514000] Processing file: 01KN67SME4QKPT02BQ2TF1AVDF.pdf
+
+[2026-04-02 10:09:47.704000] totalResumesUploaded 304
+
+[2026-04-02 10:09:47.704000] totalResumesSucceeded 7
+
+[2026-04-02 10:09:47.704000] totalResumesFailed 0
+
+[2026-04-02 10:09:47.704000] totalResumesDuplicate 145
+
+[2026-04-02 10:09:47.704000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:47.704000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:47.838000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:47.838000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:47.838000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:48.214000] Token usage details input_tokens :- 1289 output_tokens 603 total 1892
+
+[2026-04-02 10:09:48.215000] Successfully parsed 01KN67STDX76XAQ49N167EW0B4.pdf
+
+[2026-04-02 10:09:48.215000] query corporate type of path
+
+[2026-04-02 10:09:48.234000] Dublicate data from firstore.. [{'candidateEmail': 'surabhikowshik852@gmail.com', 'candidateName': 'surabhi k r', 'id': '01KN5ZW0WRSF0YB7WH9F9RXA3Q', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8431965889, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZW0WRADPK21HV4BHJ1K25', 'createdAt': '2026-04-02T02:20:31.512+00:00', 'updatedAt': '2026-04-02T02:20:31.512+00:00'}]
+
+[2026-04-02 10:09:48.234000] Found duplicate record for 01KN67STDX76XAQ49N167EW0B4.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:48.234000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:48.252000] Created document 8bf3030c-631a-4187-8dcb-76375afa48cc in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:48.252000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:48.269000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:48.277000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDX76XAQ49N167EW0B4.pdf'}
+
+[2026-04-02 10:09:48.339000] Processing file: 01KN67SME4AADVHCE9T1BXE91Y.pdf
+
+[2026-04-02 10:09:48.516000] image Based cv processing..
+
+[2026-04-02 10:09:48.516000] called extract_images_from_pdf
+
+[2026-04-02 10:09:48.516000] doc opened
+
+[2026-04-02 10:09:48.516000] started loop
+
+[2026-04-02 10:09:49.382000] started loop
+
+[2026-04-02 10:09:50.198000] Token usage details input_tokens :- 1467 output_tokens 660 total 2127
+
+[2026-04-02 10:09:50.199000] Successfully parsed 01KN67STDYABQ50M8N0E02STFM.pdf
+
+[2026-04-02 10:09:50.199000] query corporate type of path
+
+[2026-04-02 10:09:50.215000] Token usage details input_tokens :- 1126 output_tokens 403 total 1529
+
+[2026-04-02 10:09:50.215000] using model :- gpt-4o
+
+[2026-04-02 10:09:50.215000] started loop
+
+[2026-04-02 10:09:51.057000] Task to Ai is :-  Token usage details input_tokens :- 1243 output_tokens 428 total 1671
+
+[2026-04-02 10:09:51.057000] started loop
+
+[2026-04-02 10:09:51.895000] Token usage details input_tokens :- 1645 output_tokens  Token usage details input_tokens :- 1148 output_tokens 671 total 1819
+
+[2026-04-02 10:09:51.897000] 755 totalusing model :- Dublicate data from firstore.. started loop2400  
+
+[2026-04-02 10:09:52.721000] get cvExtractparsed step2using model :- gpt-4o
+
+[2026-04-02 10:09:52.721000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:52.735000] gpt-4o
+
+[2026-04-02 10:09:52.735000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:52.755000] [{'candidateEmail': 'susangitabhuyan11@gmail.com', 'candidateName': 'susangita bhuyan', 'id': '01KN629KV9YJ984V5ZYHJ4GCBS', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9101214510, 'countryCode': 91}, 'candidateParsedCvId': '01KN629KV9D96K5ZGT84N7E18Y', 'createdAt': '2026-04-02T03:02:54.057+00:00', 'updatedAt': '2026-04-02T03:02:54.057+00:00'}]images_base64 lenSuccessfully parsed 01KN67STDXTPCXVWGRKKDP0Q0R.pdf
+
+[2026-04-02 10:09:52.755000] query corporate type of path
+
+[2026-04-02 10:09:52.758000] Found duplicate record for 01KN67STDYABQ50M8N0E02STFM.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:52.758000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:52.775000] 5
+
+[2026-04-02 10:09:52.776000] called invoke_claude_with_image
+
+[2026-04-02 10:09:52.776000] model version from prompt body bedrock-2023-05-31
+
+[2026-04-02 10:09:52.857000] Dublicate data from firstore.. [{'candidateEmail': 'suntosh.naik@gmail.com', 'candidateName': 'suntosh naik', 'id': '01KN5ZVFDRWZKQ5H9006DAAJMF', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9886108008, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZVFDQJ8RJA3SZJAT2V31T', 'createdAt': '2026-04-02T02:20:13.623+00:00', 'updatedAt': '2026-04-02T02:20:13.623+00:00'}]
+
+[2026-04-02 10:09:52.857000] Found duplicate record for 01KN67STDXTPCXVWGRKKDP0Q0R.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:52.857000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:52.875000] Created document 38931ea1-248a-467b-9076-3ebe279610cb in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:52.875000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:52.895000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:52.914000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDYABQ50M8N0E02STFM.pdf'}
+
+[2026-04-02 10:09:52.916000] Created document 75d105f5-49eb-43d2-8f35-ab1ed7e6b06e in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:52.916000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:53.322000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:53.355000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDXTPCXVWGRKKDP0Q0R.pdf'}
+
+[2026-04-02 10:09:53.457000] Processing file: 01KN67SP4FD5DM9Q4TRJY8KKYV.pdf
+
+[2026-04-02 10:09:53.485000] Processing file: 01KN67SP51R6MS1BCAA7SPAG8H.pdf
+
+[2026-04-02 10:09:53.881000] totalResumesUploaded 304
+
+[2026-04-02 10:09:53.881000] totalResumesSucceeded 8
+
+[2026-04-02 10:09:53.881000] totalResumesFailed 1
+
+[2026-04-02 10:09:53.881000] totalResumesDuplicate 175
+
+[2026-04-02 10:09:53.881000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:53.881000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:53.923000] totalResumesUploaded 304
+
+[2026-04-02 10:09:53.923000] totalResumesSucceeded 8
+
+[2026-04-02 10:09:53.923000] totalResumesFailed 1
+
+[2026-04-02 10:09:53.923000] totalResumesDuplicate 176
+
+[2026-04-02 10:09:53.923000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:53.923000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:54.024000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:54.024000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:54.024000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:54.071000] GPT throttled, trying Gemini...
+
+[2026-04-02 10:09:54.071000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:54.071000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:54.620000] Token usage details input_tokens :- 1359, output_tokens: 623, cached_tokens: 0
+
+[2026-04-02 10:09:54.620000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:09:54.620000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:09:56.297000] Token usage details input_tokens :- 1204 output_tokens 443 total 1647
+
+[2026-04-02 10:09:56.297000] Successfully parsed 01KN67STDZXD281NK59YCK25QE.pdf
+
+[2026-04-02 10:09:56.297000] query corporate type of path
+
+[2026-04-02 10:09:56.316000] Dublicate data from firstore.. [{'candidateEmail': 'dasswamidas2233@gmail.com', 'candidateName': 'swami dass', 'id': '01KN5ZVTPZP7DRSMZ26H392EXY', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9513822265, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZVTPZRT5ZZ229T6004P6N', 'createdAt': '2026-04-02T02:20:25.183+00:00', 'updatedAt': '2026-04-02T02:20:25.183+00:00'}]
+
+[2026-04-02 10:09:56.316000] Found duplicate record for 01KN67STDZXD281NK59YCK25QE.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:56.316000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:56.332000] Created document 0cec2bd9-6671-4fdf-a4c7-1980bea20ed6 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:56.332000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:56.348000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:56.357000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDZXD281NK59YCK25QE.pdf'}
+
+[2026-04-02 10:09:56.423000] Processing file: 01KN67SP51WTZVW2KAZAD554WJ.pdf
+
+[2026-04-02 10:09:56.643000] totalResumesUploaded 304
+
+[2026-04-02 10:09:56.643000] totalResumesSucceeded 8
+
+[2026-04-02 10:09:56.643000] totalResumesFailed 1
+
+[2026-04-02 10:09:56.643000] totalResumesDuplicate 183
+
+[2026-04-02 10:09:56.643000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:09:56.643000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:09:56.749000] Token usage details input_tokens :- 1299 output_tokens 589 total 1888
+
+[2026-04-02 10:09:56.749000] Successfully parsed 01KN67SME4KWDESRN3Q6V0HXAZ.pdf
+
+[2026-04-02 10:09:56.749000] query corporate type of path
+
+[2026-04-02 10:09:56.769000] Dublicate data from firstore.. [{'candidateEmail': 'smakshi1234@gmail.com', 'candidateName': 'smakshi garg', 'id': '01KN5ZV7TTF88W3VTNDPBN2WXR', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8813000674, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZV7TTN0DK16P5EHEMFSY6', 'createdAt': '2026-04-02T02:20:05.849+00:00', 'updatedAt': '2026-04-02T02:20:05.849+00:00'}]
+
+[2026-04-02 10:09:56.769000] Found duplicate record for 01KN67SME4KWDESRN3Q6V0HXAZ.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:56.769000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:56.786000] Created document 7c10b641-11be-40ce-a40e-73c286b05ec4 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:56.786000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:56.802000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:56.802000] Completed processing: {'status': 'duplicate', 'file': '01KN67SME4KWDESRN3Q6V0HXAZ.pdf'}
+
+[2026-04-02 10:09:57.345000] Token usage details input_tokens :- 1182 output_tokens 432 total 1614
+
+[2026-04-02 10:09:57.345000] Successfully parsed 01KN67SME3Z5H6PH91MVPJ2R8E.pdf
+
+[2026-04-02 10:09:57.345000] query corporate type of path
+
+[2026-04-02 10:09:57.363000] Dublicate data from firstore.. [{'candidateEmail': 'jonnalasiddhartha@gmail.com', 'candidateName': 'siddhartha jonnala', 'id': '01KN5ZV7SXRZNPJBCN0VD55S27', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8106665869, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZV7SFFA86AAJG6Z5DZQH5', 'createdAt': '2026-04-02T02:20:05.722+00:00', 'updatedAt': '2026-04-02T02:20:05.722+00:00'}]
+
+[2026-04-02 10:09:57.363000] Found duplicate record for 01KN67SME3Z5H6PH91MVPJ2R8E.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:09:57.363000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:09:57.381000] Created document 16d48b01-66a4-469c-b21b-67a112646efe in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:09:57.381000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:57.398000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:09:57.398000] Completed processing: {'status': 'duplicate', 'file': '01KN67SME3Z5H6PH91MVPJ2R8E.pdf'}
+
+[2026-04-02 10:10:00.864000] Token usage details input_tokens :- 2178, output_tokens: 713, cached_tokens: 0
+
+[2026-04-02 10:10:00.864000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:10:00.864000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:01.288000] Token usage details input_tokens :- 1435, output_tokens: 548, cached_tokens: 0
+
+[2026-04-02 10:10:01.288000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:10:01.288000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:04.184000] Result: {'ResponseMetadata': {'RequestId': '5954883d-0231-446c-8010-19297d76f5af', 'HTTPStatusCode': 200, 'HTTPHeaders': {'date': 'Thu, 02 Apr 2026 04:40:04 GMT', 'content-type': 'application/json', 'content-length': '3497', 'connection': 'keep-alive', 'x-amzn-requestid': '5954883d-0231-446c-8010-19297d76f5af', 'x-amzn-bedrock-invocation-latency': '10823', 'x-amzn-bedrock-output-token-count': '789', 'x-amzn-bedrock-input-token-count': '7932'}, 'RetryAttempts': 0}, 'contentType': 'application/json', 'body': <botocore.response.StreamingBody object at 0x7feb2424d270>}
+
+[2026-04-02 10:10:04.184000] image Based cv process completed
+
+[2026-04-02 10:10:04.195000] totalResumesUploaded 304
+
+[2026-04-02 10:10:04.195000] totalResumesSucceeded 9
+
+[2026-04-02 10:10:04.195000] totalResumesFailed 1
+
+[2026-04-02 10:10:04.195000] totalResumesDuplicate 195
+
+[2026-04-02 10:10:04.196000] using model :- gpt-4.1-mini
+
+[2026-04-02 10:10:04.196000] Task to Ai is :-  get cvExtractparsed step1
+
+[2026-04-02 10:10:05.300000] Token usage details input_tokens :- 2185 output_tokens 691 total 2876
+
+[2026-04-02 10:10:05.300000] using model :- gpt-4o
+
+[2026-04-02 10:10:05.300000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:06.869000] Token usage details input_tokens :- 1647, output_tokens: 724, cached_tokens: 0
+
+[2026-04-02 10:10:06.869000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:10:06.869000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:07.961000] Token usage details input_tokens :- 1229 output_tokens 256 total 1485
+
+[2026-04-02 10:10:07.961000] using model :- gpt-4o
+
+[2026-04-02 10:10:07.961000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:10.421000] Token usage details input_tokens :- 2241 output_tokens 874 total 3115
+
+[2026-04-02 10:10:10.422000] Successfully parsed 01KN67SP51WTZVW2KAZAD554WJ.pdf
+
+[2026-04-02 10:10:10.422000] query corporate type of path
+
+[2026-04-02 10:10:10.441000] Dublicate data from firstore.. [{'candidateEmail': 'samal.soumya92@gmail.com', 'candidateName': 'soumya sudhir samal', 'id': '01KN5ZVD8A6N8N5YAPMM8QVZHH', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8117886010, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZVD8ACEN5DZ2VA49Q3G1F', 'createdAt': '2026-04-02T02:20:11.402+00:00', 'updatedAt': '2026-04-02T02:20:11.402+00:00'}]
+
+[2026-04-02 10:10:10.441000] Found duplicate record for 01KN67SP51WTZVW2KAZAD554WJ.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:10.441000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:10.459000] Created document e320ae3d-329b-4001-8418-9174d65ff4bd in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:10.459000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:10.474000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:10.474000] Completed processing: {'status': 'duplicate', 'file': '01KN67SP51WTZVW2KAZAD554WJ.pdf'}
+
+[2026-04-02 10:10:10.492000] Token usage details input_tokens :- 1738, output_tokens: 697, cached_tokens: 0
+
+[2026-04-02 10:10:10.492000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:10:10.492000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:14.988000] Token usage details input_tokens :- 1285 output_tokens 887 total 2172
+
+[2026-04-02 10:10:14.988000] Successfully parsed 01KN67SME4AADVHCE9T1BXE91Y.pdf
+
+[2026-04-02 10:10:14.988000] query corporate type of path
+
+[2026-04-02 10:10:15.009000] Dublicate data from firstore.. [{'candidateEmail': 'sivakumarkh@yahoo.com', 'candidateName': 'sivakumar kh', 'id': '01KN63M7KPEATJ0CM01T5C35W0', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9746635479, 'countryCode': 91}, 'candidateParsedCvId': '01KN63M7KP4GC76GAS95BYAZ1P', 'createdAt': '2026-04-02T03:26:10.550+00:00', 'updatedAt': '2026-04-02T03:26:10.550+00:00'}]
+
+[2026-04-02 10:10:15.009000] Found duplicate record for 01KN67SME4AADVHCE9T1BXE91Y.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:15.009000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:15.028000] Created document 7eadfc2e-87d0-4378-bb07-f2885b7704f1 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:15.028000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:15.045000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:15.045000] Completed processing: {'status': 'duplicate', 'file': '01KN67SME4AADVHCE9T1BXE91Y.pdf'}
+
+[2026-04-02 10:10:18.222000] Token usage details input_tokens :- 1434, output_tokens: 952, cached_tokens: 0
+
+[2026-04-02 10:10:18.222000] Successfully parsed 01KN67STDYCSDY66J41EYM60AR.pdf
+
+[2026-04-02 10:10:18.222000] query corporate type of path
+
+[2026-04-02 10:10:18.240000] Dublicate data from firstore.. [{'candidateEmail': 'suritalwar1994@gmail.com', 'candidateName': 'suresh m.', 'id': '01KN5ZW3BJZQCD5CW65Q1Z3PN8', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8722519486, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZW3BJ9Y5N4G33QX4E1XTR', 'createdAt': '2026-04-02T02:20:34.034+00:00', 'updatedAt': '2026-04-02T02:20:34.034+00:00'}]
+
+[2026-04-02 10:10:18.240000] Found duplicate record for 01KN67STDYCSDY66J41EYM60AR.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:18.240000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:18.259000] Created document 4c76148c-dfec-4cb1-981b-f767dc3ede25 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:18.259000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:18.278000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:18.279000] Completed processing: {'status': 'duplicate', 'file': '01KN67STDYCSDY66J41EYM60AR.pdf'}
+
+[2026-04-02 10:10:28.423000] Token usage details input_tokens :- 1510, output_tokens: 1667, cached_tokens: 0
+
+[2026-04-02 10:10:28.423000] Successfully parsed 01KN67SME4QKPT02BQ2TF1AVDF.pdf
+
+[2026-04-02 10:10:28.423000] query corporate type of path
+
+[2026-04-02 10:10:28.446000] Dublicate data from firstore.. [{'candidateEmail': 'smruthisuresh03@gmail.com', 'candidateName': 'smruthi s', 'id': '01KN5ZVBYAJDX1FRY9PC33KAPQ', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9900020203, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZVBYA2ABXWMXW7Z5SFD80', 'createdAt': '2026-04-02T02:20:10.058+00:00', 'updatedAt': '2026-04-02T02:20:10.058+00:00'}]
+
+[2026-04-02 10:10:28.446000] Found duplicate record for 01KN67SME4QKPT02BQ2TF1AVDF.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:28.446000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:28.463000] Created document d4c433ca-99ba-49f0-a979-463289f331cd in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:28.463000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:28.478000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:28.478000] Completed processing: {'status': 'duplicate', 'file': '01KN67SME4QKPT02BQ2TF1AVDF.pdf'}
+
+[2026-04-02 10:10:30.015000] Token usage details input_tokens :- 1722, output_tokens: 1206, cached_tokens: 0
+
+[2026-04-02 10:10:30.016000] Successfully parsed 01KN67SME42KB8FWBDRKWZZ2JY.pdf
+
+[2026-04-02 10:10:30.016000] query corporate type of path
+
+[2026-04-02 10:10:30.033000] Dublicate data from firstore.. [{'candidateEmail': 'skadi100475@gmail.com', 'candidateName': 'satyanarayan. k. adi', 'id': '01KN5ZVDGZXYRSD7CS5APKGDDM', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9008112410, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZVDGZVF2T0KN798TWX3G0', 'createdAt': '2026-04-02T02:20:11.679+00:00', 'updatedAt': '2026-04-02T02:20:11.679+00:00'}]
+
+[2026-04-02 10:10:30.033000] Found duplicate record for 01KN67SME42KB8FWBDRKWZZ2JY.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:30.033000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:30.052000] Created document 4c236979-7e61-4175-a9a6-9693eec47a18 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:30.052000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:30.067000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:30.067000] Completed processing: {'status': 'duplicate', 'file': '01KN67SME42KB8FWBDRKWZZ2JY.pdf'}
+
+[2026-04-02 10:10:36.443000] Token usage details input_tokens :- 2569, output_tokens: 759, cached_tokens: 0
+
+[2026-04-02 10:10:36.443000] using model :- gemini-2.5-flash
+
+[2026-04-02 10:10:36.443000] Task to Ai is :-  get cvExtractparsed step2
+
+[2026-04-02 10:10:38.153000] Token usage details input_tokens :- 2253, output_tokens: 1274, cached_tokens: 0
+
+[2026-04-02 10:10:38.153000] Successfully parsed 01KN67STE07TWG3F0TBB8Z4B7Z.pdf
+
+[2026-04-02 10:10:38.154000] query corporate type of path
+
+[2026-04-02 10:10:38.180000] Dublicate data from firstore.. [{'candidateEmail': 'swathireddy.r@gmail.com', 'candidateName': 'swathi reddy', 'id': '01KN5ZWT2Q747QSTKFWY965RE9', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 9008032740, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZWT2QEB4B15MQRVJ9J9G2', 'createdAt': '2026-04-02T02:20:57.303+00:00', 'updatedAt': '2026-04-02T02:20:57.303+00:00'}]
+
+[2026-04-02 10:10:38.180000] Found duplicate record for 01KN67STE07TWG3F0TBB8Z4B7Z.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:38.180000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:38.199000] Created document b0d465f7-43cd-42f6-b4f1-f9dc8a67990d in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:38.199000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:38.218000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:38.218000] Completed processing: {'status': 'duplicate', 'file': '01KN67STE07TWG3F0TBB8Z4B7Z.pdf'}
+
+[2026-04-02 10:10:42.835000] Token usage details input_tokens :- 1813, output_tokens: 1269, cached_tokens: 0
+
+[2026-04-02 10:10:42.835000] Successfully parsed 01KN67SP51R6MS1BCAA7SPAG8H.pdf
+
+[2026-04-02 10:10:42.835000] query corporate type of path
+
+[2026-04-02 10:10:42.852000] Dublicate data from firstore.. [{'candidateEmail': 'soumyacha3@gmail.com', 'candidateName': 'soumyadeep chakraborty', 'id': '01KN5ZVDWENTXS56YB7RV6ANAY', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8001282488, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZVDWEA611XV0S83DNJ86F', 'createdAt': '2026-04-02T02:20:12.046+00:00', 'updatedAt': '2026-04-02T02:20:12.046+00:00'}]
+
+[2026-04-02 10:10:42.852000] Found duplicate record for 01KN67SP51R6MS1BCAA7SPAG8H.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:10:42.852000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:10:42.871000] Created document 01432fde-dbf3-47d7-848a-1ac7e63c0271 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:10:42.871000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:42.889000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:10:42.889000] Completed processing: {'status': 'duplicate', 'file': '01KN67SP51R6MS1BCAA7SPAG8H.pdf'}
+
+[2026-04-02 10:11:14.668000] Token usage details input_tokens :- 2644, output_tokens: 1716, cached_tokens: 0
+
+[2026-04-02 10:11:14.669000] Successfully parsed 01KN67SP4FD5DM9Q4TRJY8KKYV.pdf
+
+[2026-04-02 10:11:14.669000] query corporate type of path
+
+[2026-04-02 10:11:14.690000] Dublicate data from firstore.. [{'candidateEmail': 'anurag.leadership@gmail.com', 'candidateName': 'anurag mahanto', 'id': '01KN5ZVF2X17QSEFXZ21S1QZ99', 'refereeType': 'INTERNAL', 'companyId': '01JNR4N624Q7E8XH9X8G9MNH62', 'phoneNumberDetails': {'number': 8073527396, 'countryCode': 91}, 'candidateParsedCvId': '01KN5ZVF2WKDBA25516SGXXMB9', 'createdAt': '2026-04-02T02:20:13.276+00:00', 'updatedAt': '2026-04-02T02:20:13.276+00:00'}]
+
+[2026-04-02 10:11:14.690000] Found duplicate record for 01KN67SP4FD5DM9Q4TRJY8KKYV.pdf, updating status as DUPLICATE
+
+[2026-04-02 10:11:14.690000] updating firestore document with cvExtractedParsed data and status of that resume in firestore document
+
+[2026-04-02 10:11:14.710000] Created document cde23606-e7c8-4d9c-8ef7-838599283739 in bulkSourceTypeParseResumes with status DUPLICATE
+
+[2026-04-02 10:11:14.710000] Incrementing totalResumesDuplicate : DUPLICATE of bulkSourceTypeResumeId 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:11:14.730000] Incremented totalResumesDuplicate for 01KN67SETQ8QMCB8QX8DF07J0Q
+
+[2026-04-02 10:11:14.730000] Completed processing: {'status': 'duplicate', 'file': '01KN67SP4FD5DM9Q4TRJY8KKYV.pdf'}
+
+[2026-04-02 10:11:14.731000] Parallel processing completed. Results: [{'status': 'duplicate', 'file': '01KN67STDX2ZDSCPKYXNRKQMSQ.pdf'}, {'status': 'duplicate', 'file': '01KN67STDZ5AW4GBHF4S5EA133.pdf'}, {'status': 'duplicate', 'file': '01KN67SW18087TR2SCC73JXV6D.pdf'}, {'status': 'duplicate', 'file': '01KN67STDY1AGYXCFZFG30ZGFM.pdf'}, {'status': 'duplicate', 'file': '01KN67STDC1YN1SED0R89HJ3VF.pdf'}, {'status': 'duplicate', 'file': '01KN67SR0FSA0PP8DTQEHDFHPG.pdf'}, {'status': 'duplicate', 'file': '01KN67STDZW2HPHA54T4CD6F1H.pdf'}, {'status': 'duplicate', 'file': '01KN67STE1WD5CVG767MRTFCDS.pdf'}, {'status': 'duplicate', 'file': '01KN67STE0SMSFJQX7ZH40ZF7H.pdf'}, {'status': 'duplicate', 'file': '01KN67STDX5TKV6N320QV51AZ3.pdf'}, {'status': 'duplicate', 'file': '01KN67STDX2CGZVCCH107952CX.pdf'}, {'status': 'duplicate', 'file': '01KN67STDX76XAQ49N167EW0B4.pdf'}, {'status': 'duplicate', 'file': '01KN67STDYABQ50M8N0E02STFM.pdf'}, {'status': 'duplicate', 'file': '01KN67STDXTPCXVWGRKKDP0Q0R.pdf'}, {'status': 'duplicate', 'file': '01KN67STDZXD281NK59YCK25QE.pdf'}, {'status': 'duplicate', 'file': '01KN67SME4KWDESRN3Q6V0HXAZ.pdf'}, {'status': 'duplicate', 'file': '01KN67SME3Z5H6PH91MVPJ2R8E.pdf'}, {'status': 'duplicate', 'file': '01KN67SP51WTZVW2KAZAD554WJ.pdf'}, {'status': 'duplicate', 'file': '01KN67SME4AADVHCE9T1BXE91Y.pdf'}, {'status': 'duplicate', 'file': '01KN67STDYCSDY66J41EYM60AR.pdf'}, {'status': 'duplicate', 'file': '01KN67SME4QKPT02BQ2TF1AVDF.pdf'}, {'status': 'duplicate', 'file': '01KN67SME42KB8FWBDRKWZZ2JY.pdf'}, {'status': 'duplicate', 'file': '01KN67STE07TWG3F0TBB8Z4B7Z.pdf'}, {'status': 'duplicate', 'file': '01KN67SP51R6MS1BCAA7SPAG8H.pdf'}, {'status': 'duplicate', 'file': '01KN67SP4FD5DM9Q4TRJY8KKYV.pdf'}]
+
+[2026-04-02 10:11:14.742000] totalResumesUploaded 304
+
+[2026-04-02 10:11:14.742000] totalResumesSucceeded 12
+
+[2026-04-02 10:11:14.742000] totalResumesFailed 1
+
+[2026-04-02 10:11:14.742000] totalResumesDuplicate 288
+
+[2026-04-02 10:11:14.744000] END RequestId: 6e8b8c13-7d02-5a97-b2fb-ee54882dd1ba
+
+[2026-04-02 10:11:14.744000] REPORT RequestId: 6e8b8c13-7d02-5a97-b2fb-ee54882dd1ba	Duration: 119184.53 ms	Billed Duration: 122969 ms	Memory Size: 512 MB	Max Memory Used: 477 MB	Init Duration: 3783.72 ms	
+

@@ -931,19 +931,59 @@ def extract_skill_data_nova(input_data):
     except Exception as e:
         return None, f"Error extracting skills: {str(e)}"
 
+def extract_skill_data_from_json(json_data):
+    """Extract skill data from GPT model JSON response.
+    
+    Args:
+        json_data: Dictionary containing skill data from GPT model
+        
+    Returns:
+        Tuple of (core_skills, technical_skills, soft_skills, preferred_departments, yoe)
+    """
+    try:
+        core_skills = json_data.get('coreSkills', [])
+        technical_skills = json_data.get('technicalSkills', [])
+        soft_skills = json_data.get('softSkills', [])
+        preferred_departments = json_data.get('Prefered_departments', [])
+        yoe = json_data.get('YOE', 0)
+        
+        return core_skills, technical_skills, soft_skills, preferred_departments, yoe
+        
+    except Exception as e:
+        print(f"Error extracting skills from JSON: {str(e)}")
+        return [], [], [], [], 0
+
 def update_technical_skills_years(technical_skills):
-    # Transform each skill's 'years' from a list to a number
-    return [
-        {**skill, 'years': skill.get('years', [0])[0] if skill.get('years') else 0} 
-        for skill in technical_skills
-    ]
+    """Transform each skill's 'years' to a number."""
+    result = []
+    for skill in technical_skills:
+        years_value = skill.get('years', 0)
+        # Handle if years is already an int/float
+        if isinstance(years_value, (int, float)):
+            skill['years'] = years_value
+        # Handle if years is a list
+        elif isinstance(years_value, list):
+            skill['years'] = years_value[0] if years_value else 0
+        else:
+            skill['years'] = 0
+        result.append(skill)
+    return result
 
 def update_core_skills_years(core_skills):
-    # Transform each skill's 'years' from a list to a number
-    return [
-        {**skill, 'years': skill.get('years', [0])[0] if skill.get('years') else 0} 
-        for skill in core_skills
-    ]
+    """Transform each skill's 'years' to a number."""
+    result = []
+    for skill in core_skills:
+        years_value = skill.get('years', 0)
+        # Handle if years is already an int/float
+        if isinstance(years_value, (int, float)):
+            skill['years'] = years_value
+        # Handle if years is a list
+        elif isinstance(years_value, list):
+            skill['years'] = years_value[0] if years_value else 0
+        else:
+            skill['years'] = 0
+        result.append(skill)
+    return result
 
 def clean_json_string(json_string):
     # Remove ```json from the beginning if present

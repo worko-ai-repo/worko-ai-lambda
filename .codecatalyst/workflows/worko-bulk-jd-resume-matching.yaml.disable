@@ -5,6 +5,7 @@ Triggers:
   - Type: PUSH
     Branches:
       - main
+      - dev
 
 Actions:
   Build_and_Deploy_WorkoBulkJdResumeMatching:

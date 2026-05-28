@@ -5,6 +5,7 @@ Triggers:
   - Type: PUSH
     Branches:
       - main
+      - dev
 
 Actions:
   BuildAndDeploy:
@@ -138,5 +139,6 @@ Actions:
             echo "New version deployed: $NEW_VERSION"
     Environment:
       Name: dev
+      
     Compute:
       Type: EC2
