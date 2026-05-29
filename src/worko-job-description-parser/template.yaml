@@ -87,6 +87,7 @@ Resources:
       Role: !GetAtt JobDescParserLambdaRole.Arn
       Layers:
         - !Ref PythonDependenciesLayer
+        - !Ref SharedCoreLayer
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
