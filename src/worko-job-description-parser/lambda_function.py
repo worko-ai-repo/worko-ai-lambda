@@ -22,6 +22,13 @@ dynamodb = boto3.resource('dynamodb')
 bedrock = boto3.client(service_name='bedrock', region_name = region)
 bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name = region)
 
+import sys
+from pathlib import Path
+
+if __name__ == "__main__":
+    shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
+    sys.path.insert(0, str(shared_layer_path))
+from ai_clients.gcp_client import GeminiClient
 
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
@@ -760,21 +767,25 @@ def lambda_handler(event, context):
     dynamic_prompt=f"Parse this JD:\n{job_desc}"
 
 
-    # credentials = get_secret(GCP_secret_name)
 
-    # response = call_gemini_pro(dynamic_prompt, credentials, env, max_json_try=3, want_json=True, system_prompt=prompt)
-
-    GCP_secret_name = "AZURE-openai-secret-multimodel-"+env
-    azure_secret = get_secret(GCP_secret_name)
-
+    AZURE_secret_name = "AZURE-openai-secret-multimodel-"+env
+    azure_secret = get_secret(AZURE_secret_name)
     gpt52_client = AzureOpenAIClient(azure_secret, model="gpt-5.2")
+
+    
+    GCP_secret_name ="GCP-aiplatform-secrect-"+env
+    gcp_credentials = get_secret(GCP_secret_name)
+    gcp = GeminiClient(gcp_credentials,env)
+
+
     try:
-        response = gpt52_client.invoke_model_with_backoff(
-            prompt=dynamic_prompt,
-            Task="Extract JD info from gpt 5.2",
-            system_content=prompt,
-            want_json=True
-        )
+        # response = gpt52_client.invoke_model_with_backoff(
+        #     prompt=dynamic_prompt,
+        #     Task="Extract JD info from gpt 5.2",
+        #     system_content=prompt,
+        #     want_json=True
+        # )
+        response = gcp.invoke_model_with_backoff(dynamic_prompt, Task="parse the job description", system_content=prompt,want_json=True,)
     except Exception as e:
         print(f"Error in calling AI: {e}")
         response = {"error": str(e)}

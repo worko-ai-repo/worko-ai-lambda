@@ -9,13 +9,12 @@ from google.oauth2 import service_account
 import re
 
 
+
 class GeminiClient:
     """Client for Google Gemini API with retry logic."""
+
     
-    DEFAULT_TEMPERATURE = 0.3
-    DEFAULT_MAX_OUTPUT_TOKENS = 10000
-    
-    def __init__(self, gcp_credentials: Dict[str, str], env: str, model="gemini-2.5-pro"):
+    def __init__(self, gcp_credentials: Dict[str, str], env: str, model="gemini-2.5-flash-lite",DEFAULT_MAX_OUTPUT_TOKENS = 10000,DEFAULT_TEMPERATURE = 0.3):
         """Initialize Gemini client.
         
         Args:
@@ -27,7 +26,9 @@ class GeminiClient:
         self.env = env
         self.project_id = f"worko-{env}"
         self.location = "global"
-        
+        self.DEFAULT_MAX_OUTPUT_TOKENS = DEFAULT_MAX_OUTPUT_TOKENS
+        self.DEFAULT_TEMPERATURE = DEFAULT_TEMPERATURE
+
         if not isinstance(gcp_credentials, dict):
             raise TypeError("gcp_credentials must be a dictionary")
         
@@ -47,7 +48,16 @@ class GeminiClient:
     
     def clean_and_load(self, raw: str) -> dict:
         """Cleans raw JSON string and loads it into a dictionary."""
+        # Remove markdown code fences
         cleaned = re.sub(r"```json|```", "", raw).strip()
+        
+        # Try to find JSON object by locating first { and last }
+        first_brace = cleaned.find('{')
+        last_brace = cleaned.rfind('}')
+        
+        if first_brace != -1 and last_brace != -1 and first_brace < last_brace:
+            cleaned = cleaned[first_brace:last_brace + 1]
+        
         try:
             data = json.loads(cleaned)
             return data
@@ -56,24 +66,10 @@ class GeminiClient:
             print("Cleaned JSON (first 500 chars):", cleaned[:500])
             raise ValueError(f"Invalid JSON response from Gemini: {str(e)}") from e
     
-    def invoke_model_with_backoff(
-        self,
-        prompt: str,
-        Task="Not specified",
-        system_content: str = "You are a helpful assistant.",
-        max_retries: int = 10,
-        base_delay: int = 2,
-        want_json: bool = True
-    ) -> Union[str, Dict[Any, Any]]:
+    def invoke_model_with_backoff(self,prompt: str,Task="Not specified",
+                                  system_content: str = "You are a helpful assistant.",
+                                  max_retries: int = 10,base_delay: int = 2,want_json: bool = True) -> Union[str, Dict[Any, Any]]:
         """Invoke model without retry logic - throttling handled at Lambda level.
-        
-        Args:
-            prompt: User prompt
-            system_content: System message for the model
-            max_retries: Not used (kept for compatibility)
-            base_delay: Not used (kept for compatibility)
-            want_json: Whether to parse response as JSON
-            
         Returns:
             Model response as string or parsed JSON dict
         """
@@ -81,30 +77,17 @@ class GeminiClient:
         print("Task to Ai is :- ", Task)
         return self.invoke_model(system_content, prompt, want_json)
     
-    def invoke_model(
-        self,
-        system_content: str,
-        prompt: str,
-        want_json: bool = True,
-        max_json_retries: int = 3,
-        temperature: float = DEFAULT_TEMPERATURE
+    def invoke_model(self,system_content: str,
+        prompt: str,want_json: bool = True,max_json_retries: int = 3
     ) -> Union[str, Dict[Any, Any]]:
         """Invoke Gemini model.
-        
-        Args:
-            system_content: System message
-            prompt: User prompt
-            want_json: Whether to parse response as JSON
-            max_json_retries: Max retries for JSON parsing
-            temperature: Model temperature
-            
         Returns:
             Model response as string or parsed JSON dict
         """
         # Build config
         generate_config = types.GenerateContentConfig(
             max_output_tokens=self.DEFAULT_MAX_OUTPUT_TOKENS,
-            temperature=temperature,
+            temperature=self.DEFAULT_TEMPERATURE,
             system_instruction=system_content if system_content else None,
         )
         
@@ -155,7 +138,7 @@ class GeminiClient:
                 # Re-invoke model for retry with slightly higher temperature for variation
                 retry_config = types.GenerateContentConfig(
                     max_output_tokens=self.DEFAULT_MAX_OUTPUT_TOKENS,
-                    temperature=min(temperature + 0.1, 1.0),
+                    temperature=min(self.DEFAULT_TEMPERATURE + 0.1, 1.0),
                     system_instruction=system_content if system_content else None,
                 )
                 
