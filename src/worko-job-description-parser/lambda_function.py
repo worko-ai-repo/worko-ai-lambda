@@ -29,6 +29,7 @@ if __name__ == "__main__":
     shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
     sys.path.insert(0, str(shared_layer_path))
 from ai_clients.gcp_client import GeminiClient
+from utils import get_secret
 
 class AzureOpenAIClient:
     """Client for Azure OpenAI API with retry logic."""
@@ -255,39 +256,39 @@ class AzureOpenAIClient:
                 raise ValueError("Invalid response format from Azure OpenAI") from e
          
                   
-def get_secret(secret_name):
-    secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
-    """
-    Retrieve individual secrets from AWS Secrets Manager using the get_secret_value API.
-    This function assumes the stack mentioned in the source code README has been successfully deployed.
-    This stack includes 7 secrets, all of which have names beginning with "mySecret".
+# def get_secret(secret_name):
+#     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
+#     """
+#     Retrieve individual secrets from AWS Secrets Manager using the get_secret_value API.
+#     This function assumes the stack mentioned in the source code README has been successfully deployed.
+#     This stack includes 7 secrets, all of which have names beginning with "mySecret".
 
-    :param secret_name: The name of the secret fetched.
-    :type secret_name: str
-    """
-    try:
-        response = secrets_client.get_secret_value(SecretId=secret_name)
-        secret_value = response['SecretString']
+#     :param secret_name: The name of the secret fetched.
+#     :type secret_name: str
+#     """
+#     try:
+#         response = secrets_client.get_secret_value(SecretId=secret_name)
+#         secret_value = response['SecretString']
         
-        # Try to parse as JSON, fallback to string
-        try:
-            secret_data = json.loads(secret_value)
-        except json.JSONDecodeError:
-            secret_data = secret_value
-        return secret_data
-        # return {
-        #     "statusCode": 200,
-        #     "body": json.dumps({
-        #         "secret_name": secret_name,
-        #         "secret_value": secret_data
-        #     })
-        # }
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ResourceNotFoundException':
-            return {
-                "statusCode": 404,
-                "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
-            }
+#         # Try to parse as JSON, fallback to string
+#         try:
+#             secret_data = json.loads(secret_value)
+#         except json.JSONDecodeError:
+#             secret_data = secret_value
+#         return secret_data
+#         # return {
+#         #     "statusCode": 200,
+#         #     "body": json.dumps({
+#         #         "secret_name": secret_name,
+#         #         "secret_value": secret_data
+#         #     })
+#         # }
+#     except ClientError as e:
+#         if e.response['Error']['Code'] == 'ResourceNotFoundException':
+#             return {
+#                 "statusCode": 404,
+#                 "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
+#             }
 
 def call_gemini_pro(prompt, creds, env, max_json_try=3, want_json=True, system_prompt=None):
     PROJECT_ID = "worko-" + env
@@ -595,9 +596,10 @@ def load_ai_json(response):
     else:
         # Return primitive values as-is
         return obj
-
+gcp_credentials = None
 def lambda_handler(event, context):
     print(event)
+    global gcp_credentials
     env = os.environ.get("ENVIRONMENT","dev")
     
     GCP_secret_name = "GCP-firestore-secret-"+env
@@ -768,13 +770,16 @@ def lambda_handler(event, context):
 
 
 
-    AZURE_secret_name = "AZURE-openai-secret-multimodel-"+env
-    azure_secret = get_secret(AZURE_secret_name)
-    gpt52_client = AzureOpenAIClient(azure_secret, model="gpt-5.2")
+    # AZURE_secret_name = "AZURE-openai-secret-multimodel-"+env
+    # azure_secret = get_secret(AZURE_secret_name)
+    # gpt52_client = AzureOpenAIClient(azure_secret, model="gpt-5.2")
 
     
     GCP_secret_name ="GCP-aiplatform-secrect-"+env
-    gcp_credentials = get_secret(GCP_secret_name)
+    if not gcp_credentials:
+        gcp_credentials = get_secret(GCP_secret_name)
+        print("Using cached GCP credentials")
+
     gcp = GeminiClient(gcp_credentials,env)
 
 

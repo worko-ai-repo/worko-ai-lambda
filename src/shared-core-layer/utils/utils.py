@@ -16,7 +16,7 @@ import base64
 from boto3.dynamodb.conditions import Key, Attr
 from google.cloud import firestore
 from google.oauth2 import service_account
-
+from botocore.exceptions import ClientError
 
 
 # Initialize Bedrock clients
@@ -1587,6 +1587,7 @@ class CustomEncoder(json.JSONEncoder):
 
 
 def get_secret(secret_name):
+
     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')
 
     try:
@@ -1596,6 +1597,7 @@ def get_secret(secret_name):
         # Try to parse as JSON, fallback to string
         try:
             secret_data = json.loads(secret_value)
+            gcp_credentials = secret_data
         except json.JSONDecodeError:
             secret_data = secret_value
         return secret_data
