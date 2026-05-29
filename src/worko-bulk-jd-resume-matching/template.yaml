@@ -23,6 +23,7 @@ Resources:
       Handler: lambda_function.lambda_handler
       Layers:
         - !Ref WorkoBulkJdResumeMatchingDepsLayer
+        - !Ref SharedCoreLayer
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
@@ -68,6 +69,18 @@ Resources:
       CompatibleRuntimes:
         - python3.11
       RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.11
+
+  SharedCoreLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-shared-core-${Environment}"
+      Description: Shared core business logic for JD-Resume matching
+      ContentUri: ../shared-core-layer/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Retain
     Metadata:
       BuildMethod: python3.11
 

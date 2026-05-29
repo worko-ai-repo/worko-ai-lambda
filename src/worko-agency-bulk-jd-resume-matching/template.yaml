@@ -60,6 +60,18 @@ Resources:
       BuildMethod: python3.10
       BuildArchitecture: x86_64
 
+  SharedCoreLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-shared-core-${Environment}"
+      Description: Shared core business logic for JD-Resume matching
+      ContentUri: ../shared-core-layer/
+      CompatibleRuntimes:
+        - python3.10
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.10
+
   AgencyBulkJdResumeMatchingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -69,6 +81,7 @@ Resources:
       Role: !GetAtt AgencyBulkLambdaRole.Arn
       Layers:
         - !Ref PythonDependenciesLayer
+        - !Ref SharedCoreLayer
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment

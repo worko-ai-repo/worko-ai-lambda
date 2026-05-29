@@ -12,11 +12,19 @@ from botocore.exceptions import ClientError
 from urllib.parse import unquote_plus
 # iac deploy 11
 dynamodb = boto3.resource('dynamodb')
+import sys
+from pathlib import Path
 
+if __name__ == "__main__":
+    shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
+    sys.path.insert(0, str(shared_layer_path))
+    
+from ai_clients import AzureOpenAIClient
+from database_adapters import FirestoreManagerAgency
 from utils import *
+from scoring.get_scoring import get_score
 
-
-def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId):
+def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId):
     region ="ap-south-1"
     account_id = get_account_id()
     queue_name = 'worko-corp-app-event-queue'
@@ -53,803 +61,16 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
     steps = []
     
     try:
-        if found_text == "Non-Technical":
-            print("I am in Non-Tech")
-            # Determine the experience level of JD
-            prompt = (
-                        f"Human: Based on the following job description, please analyze the required years of experience:\n\n"
-                        f"{job_desc}\n\n"
-                        f"Human: Strictly determine the experience level using ONLY these criteria:\n"
-                        f"- If years of experience is greater than 12: superior\n"
-                        f"- If years of experience is between 5 and 12 (inclusive): senior\n"
-                        f"- If years of experience is between 1 and 5 (exclusive): junior\n"
-                        f"- If years of experience is less than 1: fresher\n\n"
-                        f"Respond EXACTLY in this JSON format without any additional fields or explanations:\n"
-                        f"{{\n"
-                        f"  \"experience_level\": \"<determined_level>\",\n"
-                        f"  \"criteria_matched\": \"<exact_matching_criteria_text>\"\n"
-                        f"}}\n\n"
-                        f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
-                    )
 
-            # completion_text = OpenAIClient.invoke_model_with_backoff(prompt, Task= "Check JD experience level",want_json=False)
-            completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Check JD experience level" ,want_json=False)
-            print("I am in Non-Tech",content )
-            print_completion_text(completion_text)
-                      
-            if "superior" in completion_text:
-                print("Experience Level - Non-Tech superior")
-                steps = [
-                                ("Here is the most relevant sentence in the context: Evaluate the resume against the job description based on the following 4 parameters and their respective weighted scores:"
-                                    "1. Experience (5 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                    "2. Responsibilities (10 points) - Look for exact keyword matches or direct mentions of responsibilities in the resume."
-                                    "3. Achievements (5 points) - Look for exact keyword matches or direct mentions of achievements in the resume."
-                                    "4. Core Skills/Core Competencies (10 points) - Strictly look for exact keyword matches or direct mentions of the required skills in the resume. Do not give partial credit for related experience."
-                                    "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 30 (27), cap it at 27."
-                                    "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                    "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                    "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Mandatory Skills Evaluation Framework (Total: 40 Points)"
-                                    "SECTION A: SKILL-BASED EVALUATION (24 points, 60% weight)"
-                                        "List all mandatory technical/core skills from the job description."
-                                        "Assign equal weight to each skill:"
-                                        "- If there are n mandatory skills, each skill = 24/n points"
-                                        "For each skill:"
-                                        "- If the candidate has the skill → award full points for that skill."
-                                        "If not → 0 points."
-                                        "Section A Score = Sum of points for all matched skills."
-                                        "Example:"
-                                        "3 mandatory skills: Java, Spring Boot, DevOps"
-                                        "Each skill = 8 points"
-                                        "Candidate has Java & Spring Boot only"
-                                        "Section A Score = 8 + 8 + 0 = 16 points"
-                                    "SECTION B: NON-SKILL-BASED EVALUATION (16 points, 40% weight)"
-                                        "List all non-skill mandatory requirements (education, company, location, etc.)."
-                                        "If the candidate meets ALL non-skill requirements → 16 points."
-                                        "If ANY non-skill requirement is missing → 0 points."
-                                        "SCORING CALCULATION"
-                                        "Final Score = Section A Score + Section B Score"
-                                        "Maximum: 40 points"
-                                    "Provide results in JSON format: {\"score\": [0-40], \"sectionA\": {\"skillsFound\": [], \"skillsMissing\": [], \"pointsPerSkill\": 0, \"totalSkills\": 0, \"score\": 0}, \"sectionB\":{\"requirementsMet\": [], \"requirementsMissing\": [], \"allRequirementsMet\": false, \"score\": 0}, \"recommendation\": \"\"}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Check if any specific kind of educational requirement is asked in the job description (like specific certification, specific college or MBA/Executive MBA from a Tier 1 institute, specific degree type)"
-                                    "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                    "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is not present in the resume, then add 0% of 10 points to the Matching Score."
-                                    "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is present in the resume, then add 90% of 10 points (9) to the Matching Score."
-                                    "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as preferred, and it is not present in the resume, then add 50% of 10 points (5) to the Matching Score."
-                                    "If any specific educational requirement is not being asked in the job description, and the resume also does not have Tier 1 institute educational details, then add 75% of 10 points (7.5) to the Matching Score."
-                                    "If any specific educational requirement is not being asked in the job description, but the resume has Tier 1 institute educational details, then add 80% of 10 points (8) to the Matching Score."
-                                    "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                    "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"),
-                                ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                            ]
-            elif "senior" in completion_text:
-                print("Experience Level - Non-Tech senior")
-                steps = [
-                                ("Here is the most relevant sentence in the context: Evaluate the resume against the job description based on the following 5 parameters and their respective weighted scores:"
-                                             "1. Experience (5 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                             "2. Responsibilities (10 points) - Look for exact keyword matches or direct mentions of responsibilities in the resume."
-                                             "3. Achievements (5 points) - Look for exact keyword matches or direct mentions of achievements in the resume."
-                                             "4. Soft Skills (5 points) - Look for exact keyword matches or direct mentions of soft skills in the resume."
-                                             "5. Core Skills/Core Competencies (5 points) - Strictly look for exact keyword matches or direct mentions of the required skills in the resume. Do not give partial credit for related experience."
-                                             "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 30 (27), cap it at 27"
-                                             "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                             "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                             "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Mandatory Skills Evaluation Framework (Total: 40 Points)"
-                                    "SECTION A: SKILL-BASED EVALUATION (24 points, 60% weight)"
-                                        "List all mandatory technical/core skills from the job description."
-                                        "Assign equal weight to each skill:"
-                                        "- If there are n mandatory skills, each skill = 24/n points"
-                                        "For each skill:"
-                                        "- If the candidate has the skill → award full points for that skill."
-                                        "If not → 0 points."
-                                        "Section A Score = Sum of points for all matched skills."
-                                        "Example:"
-                                        "3 mandatory skills: Java, Spring Boot, DevOps"
-                                        "Each skill = 8 points"
-                                        "Candidate has Java & Spring Boot only"
-                                        "Section A Score = 8 + 8 + 0 = 16 points"
-                                    "SECTION B: NON-SKILL-BASED EVALUATION (16 points, 40% weight)"
-                                        "List all non-skill mandatory requirements (education, company, location, etc.)."
-                                        "If the candidate meets ALL non-skill requirements → 16 points."
-                                        "If ANY non-skill requirement is missing → 0 points."
-                                        "SCORING CALCULATION"
-                                        "Final Score = Section A Score + Section B Score"
-                                        "Maximum: 40 points"
-                                    "Provide results in JSON format: {\"score\": [0-40], \"sectionA\": {\"skillsFound\": [], \"skillsMissing\": [], \"pointsPerSkill\": 0, \"totalSkills\": 0, \"score\": 0}, \"sectionB\":{\"requirementsMet\": [], \"requirementsMissing\": [], \"allRequirementsMet\": false, \"score\": 0}, \"recommendation\": \"\"}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Check if any specific kind of educational requirement is asked in the job description (like specific certification, specific college or MBA/Executive MBA from a Tier 1 institute, specific degree type)"
-                                             "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is not present in the resume, then add 0% of 10 points to the Matching Score."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is present in the resume, then add 90% of 10 points (9) to the Matching Score."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as preferred, and it is not present in the resume, then add 50% of 10 points (5) to the Matching Score."
-                                             "If any specific educational requirement is not being asked in the job description, and the resume also does not have Tier 1 institute educational details, then add 75% of 10 points (7.5) to the Matching Score."
-                                             "If any specific educational requirement is not being asked in the job description, but the resume has Tier 1 institute educational details, then add 80% of 10 points (8) to the Matching Score."
-                                             "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                             "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"),
-                                ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                            ]
-                            
-            elif "junior" in completion_text:
-                print("Experience Level - Non-Tech junior")
-                steps = [
-                                ("Here is the most relevant sentence in the context: Evaluate the resume against the job description based on the following 5 parameters and their respective weighted scores:"
-                                             "1. Experience (5 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                             "2. Responsibilities (10 points) - Look for exact keyword matches or direct mentions of responsibilities in the resume."
-                                             "3. Achievements (5 points) - Look for exact keyword matches or direct mentions of achievements in the resume."
-                                             "4. Soft Skills (5 points) - Look for exact keyword matches or direct mentions of soft skills in the resume."
-                                             "5. Core Skills/Core Competencies (5 points) - Strictly look for exact keyword matches or direct mentions of the required skills in the resume. Do not give partial credit for related experience."
-                                             "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 30 (27), cap it at 27"
-                                             "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                             "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                             "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Mandatory Skills Evaluation Framework (Total: 40 Points)"
-                                    "SECTION A: SKILL-BASED EVALUATION (24 points, 60% weight)"
-                                        "List all mandatory technical/core skills from the job description."
-                                        "Assign equal weight to each skill:"
-                                        "- If there are n mandatory skills, each skill = 24/n points"
-                                        "For each skill:"
-                                        "- If the candidate has the skill → award full points for that skill."
-                                        "If not → 0 points."
-                                        "Section A Score = Sum of points for all matched skills."
-                                        "Example:"
-                                        "3 mandatory skills: Java, Spring Boot, DevOps"
-                                        "Each skill = 8 points"
-                                        "Candidate has Java & Spring Boot only"
-                                        "Section A Score = 8 + 8 + 0 = 16 points"
-                                    "SECTION B: NON-SKILL-BASED EVALUATION (16 points, 40% weight)"
-                                        "List all non-skill mandatory requirements (education, company, location, etc.)."
-                                        "If the candidate meets ALL non-skill requirements → 16 points."
-                                        "If ANY non-skill requirement is missing → 0 points."
-                                        "SCORING CALCULATION"
-                                        "Final Score = Section A Score + Section B Score"
-                                        "Maximum: 40 points"
-                                    "Provide results in JSON format: {\"score\": [0-40], \"sectionA\": {\"skillsFound\": [], \"skillsMissing\": [], \"pointsPerSkill\": 0, \"totalSkills\": 0, \"score\": 0}, \"sectionB\":{\"requirementsMet\": [], \"requirementsMissing\": [], \"allRequirementsMet\": false, \"score\": 0}, \"recommendation\": \"\"}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Check if any specific kind of educational requirement is asked in the job description (like specific certification, specific college or MBA/Executive MBA from a Tier 1 institute, specific degree type)"
-                                             "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is not present in the resume, then add 0% of 10 points to the Matching Score."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is present in the resume, then add 90% of 10 points (9) to the Matching Score."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as preferred, and it is not present in the resume, then add 50% of 10 points (5) to the Matching Score."
-                                             "If any specific educational requirement is not being asked in the job description, and the resume also does not have Tier 1 institute educational details, then add 75% of 10 points (7.5) to the Matching Score."
-                                             "If any specific educational requirement is not being asked in the job description, but the resume has Tier 1 institute educational details, then add 80% of 10 points (8) to the Matching Score."
-                                             "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                             "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"),
-                                ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                            ]
-                            
-            elif "fresher" in completion_text:
-                print("Experience Level - Non-Tech fresher")
-                steps = [
-                                ("Here is the most relevant sentence in the context: Evaluate the resume against the job description based on the following 2 parameters and their respective weighted scores:"
-                                             "1. Experience (10 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                             "2. Soft Skills (15 points) - Look for exact keyword matches or direct mentions of soft skills in the resume."
-                                             "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 25 (22.5), cap it at 22.5."
-                                             "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                             "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                             "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Additionally, check for any specific relevant experience mentioned in the job description:"
-                                            "If specific relevant Project/Internship/Experience/skills is mentioned as mandatory in the job description and it is not present in the resume, add 0% of 25 points to the Matching Score."
-                                            "If specific relevant Project/Internship/Experience/skills is mentioned as mandatory in the job description and it is present in the resume, add 90% of 25 points (22.5) to the Matching Score."
-                                            "If specific relevant Project/Internship/Experience/skills is mentioned as non-mandatory or preferred in the job description and it is present in the resume, add 90% of 25 points (22.5) to the Matching Score."
-                                            "If specific relevant Project/Internship/Experience/skills is mentioned as non-mandatory or preferred in the job description and it is not present in the resume, add 60% of 25 points (15) to the Matching Score."
-                                            "Before calculating the score, identify and list the most relevant sentences from the job description that specify the required or preferred experience, and the corresponding sentences from the resume that match or do not match these requirements."
-                                            "Show the points given. Present it in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                            "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"),
-                                ("Here is the most relevant sentence in the context: Check if any specific kind of educational requirement is asked in the job description (like specific certification, specific college or MBA/Executive MBA from a Tier 1 institute, specific degree type)"
-                                             "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is not present in the resume, then add 0% of 30 points to the Matching Score."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as mandatory, and it is present in the resume, then add 90% of 30 points (27) to the Matching Score."
-                                             "If a specific educational requirement (like graduation from a Tier 1 institute) is being asked in the job description as preferred, and it is not present in the resume, then add 50% of 30 points (15) to the Matching Score."
-                                             "If any specific educational requirement is not being asked in the job description, and the resume also does not have Tier 1 institute educational details, then add 75% of 30 points (22.5) to the Matching Score."
-                                             "If any specific educational requirement is not being asked in the job description, but the resume has Tier 1 institute educational details, then add 80% of 30 points (24) to the Matching Score."
-                                             "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                             "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"),
-                                ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                            ]
-    
-        else:
-            # Determine the experience level of JD
-
-            prompt = (
-                        f"Human: Based on the following job description, please analyze the required years of experience:\n\n"
-                        f"{job_desc}\n\n"
-                        f"Human: Strictly determine the experience level using ONLY these criteria:\n"
-                        f"- If years of experience is greater than 12: superior\n"
-                        f"- If years of experience is between 5 and 12 (inclusive): senior\n"
-                        f"- If years of experience is between 1 and 5 (exclusive): junior\n"
-                        f"- If years of experience is less than 1: fresher\n\n"
-                        f"Respond EXACTLY in this JSON format without any additional fields or explanations:\n"
-                        f"{{\n"
-                        f"  \"experience_level\": \"<determined_level>\",\n"
-                        f"  \"criteria_matched\": \"<exact_matching_criteria_text>\"\n"
-                        f"}}\n\n"
-                        f"Do not include any other fields like 'reasoning' or additional commentary. Only provide the specified JSON output."
-                    )
-
-            # completion_text = OpenAIClient.invoke_model_with_backoff(prompt,Task="check exp level of tech guy",want_json=False)
-            completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task= "check exp level of tech guy" ,want_json=False)
-            print_completion_text(completion_text)
-            
-            if "superior" in completion_text:
-                print("Experience Level - Tech superior")
-                steps = [
-                            ("Here is the most relevant sentence in the context: Rate the resume against the job description based on the following 5 parameters:"
-                                     "1. Technical Skills (weighted score: 10 points) - Strictly look for exact keyword matches or direct mentions of the required skills in the resume. Do not give partial credit for related experience."
-                                     "2. Experience (weighted score: 5 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                     "3. Education (weighted score: 5 points) - If no specific educational requirement is mentioned, award full points for a relevant degree, regardless of the institution."
-                                     "4. Responsibilities (weighted score: 10 points) - Look for exact keyword matches or direct mentions of responsibilities in the resume."
-                                     "5. Achievements (weighted score: 5 points) - Look for exact keyword matches or direct mentions of achievements in the resume."
-                                     "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 35 (31.5), cap it at 31.5"
-                                    "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                    "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                    "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Mandatory Skills Evaluation Framework (Total: 40 Points)"
-                                    "SECTION A: SKILL-BASED EVALUATION (24 points, 60% weight)"
-                                        "List all mandatory technical/core skills from the job description."
-                                        "Assign equal weight to each skill:"
-                                        "- If there are n mandatory skills, each skill = 24/n points"
-                                        "For each skill:"
-                                        "- If the candidate has the skill → award full points for that skill."
-                                        "If not → 0 points."
-                                        "Section A Score = Sum of points for all matched skills."
-                                        "Example:"
-                                        "3 mandatory skills: Java, Spring Boot, DevOps"
-                                        "Each skill = 8 points"
-                                        "Candidate has Java & Spring Boot only"
-                                        "Section A Score = 8 + 8 + 0 = 16 points"
-                                    "SECTION B: NON-SKILL-BASED EVALUATION (16 points, 40% weight)"
-                                        "List all non-skill mandatory requirements (education, company, location, etc.)."
-                                        "If the candidate meets ALL non-skill requirements → 16 points."
-                                        "If ANY non-skill requirement is missing → 0 points."
-                                        "SCORING CALCULATION"
-                                        "Final Score = Section A Score + Section B Score"
-                                        "Maximum: 40 points"
-                                    "Provide results in JSON format: {\"score\": [0-40], \"sectionA\": {\"skillsFound\": [], \"skillsMissing\": [], \"pointsPerSkill\": 0, \"totalSkills\": 0, \"score\": 0}, \"sectionB\":{\"requirementsMet\": [], \"requirementsMissing\": [], \"allRequirementsMet\": false, \"score\": 0}, \"recommendation\": \"\"}"
-                                ),
-                            ("Here is the most relevant sentence in the context: Check if any specific educational requirement is asked for in the job description (e.g., specific certification, graduation from a Tier 1 institute, specific degree type, etc.)."
-                                     "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                     "For the Education parameter (weighted score: 5 points):"
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is mandatory in the job description:"
-                                     "  - If the requirement is present in the resume, add 4.5 points (90% of 5 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 0 points to the Matching Score."
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is preferred in the job description:"
-                                     "  - If the requirement is present in the resume, add 4.5 points (90% of 5 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 2.5 points (50% of 5 points) to the Matching Score."
-                                     "- If no specific educational requirement is mentioned in the job description:"
-                                     "  - If the resume has a Tier 1 institute educational detail, add 4 points (80% of 5 points) to the Matching Score."
-                                     "  - If the resume does not have a Tier 1 institute educational detail, add 3.75 points (75% of 5 points) to the Matching Score."
-                                     "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                     "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                            ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                    ]
-                    
-            elif "senior" in completion_text:
-                print("Experience Level - Tech senior")
-                steps = [
-                            ("Here is the most relevant sentence in the context: Rate the resume against the job description based on the following 5 parameters:"
-                                     "1. Technical Skills (weighted score: 15 points) - Strictly look for exact keyword matches or direct mentions of the required skills in the resume. Do not give partial credit for related experience."
-                                     "2. Experience (weighted score: 5 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                     "3. Education (weighted score: 5 points) - If no specific educational requirement is mentioned, award full points for a relevant degree, regardless of the institution."
-                                     "4. Responsibilities (weighted score: 5 points) - Look for exact keyword matches or direct mentions of responsibilities in the resume."
-                                     "5. Achievements (weighted score: 5 points) - Look for exact keyword matches or direct mentions of achievements in the resume."
-                                     "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 35 (31.5), cap it at 31.5"
-                                    "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                    "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                    "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                                ("Here is the most relevant sentence in the context: Mandatory Skills Evaluation Framework (Total: 40 Points)"
-                                    "SECTION A: SKILL-BASED EVALUATION (24 points, 60% weight)"
-                                        "List all mandatory technical/core skills from the job description."
-                                        "Assign equal weight to each skill:"
-                                        "- If there are n mandatory skills, each skill = 24/n points"
-                                        "For each skill:"
-                                        "- If the candidate has the skill → award full points for that skill."
-                                        "If not → 0 points."
-                                        "Section A Score = Sum of points for all matched skills."
-                                        "Example:"
-                                        "3 mandatory skills: Java, Spring Boot, DevOps"
-                                        "Each skill = 8 points"
-                                        "Candidate has Java & Spring Boot only"
-                                        "Section A Score = 8 + 8 + 0 = 16 points"
-                                    "SECTION B: NON-SKILL-BASED EVALUATION (16 points, 40% weight)"
-                                        "List all non-skill mandatory requirements (education, company, location, etc.)."
-                                        "If the candidate meets ALL non-skill requirements → 16 points."
-                                        "If ANY non-skill requirement is missing → 0 points."
-                                        "SCORING CALCULATION"
-                                        "Final Score = Section A Score + Section B Score"
-                                        "Maximum: 40 points"
-                                    "Provide results in JSON format: {\"score\": [0-40], \"sectionA\": {\"skillsFound\": [], \"skillsMissing\": [], \"pointsPerSkill\": 0, \"totalSkills\": 0, \"score\": 0}, \"sectionB\":{\"requirementsMet\": [], \"requirementsMissing\": [], \"allRequirementsMet\": false, \"score\": 0}, \"recommendation\": \"\"}"
-                                ),
-                            ("Here is the most relevant sentence in the context: Check if any specific educational requirement is asked for in the job description (e.g., specific certification, graduation from a Tier 1 institute, specific degree type, etc.)."
-                                     "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                     "For the Education parameter (weighted score: 5 points):"
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is mandatory in the job description:"
-                                     "  - If the requirement is present in the resume, add 4.5 points (90% of 5 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 0 points to the Matching Score."
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is preferred in the job description:"
-                                     "  - If the requirement is present in the resume, add 4.5 points (90% of 5 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 2.5 points (50% of 5 points) to the Matching Score."
-                                     "- If no specific educational requirement is mentioned in the job description:"
-                                     "  - If the resume has a Tier 1 institute educational detail, add 4 points (80% of 5 points) to the Matching Score."
-                                     "  - If the resume does not have a Tier 1 institute educational detail, add 3.75 points (75% of 5 points) to the Matching Score."
-                                     "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                     "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                            ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                        ]
-                        
-            elif "junior" in completion_text:
-                print("Experience Level - Tech junior")
-                steps = [
-                            ("Here is the most relevant sentence in the context: Rate the resume against the job description based on the following 5 parameters:"
-                                     "1. Technical Skills (weighted score: 5 points) - Strictly look for exact keyword matches or direct mentions of the required skills in the resume. Do not give partial credit for related experience."
-                                     "2. Experience (weighted score: 10 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                     "3. Education (weighted score: 5 points) - If no specific educational requirement is mentioned, award full points for a relevant degree, regardless of the institution."
-                                     "4. Responsibilities (weighted score: 5 points) - Look for exact keyword matches or direct mentions of responsibilities in the resume."
-                                     "5. Soft Skills (weighted score: 5 points) - Look for exact keyword matches or direct mentions of soft skills in the resume."
-                                     "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 30 (27), cap it at 27"
-                                    "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                    "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                    "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                            ("Here is the most relevant sentence in the context: Mandatory Skills Evaluation Framework (Total: 40 Points)"
-                                    "SECTION A: SKILL-BASED EVALUATION (24 points, 60% weight)"
-                                        "List all mandatory technical/core skills from the job description."
-                                        "Assign equal weight to each skill:"
-                                        "- If there are n mandatory skills, each skill = 24/n points"
-                                        "For each skill:"
-                                        "- If the candidate has the skill → award full points for that skill."
-                                        "If not → 0 points."
-                                        "Section A Score = Sum of points for all matched skills."
-                                        "Example:"
-                                        "3 mandatory skills: Java, Spring Boot, DevOps"
-                                        "Each skill = 8 points"
-                                        "Candidate has Java & Spring Boot only"
-                                        "Section A Score = 8 + 8 + 0 = 16 points"
-                                    "SECTION B: NON-SKILL-BASED EVALUATION (16 points, 40% weight)"
-                                        "List all non-skill mandatory requirements (education, company, location, etc.)."
-                                        "If the candidate meets ALL non-skill requirements → 16 points."
-                                        "If ANY non-skill requirement is missing → 0 points."
-                                        "SCORING CALCULATION"
-                                        "Final Score = Section A Score + Section B Score"
-                                        "Maximum: 40 points"
-                                    "Provide results in JSON format: {\"score\": [0-40], \"sectionA\": {\"skillsFound\": [], \"skillsMissing\": [], \"pointsPerSkill\": 0, \"totalSkills\": 0, \"score\": 0}, \"sectionB\":{\"requirementsMet\": [], \"requirementsMissing\": [], \"allRequirementsMet\": false, \"score\": 0}, \"recommendation\": \"\"}"
-                                ),
-                            ("Here is the most relevant sentence in the context: Check if any specific educational requirement is asked for in the job description (e.g., specific certification, graduation from a Tier 1 institute, specific degree type, etc.)."
-                                     "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                     "For the Education parameter (weighted score: 10 points):"
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is mandatory in the job description:"
-                                     "  - If the requirement is present in the resume, add 9 points (90% of 10 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 0 points to the Matching Score."
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is preferred in the job description:"
-                                     "  - If the requirement is present in the resume, add 9 points (90% of 10 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 5 points (50% of 10 points) to the Matching Score."
-                                     "- If no specific educational requirement is mentioned in the job description:"
-                                     "  - If the resume has a Tier 1 institute educational detail, add 8 points (80% of 10 points) to the Matching Score."
-                                     "  - If the resume does not have a Tier 1 institute educational detail, add 7.5 points (75% of 10 points) to the Matching Score."
-                                     "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                     "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                            ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                        ]
-                        
-            elif "fresher" in completion_text:
-                print("Experience Level - Tech fresher")
-                steps = [
-                            ("Here is the most relevant sentence in the context: Rate the resume against the job description based on the following 4 parameters:"
-                                     "1. Technical Skills (weighted score: 15 points) - Strictly look for exact keyword matches or direct mentions of the required skills in the resume. Do not give partial credit for related experience."
-                                            "a. Check if the job description mentions a specific requirement for relevant technical experience as mandatory."
-                                            "  - If it is mandatory and the relevant technical experience is present in the resume, add 13.5 points (90% of 15 points) to the Matching Score."
-                                            "  - If it is mandatory and the relevant technical experience is not present in the resume, add 0 points to the Matching Score."
-                                            "b. If the job description mentions relevant technical experience as non-mandatory or preferred:"
-                                            "  - If it is present in the resume, add 13.5 points (90% of 15 points) to the Matching Score."
-                                            "  - If it is not present in the resume, add 9 points (60% of 15 points) to the Matching Score."
-                                     "2. Experience (weighted score: 5 points) - Consider only the relevant experience directly aligning with the job description. Do not overinterpret broad experience."
-                                     "3. Education (weighted score: 5 points) - If no specific educational requirement is mentioned, award full points for a relevant degree, regardless of the institution."
-                                     "4. Soft Skills (weighted score: 5 points) - Look for exact keyword matches or direct mentions of soft skills in the resume."
-                                     "Calculate the Matching Score by summing up the scores for each parameter. If the Matching Score is higher than 90% of 30 (27), cap it at 27"
-                                    "Before responding, identify and list the most relevant sentences from the resume and job description that support your evaluation for each parameter."
-                                    "Present Matching Score in JSON format with score field and detailedAnalysis field without any additional calculations or explanations."
-                                    "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                            ("Here is the most relevant sentence in the context: Mandatory Skills Evaluation Framework (Total: 40 Points)"
-                                    "SECTION A: SKILL-BASED EVALUATION (24 points, 60% weight)"
-                                        "List all mandatory technical/core skills from the job description."
-                                        "Assign equal weight to each skill:"
-                                        "- If there are n mandatory skills, each skill = 24/n points"
-                                        "For each skill:"
-                                        "- If the candidate has the skill → award full points for that skill."
-                                        "If not → 0 points."
-                                        "Section A Score = Sum of points for all matched skills."
-                                        "Example:"
-                                        "3 mandatory skills: Java, Spring Boot, DevOps"
-                                        "Each skill = 8 points"
-                                        "Candidate has Java & Spring Boot only"
-                                        "Section A Score = 8 + 8 + 0 = 16 points"
-                                    "SECTION B: NON-SKILL-BASED EVALUATION (16 points, 40% weight)"
-                                        "List all non-skill mandatory requirements (education, company, location, etc.)."
-                                        "If the candidate meets ALL non-skill requirements → 16 points."
-                                        "If ANY non-skill requirement is missing → 0 points."
-                                        "SCORING CALCULATION"
-                                        "Final Score = Section A Score + Section B Score"
-                                        "Maximum: 40 points"
-                                    "Provide results in JSON format: {\"score\": [0-40], \"sectionA\": {\"skillsFound\": [], \"skillsMissing\": [], \"pointsPerSkill\": 0, \"totalSkills\": 0, \"score\": 0}, \"sectionB\":{\"requirementsMet\": [], \"requirementsMissing\": [], \"allRequirementsMet\": false, \"score\": 0}, \"recommendation\": \"\"}"
-                                ),
-                            ("Here is the most relevant sentence in the context: Check if any specific educational requirement is asked for in the job description (e.g., specific certification, graduation from a Tier 1 institute, specific degree type, etc.)."
-                                     "Before evaluating, identify and list the most relevant sentences from the job description that specify educational requirements, and the corresponding sentences from the resume that match or do not match these requirements."
-                                     "For the Education parameter (weighted score: 10 points):"
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is mandatory in the job description:"
-                                     "  - If the requirement is present in the resume, add 9 points (90% of 10 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 0 points to the Matching Score."
-                                     "- If a specific educational requirement (like graduation from a Tier 1 institute) is preferred in the job description:"
-                                     "  - If the requirement is present in the resume, add 9 points (90% of 10 points) to the Matching Score."
-                                     "  - If the requirement is not present in the resume, add 5 points (50% of 10 points) to the Matching Score."
-                                     "- If no specific educational requirement is mentioned in the job description:"
-                                     "  - If the resume has a Tier 1 institute educational detail, add 8 points (80% of 10 points) to the Matching Score."
-                                     "  - If the resume does not have a Tier 1 institute educational detail, add 7.5 points (75% of 10 points) to the Matching Score."
-                                     "Show the points given. Present it in JSON format with score field and detailedAnalysis field."
-                                     "{\"score\": [final score],\"detailedAnalysis\": [{\"keyword\": [keyword], \"weightage\": [assigned weight], \"found\": [true/false], \"points\": [points awarded], \"matchingText\": [matching sentence from resume]}]}"
-                                ),
-                            ("STEP 1: JOB DESCRIPTION ANALYSIS"
-                                    "Find the top 15 keywords in the job description and give them weightage based on their repetition and mandatoriness/requirement. The combined weighted score of all 15 keywords should be 20."
-                                    "Before proceeding, identify and list the most relevant sentences from the job description that contain these keywords, along with their frequency and context."
-                                    " 2: RESUME ANALYSIS"
-                                    "For the same 15 keywords identified from the job description, analyze their presence and importance in the resume using the following criteria:"
-                                    "RESUME KEYWORD WEIGHTING RULES:"
-                                    "- If keyword appears in professional experience section with action verbs (developed, managed, led, implemented): Award 4 points"
-                                    "- If keyword appears in professional experience section without action verbs: Award 3 points"
-                                    "- If keyword appears in skills section or technical skills: Award 2 points"
-                                    "- If keyword appears in education/certification section: Award 1 point"
-                                    "- If keyword appears only in summary/objective without experience backing: Award 0.5 points"
-                                    "- If keyword is not present: Award 0 points"
-                                    "STEP 3: MATCHING AND SCORING"
-                                    "For each of the 15 keywords:"
-                                    "1. Compare JD weightage (from Step 1) with Resume weightage (from Step 2)"
-                                    "2. Calculate match score using this formula:"
-                                    "   - If Resume Weight >= JD Weight: Award full JD weightage points"
-                                    "   - If Resume Weight < JD Weight: Award (Resume Weight / JD Weight) * JD weightage points"
-                                    "   - If Resume Weight = 0: Award 0 points"
-                                    "STEP 4: FINAL CALCULATION"
-                                    "1. Sum up all 15 keyword match scores"
-                                    "2. If this sum exceeds 18 points (90% of 20), set the final score to 18"
-                                    "3. If this sum is 18 points or less, use the exact sum as the final score"
-                                    "OUTPUT FORMAT:"
-                                    "Present results in JSON format:"
-                                    "{\"score\": [final score], \"detailedAnalysis\": [{\"keyword\": \"[keyword]\", \"jdWeight\": \"[weight from job description]\", \"resumeWeight\": \"[weight from resume analysis]\", \"matchRatio\": \"[resume weight / jd weight]\", \"pointsAwarded\": \"[final points for this keyword]\", \"jdContext\": \"[sentence from JD containing keyword]\", \"resumeContext\": \"[sentence from resume containing keyword or 'Not Found']\", \"resumeSection\": \"[which section of resume: Experience/Skills/Education/Summary/NotFound]\"}], \"summary\": {\"totalPossiblePoints\": 20, \"totalEarnedPoints\": \"[sum before cap]\", \"finalScore\": \"[final score after 18-point cap]\", \"matchPercentage\": \"[final score / 20 * 100]%\"}}"
-                                    "VALIDATION RULES:"
-                                    "- Only consider exact keyword matches or very close variations (e.g., \"JavaScript\" and \"JS\")"
-                                    "- Do not make assumptions about implied skills or experience"
-                                    "- Weight keywords based strictly on their placement and context within resume sections"
-                                    "- If a keyword appears in multiple sections, use the highest applicable weight"
-                                )
-                        ]
-    
         final_completion_text = ""
         rejection_feedback = ""
-        overall_matching_score = 0
+        # overall_matching_score = 0
         emailFeedback = ""
         overall_Analysis=""
-        print("About to start scoring loop...")
-        if not steps:
-            print("ERROR: No steps defined for this experience level!")
-            return {"statusCode": 500, "body": {"error": "No scoring steps defined"}}
 
-        for i, step in enumerate(steps):
-            prompt = create_prompt(processed_text, job_desc, step)
-            print(f"Processing Step in score calculation {i+1} with prompt: respective prompt")
-            
-            # Use different model invocation functions for each step
-            if i == 0:
-                # Adding code for Open AI processing
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
-                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
+        matching_score_obj = get_score(processed_text,job_desc)
+        overall_matching_score = matching_score_obj["overall_matching_score"]
 
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
-                # temp_score = temp_score.get('score')
-
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-
-                # Cap temp_score at 27 if it's greater than 27
-                if temp_score is not None and temp_score > 27:
-                    temp_score = 27
-
-            elif i == 1:
-            
-                # Adding code for Open AI processing
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 2 for score calculations" ,want_json=False)
-                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
-
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-                
-                # Cap temp_score at 36 if it's greater than 36
-                if temp_score is not None and temp_score > 36:
-                    temp_score = 36
-
-            elif i == 2:
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 3 for score calculations" ,want_json=False)
-                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
-                
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
-
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-
-                # Cap temp_score at 9 if it's greater than 9
-                if temp_score is not None and temp_score > 9:
-                    temp_score = 9
-
-            elif i == 3:
-            
-                # Adding code for Open AI processing
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 4 for score calculations" ,want_json=False)
-                # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
-
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-                
-                # Cap temp_score at 18 if it's greater than 18
-                if temp_score is not None and temp_score > 18:
-                    temp_score = 18
-            else:
-                # Fallback to original function if there are more steps than defined functions
-                content = gpt_models[0].invoke_model_with_backoff(prompt,want_json=False)
-                # content = OpenAIClient.invoke_model_with_backoff(prompt,want_json=False)
-                print("Somthing went wrong)")
-            print("temp_score", temp_score)
-            # If temp_score is coming from the JSON as a list
-            if isinstance(temp_score, list) and len(temp_score) > 0:
-                temp_score = temp_score[0]
-            # If it's already been converted to a string representation of a list
-            elif isinstance(temp_score, str) and temp_score.startswith('[') and temp_score.endswith(']'):
-                temp_score = temp_score.strip('[]')
-
-            print("temp_score", temp_score)
-            
-            if temp_score is not None:
-                overall_matching_score = ensure_decimal(overall_matching_score)
-                temp_score = ensure_decimal(temp_score)
-                overall_matching_score = overall_matching_score + temp_score
-            else:
-                print("No valid score found in this response")
-
-        # overall_matching_score = 72
         overall_matching_score = int(round(overall_matching_score))
         print("overall_matching_score", overall_matching_score)
 
@@ -1015,7 +236,7 @@ def jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed
         print("updating firestore document after scoring with data :--",update_data)
         DBManager.update_firestore_document_with_scoring_data(update_collection_name, update_doc_id, update_data,processingStatus)
         # send sqs after score calculation
-        update_sqs_queue(queue_url,agencyBulkJdResumeId)
+        update_sqs_queue_agency(queue_url,agencyBulkJdResumeId)
     except Exception as e:
         print(f"An error occurred: {e}")
         # update_cv_extract_in_dynamodb(table_name, partition_key_value, sort_key_prefix, str(e) , 251, -1)
@@ -1090,7 +311,7 @@ def lambda_handler(event, context):
         GCP_secret_name = "GCP-firestore-secret-"+env
         GCP_DATABASE_NAME = "worko-corp-db-" +env 
         
-        DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+        DBManager = FirestoreManagerAgency(GCP_secret_name,GCP_DATABASE_NAME)
 
         update_data = {
             "updatedAt": datetime.now().isoformat(),
@@ -1162,7 +383,7 @@ def lambda_handler(event, context):
         print("updating firestore document before scoring with IN-PROGRESS status and cv cv_extracted_parsed :--",cv_extracted_parsed)
         DBManager.update_firestore_document_with_scoring_data(update_collection_name, update_doc_id, cv_extracted_parsed,processingStatus)
 
-        score = jd_resume_matching(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId)
+        score = jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId)
         return {
             "statusCode": 200,
             "body": json.dumps({
@@ -1177,7 +398,7 @@ def lambda_handler(event, context):
         
         # # Define the SQS queue URL
 
-        update_sqs_queue(queue_url,agencyBulkJdResumeId)
+        update_sqs_queue_agency(queue_url,agencyBulkJdResumeId)
         return {
             "statusCode": 500,
             "body": json.dumps({
@@ -1185,31 +406,31 @@ def lambda_handler(event, context):
             })
         }
     
-# if __name__ == "__main__":
-#     event = {
-#         "Records": [
-#             {
-#             "eventVersion": "2.1",
-#             "eventSource": "aws:s3",
-#             "awsRegion": "ap-south-1",
-#             "eventTime": "2024-01-15T10:30:00.000Z",
-#             "eventName": "s3:ObjectCreated:Put",
-#             "s3": {
-#                 "s3SchemaVersion": "1.0",
-#                 "configurationId": "lambda-trigger",
-#                 "bucket": {
-#                 "name": "worko-app-dev",
-#                 "arn": "arn:aws:s3:::worko-app-dev"
-#                 },
-#                 "object": {
-#                 "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf",
-#                 "size": 245760,
-#                 "eTag": "d41d8cd98f00b204e9800998ecf8427e"
-#                 }
-#             }
-#             }
-#         ]
+if __name__ == "__main__":
+    event = {
+        "Records": [
+            {
+            "eventVersion": "2.1",
+            "eventSource": "aws:s3",
+            "awsRegion": "ap-south-1",
+            "eventTime": "2024-01-15T10:30:00.000Z",
+            "eventName": "s3:ObjectCreated:Put",
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "lambda-trigger",
+                "bucket": {
+                "name": "worko-app-dev",
+                "arn": "arn:aws:s3:::worko-app-dev"
+                },
+                "object": {
+                "key": "agencies/712EEWMW5HE3NE9K8DGRXXTR53/bulk-cvs/01KD2W640HJS9PZNJMHNH6YE6K/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf",
+                "size": 245760,
+                "eTag": "d41d8cd98f00b204e9800998ecf8427e"
+                }
+            }
+            }
+        ]
 
-#     }
-#     lambda_handler(event,None)
+    }
+    lambda_handler(event,None)
     
