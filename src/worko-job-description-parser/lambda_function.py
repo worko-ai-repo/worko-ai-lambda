@@ -775,9 +775,11 @@ def lambda_handler(event, context):
     # gpt52_client = AzureOpenAIClient(azure_secret, model="gpt-5.2")
 
     
-    GCP_secret_name ="GCP-aiplatform-secrect-"+env
+    
     if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
         gcp_credentials = get_secret(GCP_secret_name)
+    else:    
         print("Using cached GCP credentials")
 
     gcp = GeminiClient(gcp_credentials,env)

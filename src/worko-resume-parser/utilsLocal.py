@@ -28,7 +28,7 @@ s3_client = boto3.client('s3')
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
 
 
-def process_parsed_cv_json(cv_obj):
+def process_parsed_cv_json_resume_parser(cv_obj):
     try:
         if not isinstance(cv_obj, dict):
             return cv_obj
@@ -1620,7 +1620,7 @@ def get_account_id():
     # Extract account ID
     return response['Account']
 
-def update_sqs_queue(userId,ID):
+def update_sqs_queue_resume_parser(userId,ID):
     event = "UPDATE_CV_CENTRAL_CAND_PROFILE"
     email = userId.split("#")[-1]
     queue_name = 'worko-app-event-queue'
@@ -1650,6 +1650,7 @@ def update_sqs_queue(userId,ID):
         'statusCode': 200,
         'body': json.dumps('Message sent to SQS!')
     }
+
 
 def get_secret(secret_name):
     secrets_client = boto3.client('secretsmanager', region_name='ap-south-1')

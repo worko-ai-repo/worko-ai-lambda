@@ -15,11 +15,26 @@ import io
 import base64    
 from typing import Tuple, Dict, Any, Optional, Union
 from botocore.exceptions import ClientError
-from utils import *
+from utilsLocal import *
 # import ulid    
 import uuid
+import sys
+from pathlib import Path
 sqs = boto3.client('sqs')
-# iac deploy 13
+# Initialize the AWS service clientsend
+dynamodb = boto3.resource('dynamodb')
+s3_client = boto3.client('s3')
+bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
+
+
+
+if __name__ == "__main__":
+    shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
+    sys.path.insert(0, str(shared_layer_path))
+from ai_clients.gcp_client import GeminiClient
+# from utils import *
+
+
 
 def process_cv_for_agency(processed_text,model,current_timestamp):
     prompt = """you are a Expert in Extracting data from Resume. do detailed analysis of below given resume text and extract
@@ -75,7 +90,7 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
     # response = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing")
 
     response = model[0].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing " )
-    response["multipleCandidateExperience"]=process_parsed_cv_json(response["multipleCandidateExperience"])
+    response["multipleCandidateExperience"]=process_parsed_cv_json_resume_parser(response["multipleCandidateExperience"])
     # merged = process_parsed_cv_json(merged)
     # response = process_parsed_cv_json(response)
 
@@ -150,32 +165,39 @@ def process_cv_for_agency(processed_text,model,current_timestamp):
         f"  ]\n"
         f"}}}}\n"
     )
-    content2 = model[1].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing for skills and pref" )
+    content2 = model[0].invoke_model_with_backoff(prompt,Task= "Agency Resume parsing for skills and pref" )
 
     merged = {**response, **content2}  # , **addded_details}
-    merged = process_parsed_cv_json(merged)
+    merged = process_parsed_cv_json_resume_parser(merged)
     return merged
 
-# Initialize the AWS service clientsend
-dynamodb = boto3.resource('dynamodb')
-s3_client = boto3.client('s3')
-bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
 
+gcp_credentials = None
 def lambda_handler(event, context):
+    global gcp_credentials
     print("Got a event" ,event)
     start_time = time.time()
 
     env = os.environ.get('ENVIRONMENT','dev') 
     # env = "prod"
-    secret_name = "AZURE-openai-secret-multimodel-"+env
-    azure_openai_secret =get_secret(secret_name)
+    # secret_name = "AZURE-openai-secret-multimodel-"+env
+    # azure_openai_secret =get_secret(secret_name)
+    
     models_available = ["gpt-4o","gpt-4.1-mini"]
     current_timestamp = datetime.now().isoformat()
 
-    gpt_4o_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
-    gpt_4_1_mini_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
-    gpt_models = [gpt_4o_model,gpt_4_1_mini_model]
-    print("initialised gpt models..",gpt_models,env)
+
+    if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
+        gcp_credentials = get_secret(GCP_secret_name)
+    else:
+        print("Using cached GCP credentials")
+    gcp_models = [GeminiClient(gcp_credentials,env)]
+
+    # gpt_4o_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+    # gpt_4_1_mini_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
+    # gpt_models = [gpt_4o_model,gpt_4_1_mini_model]
+    # print("initialised gpt models..",gpt_models,env)
 
     agencyUserId = event.get('agencyUserId',"")
     cvAwsS3ResourceType = event.get("cvAwsS3ResourceType","")
@@ -239,8 +261,8 @@ def lambda_handler(event, context):
             }
 
         print("processed_text", processed_text)
-
-        merged = process_cv_for_agency(processed_text,gpt_models,current_timestamp)
+        merged = process_cv_for_agency(processed_text,gcp_models ,current_timestamp)
+        # merged = process_cv_for_agency(processed_text,gpt_models,current_timestamp)
             
             # "currentCTC": 0,
             # "expectedCTC": 0,
@@ -318,7 +340,9 @@ def lambda_handler(event, context):
             }
 
         print("processed_text", processed_text)
-        merged = process_cv_for_agency(processed_text,gpt_models,current_timestamp)
+        merged = process_cv_for_agency(processed_text,gcp_models,current_timestamp)
+
+        # merged = process_cv_for_agency(processed_text,gpt_models,current_timestamp)
             
             # "currentCTC": 0,
             # "expectedCTC": 0,
@@ -489,7 +513,9 @@ def lambda_handler(event, context):
                 # print_completion_text(content)
                 # core_skills,technical_skills,soft_skills,Prefered_departments, yoe = extract_skill_data_nova(content)
                 
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task = "skill extraction for upadating or sign up cv" )
+                # content = gpt_models[0].invoke_model_with_backoff(prompt,Task = "skill extraction for upadating or sign up cv" )
+                content = gcp_models[0].invoke_model_with_backoff(prompt,Task = "skill extraction for upadating or sign up cv" )
+
                 core_skills,technical_skills,soft_skills,Prefered_departments, yoe = extract_skill_data_from_json(content)
 
                 updated_core_skills = update_core_skills_years(core_skills)  ##
@@ -611,12 +637,17 @@ def lambda_handler(event, context):
                         f"}}"
                     )
                 # completion_text = invoke_model_with_backoff_OpenAI(prompt,Task = "Generate cvExtractparsed")
-                completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task = "Generate cvExtractparsed")
+                # completion_text = gpt_models[0].invoke_model_with_backoff(prompt,Task = "Generate cvExtractparsed")
+                completion_text = gcp_models[0].invoke_model_with_backoff(prompt,Task = "Generate cvExtractparsed")
+
                 # completion_text=clean_json_response(completion_text)
                 try:
                     completion_text = json.loads(completion_text)
                 except Exception as e:
-                    print(f"can't load json  {e}")
+                    if isinstance(completion_text, dict):
+                        print("completion_text is already a dictionary, no need to load json.")
+                    else:
+                        print(f"can't load json  {e}")
                 # completion_text = invoke_qwen3_32b(prompt)
                 # completion_text = get_json_from_qwen3(completion_text)
 
@@ -697,7 +728,7 @@ def lambda_handler(event, context):
             # print(f'Step 4 CvExtract is saved in dynamo time took :- {end_time-start_time}')
             
             
-            update_sqs_queue(partition_key_value,ID)
+            update_sqs_queue_resume_parser(partition_key_value,ID)
             return {
                 'statusCode': 200,
                 'body': json.dumps({'message': 'CV extract updated successfully','links_from_pdf':links_from_pdf})
@@ -717,12 +748,12 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", "jobId": "01K8SZ21FPB7TD10YQQAJ22KN0", "agencyUserId": "21YCYSMG5HE2PMZ0459J0VPCG9", "candidateParsedCvAwsS3FileName": "01KHDGVAE3WTNES3HYVQ2W056C.pdf"}
 
-    # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
-    # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
-    # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
-    # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
+    event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
+    "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
+    "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
+    "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
 
-    event = {'USER_PK': 'USR#EML#shaukatdatascience+1@gmail.com', 'USER_DETAIL_SK': 'ID#'}
+    # event = {'USER_PK': 'USR#EML#shaukatdatascience+1@gmail.com', 'USER_DETAIL_SK': 'ID#'}
     # event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
 
     #prod
