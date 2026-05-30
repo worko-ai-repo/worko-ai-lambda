@@ -1158,14 +1158,14 @@ def process_cv(processed_text, models) -> Tuple[str, Dict[str, str]]:
         except Exception as gpt_error:
             error_message = str(gpt_error).lower()
             if any(term in error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
-                print("GPT-4 throttled, trying GPT-5...")
+                print("gemini 3.1-flash throttled trying with gemini-2.5-flash-lite...")
                 try:
                     cv_extracted_parsed = models[3].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
                     cv_extracted_parsed2 = models[2].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")
                 except Exception as gpt5_error:
                     gpt5_error_message = str(gpt5_error).lower()
                     if any(term in gpt5_error_message for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429']):
-                        print("GPT-5 throttled, trying Gemini...")
+                        print("gemini-2.5-flash-lite throttled, trying gemini-2.5-flash...")
                         try:
                             cv_extracted_parsed = models[5].invoke_model_with_backoff(parsed_prompt, Task="get cvExtractparsed step1")
                             cv_extracted_parsed2 = models[4].invoke_model_with_backoff(skills_prompt, Task="get cvExtractparsed step2")

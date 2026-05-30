@@ -83,7 +83,7 @@ def lambda_handler(event, context):
     # gemini_models = [gemini_pro_2_5_flash, gemini_pro_2_5_flash]
     ############################################################################
     model_names =[ "gemini-3.5-flash","gemini-3.5-flash","gemini-2.5-flash-lite",
-                  "gemini-2.5-flash-lite","gemini-3.5-flash","gemini-3.5-flash"]
+                  "gemini-2.5-flash-lite","gemini-2.5-flash","gemini-2.5-flash"]
     AI_models = [GeminiClient(gcp_credentials,env,model =model_names[0]), GeminiClient(gcp_credentials,env,model =model_names[1]),
                   GeminiClient(gcp_credentials,env,model =model_names[2]), GeminiClient(gcp_credentials,env,model =model_names[3]),
                   GeminiClient(gcp_credentials,env,model =model_names[4]), GeminiClient(gcp_credentials,env,model =model_names[5])]

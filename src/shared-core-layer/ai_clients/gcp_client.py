@@ -78,7 +78,7 @@ class GeminiClient:
         return self.invoke_model(system_content, prompt, want_json)
     
     def invoke_model(self,system_content: str,
-        prompt: str,want_json: bool = True,max_json_retries: int = 3
+        prompt: str,want_json: bool = True,max_json_retries: int = 5
     ) -> Union[str, Dict[Any, Any]]:
         """Invoke Gemini model.
         Returns:
