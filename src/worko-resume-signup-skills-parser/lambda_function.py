@@ -11,7 +11,8 @@ from docx import Document
 from io import BytesIO
 import time
 import requests
-
+import sys
+from pathlib import Path
 import io                    
 import base64                
 
@@ -20,6 +21,12 @@ dynamodb = boto3.resource('dynamodb')
 s3_client = boto3.client('s3')
 # bedrock_runtime = boto3.client('bedrock-runtime', region_name='ap-south-1')
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
+
+if __name__ == "__main__":
+    shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
+    sys.path.insert(0, str(shared_layer_path))
+from ai_clients.gcp_client import GeminiClient
+from utils import get_secret
 
 def query_dynamodb_item_with_sk_prefix(table_name, partition_key_value, sort_key_prefix):
     table = dynamodb.Table(table_name)
@@ -1201,15 +1208,28 @@ def get_json_from_qwen3(response):
         print(e)
     return response
 
+gcp_credentials = None
 def lambda_handler(event, context):
+    global gcp_credentials  # ← Add this line
+    
     start_time= time.time()
     print(event)
     resumeId = event.get('userId')
     cvId = event.get('s3ResumeId')
     key = "users/" + resumeId + "/resumes/" + cvId
     S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
+    env = os.environ.get('ENVIRONMENT','dev') 
     end_time= time.time()
     # key="users/81d38daa-f061-7000-0f9e-64475bb44b9f/resumes/01K5ZV2E34TJ6F9DF8PWHK118Z.pdf"
+
+    if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
+        gcp_credentials = get_secret(GCP_secret_name)
+    else:
+        print("Using cached GCP credentials")
+    # model_name = "gemini-2.5-pro"
+    model_name = "gemini-3.5-flash"
+    gcp_models = [GeminiClient(gcp_credentials,env,model=model_name) ]
     try:
         # Attempt to fetch the PDF file from S3
         response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=key)
@@ -1306,7 +1326,9 @@ def lambda_handler(event, context):
         #completion_text = invoke_qwen3_32b(prompt)
         #completion_text = get_json_from_qwen3(completion_text)
 
-        content = invoke_model_with_backoff_OpenAI(prompt)
+        # content = invoke_model_with_backoff_OpenAI(prompt)
+        content = gcp_models[0].invoke_model_with_backoff(prompt,Task = "parse skills from resume")
+
         completion_text = clean_json_response(content)
         print_completion_text(completion_text)
         try:
@@ -1331,3 +1353,10 @@ def lambda_handler(event, context):
             'statusCode': 404,
             'body': 'Item not found'
         }
+    
+if __name__ == "__main__":    # For local testing
+    test_event ={
+    "userId": "81d38daa-f061-7000-0f9e-64475bb44b9f",
+    "s3ResumeId": "01K5ZV2E34TJ6F9DF8PWHK118Z.pdf"
+    }
+    print(lambda_handler(test_event, None))

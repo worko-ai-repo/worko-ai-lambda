@@ -1102,3 +1102,20 @@ If issues occur:
 ---
 
 **Migration Complete! 🚀**
+
+***migration of llm api + secrect manager caching***
+
+
+1) worko-job-description parser
+2) worko-resume-parser
+3) worko-resume-sign-up-skills-parser (not deployed )
+
+
+4) worko-cand-profile-parser
+5) worko-candidate-search-prompt-parser
+6) worko-referrel-source-cand-profile-parser
+
+7) worko-jd-resume-matching
+8) worko-bulk-jd-resume-matchig
+9) worko-sourcetype-jd-resume-matching
+10) worko-agency-bulk-jd-resume-matching

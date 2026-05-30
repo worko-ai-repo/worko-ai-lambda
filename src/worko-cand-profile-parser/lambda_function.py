@@ -16,13 +16,36 @@ dynamodb = boto3.resource('dynamodb')
 bedrock = boto3.client(service_name='bedrock', region_name = region)
 bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name = region)
 sqs = boto3.client('sqs')
-from utils import *
+from utilsLocal import *
 # best deployment2
 
+import sys
+from pathlib import Path
+
+if __name__ == "__main__":
+    shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
+    sys.path.insert(0, str(shared_layer_path))
+from ai_clients.gcp_client import GeminiClient
+from utils import get_secret
+gcp_credentials = None
+gcp_credentials_firstore = None
 def lambda_handler(event, context):
+    global gcp_credentials,gcp_credentials_firstore
+    env=os.environ.get("ENVIRONMENT", "dev")
     # example_path1="s3://worko-corporate-cand-profile-dev/companies/01JWAQF1G96E0SE9XHXSFGHNWW/bulk-cvs/01KD2WDTS7RZKEJ6QFK87MDC0K.pdf"
     # example_path2= "s3://worko-admin-cand-profile-dev/bulk-cvs/01KEH892ZACXJVV996SPKP0948.pdf"
     print("got event:",event)
+    if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
+        gcp_credentials = get_secret(GCP_secret_name)
+    else:    
+        print("Using cached GCP credentials")
+    gcp = GeminiClient(gcp_credentials,env)
+
+    if not gcp_credentials_firstore:
+        GCP_secret_name_firstore= "GCP-firestore-secret-"+env
+        gcp_credentials_firstore = get_secret(GCP_secret_name_firstore)
+
     try:
         metadata = get_meta_data(event)
         if metadata.get("skipparsing","")=="true":
@@ -32,31 +55,38 @@ def lambda_handler(event, context):
         print("following normal flow")
 
         
-    env = os.environ.get("ENVIRONMENT", "dev")
+    
     GCP_DATABASE_NAME = "worko-corp-db-"+env
-    GCP_secret_name = "GCP-firestore-secret-"+env
-    DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+
+    # DBManager = FirestoreManager(GCP_secret_name,GCP_DATABASE_NAME)
+    DBManager = FirestoreManager(gcp_credentials_firstore,GCP_DATABASE_NAME)
     collection_name_for_firstore_updating_counts = "bulkSourceTypeResumes"
-    env=os.environ.get("ENVIRONMENT", "dev")
     
-    # Initialize Azure OpenAI models
-    azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
-    azure_openai_secret = get_secret(azure_openai_secret_name)
-    gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
-    gpt4_1_mini = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
-    gpt_models = [gpt4,gpt4_1_mini]
     
-    # Initialize GPT-5 models
-    gpt52_client = AzureOpenAIClient(azure_openai_secret, model="gpt-5.2")
-    gpt5_models = [gpt52_client, gpt52_client]
+    ################################## azure and gemini code  #####################
+    # # Initialize Azure OpenAI models
+    # azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+    # azure_openai_secret = get_secret(azure_openai_secret_name)
+    # gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+    # gpt4_1_mini = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
+    # gpt_models = [gpt4,gpt4_1_mini]
     
-    # Use Gemini models
-    gcp_credentials = get_secret(GCP_secret_name)
-    # gemini_pro_2_5_pro = GeminiClient(gcp_credentials, env, model="gemini-2.5-pro")
-    gemini_pro_2_5_flash = GeminiClient(gcp_credentials, env, model="gemini-2.5-flash")
+    # # Initialize GPT-5 models
+    # gpt52_client = AzureOpenAIClient(azure_openai_secret, model="gpt-5.2")
+    # gpt5_models = [gpt52_client, gpt52_client]
+    
+    # # Use Gemini models
+    # gcp_credentials = get_secret(GCP_secret_name)
+    # # gemini_pro_2_5_pro = GeminiClient(gcp_credentials, env, model="gemini-2.5-pro")
+    # gemini_pro_2_5_flash = GeminiClient(gcp_credentials, env, model="gemini-2.5-flash")
    
-    gemini_models = [gemini_pro_2_5_flash, gemini_pro_2_5_flash]
-    
+    # gemini_models = [gemini_pro_2_5_flash, gemini_pro_2_5_flash]
+    ############################################################################
+    model_names =[ "gemini-3.5-flash","gemini-3.5-flash","gemini-2.5-flash-lite",
+                  "gemini-2.5-flash-lite","gemini-3.5-flash","gemini-3.5-flash"]
+    AI_models = [GeminiClient(gcp_credentials,env,model =model_names[0]), GeminiClient(gcp_credentials,env,model =model_names[1]),
+                  GeminiClient(gcp_credentials,env,model =model_names[2]), GeminiClient(gcp_credentials,env,model =model_names[3]),
+                  GeminiClient(gcp_credentials,env,model =model_names[4]), GeminiClient(gcp_credentials,env,model =model_names[5])]
     retry_queue_name = "worko-cand-profile-parser-retry-queue-"+env
     key_resume_elements = ["candidateName","candidateEmail"]
     
@@ -117,7 +147,7 @@ def lambda_handler(event, context):
                             try:
                                 correct_parsing_try = 3
                                 for i in range(correct_parsing_try):
-                                    cvExtractedParsed = process_cv(processed_text,gpt_models,gpt5_models,gemini_models)
+                                    cvExtractedParsed = process_cv(processed_text,AI_models)
                                     if has_key_elements(cvExtractedParsed, key_resume_elements, 2):
                                         break
                                     else:
@@ -230,7 +260,7 @@ def lambda_handler(event, context):
                     try:
                         correct_parsing_try = 3
                         for i in range(correct_parsing_try):
-                            cvExtractedParsed = process_cv(processed_text,gpt_models,gpt5_models,gemini_models)
+                            cvExtractedParsed = process_cv(processed_text,AI_models)
                             if has_key_elements(cvExtractedParsed, key_resume_elements, 2):
                                 break
                             else:
@@ -356,7 +386,7 @@ def lambda_handler(event, context):
         return {'statusCode': 500, 'body': json.dumps(f'Error: {e}')}
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # event ={'Records': [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'ap-south-1', 'eventTime': '2026-02-13T10:54:41.817Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp'}, 'requestParameters': {'sourceIPAddress': '103.176.210.127'}, 'responseElements': {'x-amz-request-id': 'A1ZX01WYQJ2Y5JH6', 'x-amz-id-2': 'wnmtopZYMlwdUUFEXUaSsPUXlfUOrsb3JKWieIvgG+zU+Hph9o1vtOaooaRN2iInFw8mWnp2dHqT/iRGvosQet9Nbvr5t1qpjWBXU656KVw='}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': 'a6c870b0-fd5d-4747-ac88-27e26b7ecba5', 'bucket': {'name': 'worko-admin-cand-profile-dev', 'ownerIdentity': {'principalId': 'A1V0APDMR493SG'}, 'arn': 'arn:aws:s3:::worko-admin-cand-profile-dev'}, 'object': {'key': 'bulk-cvs/01KHBA6ZW2MDQWJN4WE2YJXFDV.pdf', 'size': 58816, 'eTag': 'ecdcfaabc0c96728a65b559256cc68f6', 'sequencer': '00698F02F1C38704BF'}}}]}  
     # event = {"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-02-13T05:21:25.288Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWV2MBXXE3V6:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"103.176.210.127"},"responseElements":{"x-amz-request-id":"A7DP139505J83HYT","x-amz-id-2":"7qLalj01knes4BpKEg5sLH1PjcL91s9OGs69//2J775bV3sZLPXHSwrmOd1NLv3T0+tMFZQL58bR0lLKCVHtJFEc5LKEe1zZmU5N5y6A+Q4="},"s3":{"s3SchemaVersion":"1.0","configurationId":"a6c870b0-fd5d-4747-ac88-27e26b7ecba5","bucket":{"name":"worko-admin-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-admin-cand-profile-dev"},"object":{"key":"bulk-cvs/01KHAQ4QXFP0HW6BSFRK926JH1.pdf","size":225212,"eTag":"296eeb83abfe1d84d866db9a55621a78","sequencer":"00698EB4D53FB3565C"}}}]}
     # event= {'Records': 
@@ -465,5 +495,5 @@ def lambda_handler(event, context):
     #     }
     
     # #s3
-    # event = {'Records': [{'messageId': 'a130c11c-620f-45c5-83f0-9adfd40e0469', 'receiptHandle': 'AQEBjBqKam59tWsoE9+T0W8Khm1oxuAiEbdXZsmUfvEmk050KGh6Azn9Ifcs1Hq2PcyFnNFYKm3odxD6zA9sAkqyHGIeQF0cd88ZySZoPo+hGkIZil9UBbHVNwwx8u3YWsugIAxyZyj1ir30G7Pj93zEh2jfccSIACy/cE0bsBUJ34UHtF8vIGzHfGcer66xBJDZI1c+DKOIClxjGdzUQegrBHGxZEdnSoq3Gr5ORRzAViPM7NUbAO0K42ftc2tmZqhS5VCTUEuUKmqcbSd/raob5WsACZgFas+Xeocx1PttzWELoNBA8hyPL6MQYFQPv0KrjvxYIt2TgVCSaClq3YkOEBFHQ4IKWBuJgloafbCO+KrSSy9mk4galQIz/eP5ynRV5qUX8wiPjQ3n6R9tkmcpdK+OOMXMMo9Czw1NgnXlKwo=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.555Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PE95VWGS3MEXAJ","x-amz-id-2":"FE9huMj517jZJulH3U1/lyehQ+l6G9BSneIqfEZaq7UMsGqJxTBgWj3MgMbd59w2g5D4w9YEv8dL3Vgsv6bNjsVQXyxKId6QXwtTjQSCdkQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNB0JA2GAE9R9MASF8H.pdf","size":187438,"eTag":"3208a3565002d05e552b50232cdca634","sequencer":"0069CDCF6C831D28C2"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661601', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661604'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'f16019f9932a891b2049cedc7b695a19', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '9006f331-60f8-4b7a-9056-fb2eac039dbc', 'receiptHandle': 'AQEBA6KDz1PRrMeDFdpRUyuzJVaVXE53CmOMyrQN1h+Edm+EGuW8773fTl/X9Tn7qFb1t8idZJKvuPm4vLzF+ZaVr+IvUpD+XDWJiMNnUAE276xKprFpgi9h7ov1+Fp4xs3Yg7Aq1ZQ+lX0sSOJCAhlvzd63KQIh0lpnLNSVxrh2x/Fpk+1nnPWDsP3nYfqWlI/zpMjt/2qMcHJSlA9pEdtst4+De2mzbkb6QUciL2iSml/2/mPALpkrTING3mQXuqRp/33TKVB/EajSGTaDR+7k0X9C9ghcFnmjwOxG2V1Ss75aHjmD2/ONNTRKJNwGO07YQ8OiXsRJkUtrO3ntiRRovba6wGb+gsWEw0GklfY1gSLqB/xoaItT3HU2Js4sJHplxLzik0cqgxr2bS1bPeQwlqzcRQZrpvnLGzzzlz8eOaQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.586Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PA7Z4EJX3W5ZDS","x-amz-id-2":"BjHFu5DEt+tFs1TbjSxHudFoQmo5KkriHtDpGj+thbqUbU4veeVYlXbVyufR9fOQXre3agCXePpxOxpHXToxC0cxLluNt9AI3uNCc4v+62c="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNCR663FRTEFJM5ZYQP.pdf","size":225470,"eTag":"b92b80d17b604743574cdcfcc3ec4fe2","sequencer":"0069CDCF6C89EF8975"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661597', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661600'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '587c9606b9d18abf52bc4c231d0b7b54', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '338371da-285a-4669-b5cf-dc040999305f', 'receiptHandle': 'AQEBc8rp4KnKLzonOlSIJGIoyXbW63vAoJwALk0zSOOIfo85Mt55Pcd53LhrBqR6cz6sxQTrQxkX9MVq6yo88dfr6PAYecpMk4Kmig0yGpGxWIp1ikLtzGkMCk/bH3DTkClJhsfM9EEfzMmfyMwa3yTAgMhjAqG6v9WCaIix/kl75M986+2qUh5i7pMdKK/BiT5iVXg69yRAloisy52a3g2hPxaAa8/RWuADiTo/4lPycrrDxiFhgLYVR4skQ/t+mYHuT5EPjT6UL6C3Nl6ekvbgndxl3nDmGf3GSgHIvZ1uuRCKwFfUAPw5yFK58iSmGOHhSy3GEIS4YPXgCwI5eo2cL22IKlYecH9dTL4PXpQOR8vBWt3wfXaVpsJjnPdJ4HANe+m3f2aw+eiSfru7SZ6GhZJPYeM1VMTz5pHBthwfaN8=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.559Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PBSJBB71PFW6KZ","x-amz-id-2":"DDtFYMi7E11HUtr/Un6YGCaR2l8HnQ9txhCtZvN87SNBUiSfJt0kFSOnm8irsnea8LdABbZby1AFdengHFqB3rfIAmLKCEjugbV9YZTONYQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNCC45360G3JK2W076W.pdf","size":167286,"eTag":"51d9846cd02ac6aa0c450d18502692ef","sequencer":"0069CDCF6C843BC33C"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661602', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661603'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'b8a13d76b1ff314f28d53bed6b0a8b34', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
-    # lambda_handler(event, None)
+    event = {'Records': [{'messageId': 'a130c11c-620f-45c5-83f0-9adfd40e0469', 'receiptHandle': 'AQEBjBqKam59tWsoE9+T0W8Khm1oxuAiEbdXZsmUfvEmk050KGh6Azn9Ifcs1Hq2PcyFnNFYKm3odxD6zA9sAkqyHGIeQF0cd88ZySZoPo+hGkIZil9UBbHVNwwx8u3YWsugIAxyZyj1ir30G7Pj93zEh2jfccSIACy/cE0bsBUJ34UHtF8vIGzHfGcer66xBJDZI1c+DKOIClxjGdzUQegrBHGxZEdnSoq3Gr5ORRzAViPM7NUbAO0K42ftc2tmZqhS5VCTUEuUKmqcbSd/raob5WsACZgFas+Xeocx1PttzWELoNBA8hyPL6MQYFQPv0KrjvxYIt2TgVCSaClq3YkOEBFHQ4IKWBuJgloafbCO+KrSSy9mk4galQIz/eP5ynRV5qUX8wiPjQ3n6R9tkmcpdK+OOMXMMo9Czw1NgnXlKwo=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.555Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PE95VWGS3MEXAJ","x-amz-id-2":"FE9huMj517jZJulH3U1/lyehQ+l6G9BSneIqfEZaq7UMsGqJxTBgWj3MgMbd59w2g5D4w9YEv8dL3Vgsv6bNjsVQXyxKId6QXwtTjQSCdkQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNB0JA2GAE9R9MASF8H.pdf","size":187438,"eTag":"3208a3565002d05e552b50232cdca634","sequencer":"0069CDCF6C831D28C2"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661601', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661604'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'f16019f9932a891b2049cedc7b695a19', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '9006f331-60f8-4b7a-9056-fb2eac039dbc', 'receiptHandle': 'AQEBA6KDz1PRrMeDFdpRUyuzJVaVXE53CmOMyrQN1h+Edm+EGuW8773fTl/X9Tn7qFb1t8idZJKvuPm4vLzF+ZaVr+IvUpD+XDWJiMNnUAE276xKprFpgi9h7ov1+Fp4xs3Yg7Aq1ZQ+lX0sSOJCAhlvzd63KQIh0lpnLNSVxrh2x/Fpk+1nnPWDsP3nYfqWlI/zpMjt/2qMcHJSlA9pEdtst4+De2mzbkb6QUciL2iSml/2/mPALpkrTING3mQXuqRp/33TKVB/EajSGTaDR+7k0X9C9ghcFnmjwOxG2V1Ss75aHjmD2/ONNTRKJNwGO07YQ8OiXsRJkUtrO3ntiRRovba6wGb+gsWEw0GklfY1gSLqB/xoaItT3HU2Js4sJHplxLzik0cqgxr2bS1bPeQwlqzcRQZrpvnLGzzzlz8eOaQ=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.586Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PA7Z4EJX3W5ZDS","x-amz-id-2":"BjHFu5DEt+tFs1TbjSxHudFoQmo5KkriHtDpGj+thbqUbU4veeVYlXbVyufR9fOQXre3agCXePpxOxpHXToxC0cxLluNt9AI3uNCc4v+62c="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNCR663FRTEFJM5ZYQP.pdf","size":225470,"eTag":"b92b80d17b604743574cdcfcc3ec4fe2","sequencer":"0069CDCF6C89EF8975"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661597', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661600'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': '587c9606b9d18abf52bc4c231d0b7b54', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}, {'messageId': '338371da-285a-4669-b5cf-dc040999305f', 'receiptHandle': 'AQEBc8rp4KnKLzonOlSIJGIoyXbW63vAoJwALk0zSOOIfo85Mt55Pcd53LhrBqR6cz6sxQTrQxkX9MVq6yo88dfr6PAYecpMk4Kmig0yGpGxWIp1ikLtzGkMCk/bH3DTkClJhsfM9EEfzMmfyMwa3yTAgMhjAqG6v9WCaIix/kl75M986+2qUh5i7pMdKK/BiT5iVXg69yRAloisy52a3g2hPxaAa8/RWuADiTo/4lPycrrDxiFhgLYVR4skQ/t+mYHuT5EPjT6UL6C3Nl6ekvbgndxl3nDmGf3GSgHIvZ1uuRCKwFfUAPw5yFK58iSmGOHhSy3GEIS4YPXgCwI5eo2cL22IKlYecH9dTL4PXpQOR8vBWt3wfXaVpsJjnPdJ4HANe+m3f2aw+eiSfru7SZ6GhZJPYeM1VMTz5pHBthwfaN8=', 'body': '{"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-south-1","eventTime":"2026-04-02T02:07:40.559Z","eventName":"ObjectCreated:Put","userIdentity":{"principalId":"AWS:AROATCKANHWVXMDFRAEJE:worko-corp-dev-workoCorp"},"requestParameters":{"sourceIPAddress":"183.87.254.176"},"responseElements":{"x-amz-request-id":"35PBSJBB71PFW6KZ","x-amz-id-2":"DDtFYMi7E11HUtr/Un6YGCaR2l8HnQ9txhCtZvN87SNBUiSfJt0kFSOnm8irsnea8LdABbZby1AFdengHFqB3rfIAmLKCEjugbV9YZTONYQ="},"s3":{"s3SchemaVersion":"1.0","configurationId":"sqs-event-corporate","bucket":{"name":"worko-corporate-cand-profile-dev","ownerIdentity":{"principalId":"A1V0APDMR493SG"},"arn":"arn:aws:s3:::worko-corporate-cand-profile-dev"},"object":{"key":"companies/01JNR4N624Q7E8XH9X8G9MNH62/bulk-cvs/01KN5Z4FNCC45360G3JK2W076W.pdf","size":167286,"eTag":"51d9846cd02ac6aa0c450d18502692ef","sequencer":"0069CDCF6C843BC33C"}}}]}', 'attributes': {'ApproximateReceiveCount': '1', 'SentTimestamp': '1775095661602', 'SenderId': 'AROAVASDGOGDX2TDMB5GG:S3-PROD-END', 'ApproximateFirstReceiveTimestamp': '1775095661603'}, 'messageAttributes': {}, 'md5OfMessageAttributes': None, 'md5OfBody': 'b8a13d76b1ff314f28d53bed6b0a8b34', 'eventSource': 'aws:sqs', 'eventSourceARN': 'arn:aws:sqs:ap-south-1:211125353899:worko-cand-profile-parser-queue-dev', 'awsRegion': 'ap-south-1'}]}
+    lambda_handler(event, None)

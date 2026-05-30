@@ -52,3 +52,8 @@ sam deploy \
 - `S3_BUCKET_NAME`: S3 bucket for resume storage
 - `DYNAMO_TABLE_NAME`: DynamoDB table name
 - `AZURE_OPENAI_*`: Azure OpenAI configuration
+
+
+##############################  30-05-2026 ###################################
+1) add new env variable as ENVIRONMENT = "dev"
+2) in template add core shared layer

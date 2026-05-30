@@ -66,6 +66,18 @@ Resources:
         - python3.10
     Metadata:
       BuildMethod: python3.10
+  
+  SharedCoreLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-shared-core-${Environment}"
+      Description: Shared core business logic for JD-Resume matching
+      ContentUri: ../shared-core-layer/
+      CompatibleRuntimes:
+        - python3.10
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.10
 
   ResumeSignupSkillsParserFunction:
     Type: AWS::Serverless::Function
@@ -76,10 +88,12 @@ Resources:
       Role: !GetAtt ResumeSignupSkillsParserRole.Arn
       Layers:
         - !Ref PythonDependenciesLayer
+        - !Ref SharedCoreLayer
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
           S3_BUCKET_NAME: !Sub "worko-app-${Environment}"
+          ENVIRONMENT: !Ref Environment
           DYNAMO_TABLE_NAME: "worko"
           AZURE_OPENAI_ENDPOINT: "https://aif-wrk-dev-sin-01.openai.azure.com"
           AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
