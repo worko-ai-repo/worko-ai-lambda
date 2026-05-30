@@ -12,7 +12,7 @@ Globals:
   Function:
     Timeout: 300
     MemorySize: 512
-    Runtime: python3.11
+    Runtime: python3.10
 
 Resources:
   CandProfileParserRole:
@@ -66,10 +66,10 @@ Resources:
       Description: Python dependencies for candidate profile parser lambda
       ContentUri: layer/
       CompatibleRuntimes:
-        - python3.11
+        - python3.10
       RetentionPolicy: Delete
     Metadata:
-      BuildMethod: python3.11
+      BuildMethod: python3.10
       BuildArchitecture: x86_64
 
   SharedCoreLayer:
