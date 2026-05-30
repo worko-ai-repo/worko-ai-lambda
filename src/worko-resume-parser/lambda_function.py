@@ -192,7 +192,8 @@ def lambda_handler(event, context):
         gcp_credentials = get_secret(GCP_secret_name)
     else:
         print("Using cached GCP credentials")
-    gcp_models = [GeminiClient(gcp_credentials,env)]
+    model_name = "gemini-2.5-pro"
+    gcp_models = [GeminiClient(gcp_credentials,env,model=model_name) ]
 
     # gpt_4o_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
     # gpt_4_1_mini_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4.1-mini")
