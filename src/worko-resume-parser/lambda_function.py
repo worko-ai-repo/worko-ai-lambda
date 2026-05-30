@@ -192,7 +192,8 @@ def lambda_handler(event, context):
         gcp_credentials = get_secret(GCP_secret_name)
     else:
         print("Using cached GCP credentials")
-    model_name = "gemini-2.5-pro"
+    # model_name = "gemini-2.5-pro"
+    model_name = "gemini-3.5-flash"
     gcp_models = [GeminiClient(gcp_credentials,env,model=model_name) ]
 
     # gpt_4o_model = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
@@ -749,10 +750,11 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", "jobId": "01K8SZ21FPB7TD10YQQAJ22KN0", "agencyUserId": "21YCYSMG5HE2PMZ0459J0VPCG9", "candidateParsedCvAwsS3FileName": "01KHDGVAE3WTNES3HYVQ2W056C.pdf"}
 
-    event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
-    "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
-    "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
-    "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
+    event ={'USER_PK': 'USR#EML#shaukt1998+15@gmail.com', 'USER_DETAIL_SK': 'ID#'}
+    # event = {"companyId": "01JWAQF1G96E0SE9XHXSFGHNWW", 
+    # "jobId": "01K636AKJRB7QZYB0KF9ASDY08", 
+    # "agencyUserId": "71WFYNMG3HE02CK2EE0TAF04MX",
+    # "candidateParsedCvAwsS3FileName": "01KCJVGXFCWHVZ1ZW3KKCSTR4H.pdf"}
 
     # event = {'USER_PK': 'USR#EML#shaukatdatascience+1@gmail.com', 'USER_DETAIL_SK': 'ID#'}
     # event = {"event": "SOURCE_TYPE_REFRESH_CV", "candidateParsedCvAwsS3FileName": "01KH64VAN998DYYGPR9G6KQ3XW", "cvAwsS3FilePath": "companies/01JJVRPHNENTTFFF7M3N6HEQ38/bulk-cvs/01KH64V8YAF4R40RX96SKV02JE", "cvAwsS3ResourceType": "BULK_CVS", "cvAwsS3BucketName": "worko-corporate-dev"}
