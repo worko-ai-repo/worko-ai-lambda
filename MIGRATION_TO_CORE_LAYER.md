@@ -1108,7 +1108,7 @@ If issues occur:
 
 1) worko-job-description parser
 2) worko-resume-parser
-3) worko-resume-sign-up-skills-parser (not deployed )
+3) worko-resume-sign-up-skills-parser
 4) worko-cand-profile-parser
 
 5) worko-candidate-search-prompt-parser

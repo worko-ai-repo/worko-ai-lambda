@@ -583,8 +583,6 @@ def update_core_skills_years(core_skills):
         {**skill, 'years': skill.get('years', [0])[0] if skill.get('years') else 0} 
         for skill in core_skills
     ]
-def clean_json_response(response: str) -> str:
-    return response.strip().removeprefix("```json").removesuffix("```").strip()
 def clean_json_string(json_string):
     # Remove ```json from the beginning if present
     if json_string.startswith("```json"):
@@ -1125,7 +1123,23 @@ def reset_frontend_auto_populations_in_dynamodb(table_name, partition_key, sort_
 
 
 def clean_json_response(content):
-    return content.strip().removeprefix("```json").removesuffix("```").strip()
+    """Clean JSON response - handles both string and dict input."""
+    # If already a dict, return as-is (already parsed)
+    if isinstance(content, dict):
+        return content
+    
+    # If string, clean and parse
+    if isinstance(content, str):
+        cleaned = content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+            print(f"Content (first 200 chars): {cleaned[:200]}")
+            raise
+    
+    # Unexpected type
+    raise TypeError(f"Expected str or dict, got {type(content).__name__}")
 
 
 def invoke_qwen3_32b(prompt: str,
@@ -1217,7 +1231,7 @@ def lambda_handler(event, context):
     resumeId = event.get('userId')
     cvId = event.get('s3ResumeId')
     key = "users/" + resumeId + "/resumes/" + cvId
-    S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
+    S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME','worko-app-dev')
     env = os.environ.get('ENVIRONMENT','dev') 
     end_time= time.time()
     # key="users/81d38daa-f061-7000-0f9e-64475bb44b9f/resumes/01K5ZV2E34TJ6F9DF8PWHK118Z.pdf"
@@ -1355,8 +1369,5 @@ def lambda_handler(event, context):
         }
     
 if __name__ == "__main__":    # For local testing
-    test_event ={
-    "userId": "81d38daa-f061-7000-0f9e-64475bb44b9f",
-    "s3ResumeId": "01K5ZV2E34TJ6F9DF8PWHK118Z.pdf"
-    }
+    test_event ={'s3ResumeId': '01KT166NT714D21BX4878MCMBM.pdf', 'userId': '31f3cd5a-f0a1-70c6-7e01-388942ffae60'}
     print(lambda_handler(test_event, None))
