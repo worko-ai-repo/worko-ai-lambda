@@ -20,7 +20,8 @@ if __name__ == "__main__":
     sys.path.insert(0, str(shared_layer_path))
 
 # Import from shared-core-layer
-from ai_clients import AzureOpenAIClient
+# from ai_clients import AzureOpenAIClient
+from ai_clients.gcp_client import GeminiClient
 from parsers import extract_text_from_pdf, extract_text_from_docx
 
 from utils import (
@@ -824,8 +825,10 @@ def get_meta_data(event):
     metadata = response.get('Metadata', {})
     return metadata
 
+gcp_credentials = None
 
 def lambda_handler(event, context):
+    global gcp_credentials
     print("event-----", event)
     print("got event:",event)
     try:
@@ -840,13 +843,21 @@ def lambda_handler(event, context):
     table_name = os.environ.get('table_name',"worko")
 
     env = os.environ.get("ENVIRONMENT","dev")
-    GCP_secret_name = "GCP-firestore-secret-"+env
-    print(GCP_secret_name)
+    if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
+        gcp_credentials = get_secret(GCP_secret_name)
+    else:    
+        print("Using cached GCP credentials")
+
+
+    # GCP_secret_name = "GCP-firestore-secret-"+env
+    # GCP_credentials = get_secret(GCP_secret_name)
+    # print(GCP_secret_name)
 
     table_name = "worko"
 
     queue_name = os.environ.get('queue_name','worko-app-event-queue')
-    GCP_credentials = get_secret(GCP_secret_name)
+    
     # Extracting the bucket name from the nested 'Records' key
     s3_bucket_name = event['Records'][0]['s3']['bucket']['name']
     
@@ -891,11 +902,16 @@ def lambda_handler(event, context):
     else:
         print(f"Unsupported file format: {object_key}")
 
-    azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
-    azure_openai_secret = get_secret(azure_openai_secret_name)
-    gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
-    gpt_models = [gpt4]
-    cv_extract, cv_extracted_parsed = process_cv(processed_text,gpt_models)
+    # azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+    # azure_openai_secret = get_secret(azure_openai_secret_name)
+    # gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+    # gpt_models = [gpt4]
+
+
+    gcp = GeminiClient(gcp_credentials,env,model="gemini-3.5-flash")
+
+    gcp_models = [gcp,gcp]
+    cv_extract, cv_extracted_parsed = process_cv(processed_text,gcp_models)
     print(f"CV Extract:\n{cv_extract}")
     print(f"\nParsed Extract:\n{json.dumps(cv_extracted_parsed, indent=2)}")
 
@@ -929,7 +945,7 @@ def lambda_handler(event, context):
     update_ref_response_in_dynamodb_for_bulk_process(table_name, cv_partition_key_value, cv_sort_key_prefix_value, cv_extract, cv_extracted_parsed, scoreDetails, matchingScore, rejection_feedback, emailFeedback, processing_status)
     
     
-    score = jd_resume_matching(table_name, cv_partition_key_value, cv_sort_key_prefix_value, job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,otherRequirements,jdItem_extracted)
+    score = jd_resume_matching(table_name, cv_partition_key_value, gcp_models,cv_sort_key_prefix_value, job_desc, processed_text, cv_extract, cv_extracted_parsed,gcp_models,otherRequirements,jdItem_extracted)
             
     print("Score----",score)
 

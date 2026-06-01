@@ -16,7 +16,7 @@ from prompt.prompts import (
     feedback_mandatory_requirement_missing_prompt
 )
 import json
-def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,gpt_models,otherRequirements):
+def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,models,otherRequirements):
     final_completion_text = ""
     rejection_feedback = ""
     emailFeedback = ""
@@ -67,7 +67,7 @@ def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,
 
         
         # content = invoke_model_with_backoff_OpenAI(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
-        content =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:"  )
+        content =  models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:"  )
         completion_text_rejection = json.dumps(content)
 
         print("***************************************  1 <70 *********************************************")
@@ -79,7 +79,7 @@ def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,
                         f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                         f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
 
-            emailFeedback =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "get email feedback for 40-70" ,want_json=False )
+            emailFeedback =  models[0].invoke_model_with_backoff(prompt,Task= "get email feedback for 40-70" ,want_json=False )
 
             print("feedback_for_email:-",emailFeedback)
         
@@ -144,7 +144,7 @@ def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,
                 )
 
         # content = invoke_model_with_backoff_OpenAI(prompt,Task= "Score feedback for >70")
-        content =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
+        content =  models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
         completion_text_approval = json.dumps(content)
         completion_text_approval
         
@@ -156,14 +156,14 @@ def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,
                     f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                     f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
 
-        emailFeedback =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "get email feedback for scor > 70" ,want_json=False )
+        emailFeedback =  models[0].invoke_model_with_backoff(prompt,Task= "get email feedback for scor > 70" ,want_json=False )
 
         
         print("feedback_for_email:-",emailFeedback)
         print("otherRequirements:-", otherRequirements)
         if otherRequirements:
             prompt = check_mandatory_requirement_prompt.format(processed_text=processed_text, otherRequirements=otherRequirements)
-            analysis_result_json  = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Cheching Mandatoey Requirements") 
+            analysis_result_json  = models[0].invoke_model_with_backoff(prompt,Task= "Cheching Mandatoey Requirements") 
 
             print("analysis_result",analysis_result_json)
             requirements_missing = analysis_result_json["analysis"]["requirements_missing"]
@@ -179,7 +179,7 @@ def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,
                     jdItem_extracted=jdItem_extracted, 
                     requirements_missing=requirements_missing)
 
-                completion_text_rejection =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection when amndatory Not met")
+                completion_text_rejection =  models[0].invoke_model_with_backoff(prompt,Task= "Rejection when amndatory Not met")
 
 
                 completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
@@ -201,7 +201,7 @@ def get_feedback_for_bulk_upload(overall_matching_score,processed_text,job_desc,
     
     return final_completion_text, rejection_feedback, emailFeedback
 
-def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_Analysis: Dict[str, Any], overall_matching_score: int, otherRequirements: Dict[str, Any], gpt_models: list):
+def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_Analysis: Dict[str, Any], overall_matching_score: int, otherRequirements: Dict[str, Any], models: list):
     # this func will give positive and negative feedbacks for both recruiter and candidate based on the score and also give feedback for email to candidate.
     try :
 
@@ -219,7 +219,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
                                                     overall_Analysis=overall_Analysis)
             
             try:
-                completion_text_rejection = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
+                completion_text_rejection = models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
                 completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
                 completion_text_rejection= completion_text_rejection.get("feedback_Recruiter")
             except Exception as e:
@@ -242,7 +242,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
                                                         job_desc=jdItem_extracted, 
                                                         overall_Analysis=overall_Analysis)
 
-                completion_text_approval= gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback  for score >40")
+                completion_text_approval= models[0].invoke_model_with_backoff(prompt,Task= "Score feedback  for score >40")
                 print_completion_text(completion_text_approval)
                 scoreDetails = completion_text_approval.get("feedback_Recruiter")
                 scoreDetailsForApplicant = completion_text_approval.get("feedback_Candidate")
@@ -252,7 +252,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
 
 
                 prompt = feedback_email_greaterthen_40_prompt.format(completion_text_approval=completion_text_approval)
-                emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt,want_json=False,Task= "email feedback  for score >40")
+                emailFeedback = models[0].invoke_model_with_backoff(prompt,want_json=False,Task= "email feedback  for score >40")
                 print("feedback_for_email:-",emailFeedback)
         
         elif overall_matching_score >= 70:
@@ -264,7 +264,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
                 overall_Analysis=overall_Analysis
             )
 
-            completion_text_approval =gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
+            completion_text_approval =models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
 
 
             ###########################################
@@ -283,7 +283,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
             ###########################################
 
             prompt = feedback_email_greaterthen_70_prompt.format(completion_text_approval=completion_text_approval)
-            emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70",want_json=False)
+            emailFeedback = models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70",want_json=False)
 
             print("feedback_for_email:-", emailFeedback)
             
@@ -291,7 +291,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
             print("otherRequirements:-", otherRequirements)
             if otherRequirements:
                 prompt = check_mandatory_requirement_prompt.format(processed_text=processed_text, otherRequirements=otherRequirements)
-                analysis_result_json  = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Cheching Mandatoey Requirements") 
+                analysis_result_json  = models[0].invoke_model_with_backoff(prompt,Task= "Cheching Mandatoey Requirements") 
 
                 print("analysis_result",analysis_result_json)
                 requirements_missing = analysis_result_json["analysis"]["requirements_missing"]
@@ -307,7 +307,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
                         jdItem_extracted=jdItem_extracted, 
                         requirements_missing=requirements_missing)
 
-                    completion_text_rejection =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection when amndatory Not met")
+                    completion_text_rejection =  models[0].invoke_model_with_backoff(prompt,Task= "Rejection when amndatory Not met")
 
 
                     completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
@@ -339,7 +339,7 @@ def get_detailed_feedback(processed_text: str, jdItem_extracted: str, overall_An
             "rejectionFeedbackBySystemForApplicant": rejectionFeedbackBySystemForApplicant,
             "scoreDetails": scoreDetails,
             "scoreDetailsForApplicant": scoreDetailsForApplicant,
-            "emailFeedback": emailFeedback,
+            "emailFeedback": emailFeedback
             
         }
     except Exception as e:

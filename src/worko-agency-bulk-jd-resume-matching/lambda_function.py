@@ -19,12 +19,13 @@ if __name__ == "__main__":
     shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
     sys.path.insert(0, str(shared_layer_path))
     
-from ai_clients import AzureOpenAIClient
+# from ai_clients import AzureOpenAIClient
+from ai_clients.gcp_client import GeminiClient
 from database_adapters import FirestoreManagerAgency
 from utils import *
 from scoring.get_scoring import get_score
 
-def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId):
+def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted_parsed,gcp_models,update_doc_id,agencyBulkJdResumeId):
     region ="ap-south-1"
     account_id = get_account_id()
     queue_name = 'worko-corp-app-event-queue'
@@ -43,7 +44,7 @@ def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted
         )
           
     # content = OpenAIClient.invoke_model_with_backoff(prompt, Task= "Check Tech or Non-Tech JD", want_json=False)
-    content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Check Tech or Non-Tech JD" ,want_json=False)
+    content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Check Tech or Non-Tech JD" ,want_json=False)
     print("Checking the Tech or non-tech jd",content)
     
     # Initialize the variable to store the Technical or Non Technical
@@ -68,11 +69,23 @@ def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted
         emailFeedback = ""
         overall_Analysis=""
 
-        matching_score_obj = get_score(processed_text,job_desc)
-        overall_matching_score = matching_score_obj["overall_matching_score"]
+        retry_on_scoring_fails = 3
+        for _ in range(retry_on_scoring_fails):
+            try:
+                matching_score_obj = get_score(processed_text,job_desc,gcp_models)
+                print("overall matching score ", matching_score_obj)
+                overall_matching_score = matching_score_obj["overall_matching_score"]
+                overall_matching_score = int(round(overall_matching_score))
+                break
+            except Exception as e:
+                print(f"Error occurred while fetching scoring: {e}")
+                time.sleep(2)  # Wait before retrying
+        else:
+            print("Failed to fetch scoring after multiple attempts.")
 
-        overall_matching_score = int(round(overall_matching_score))
-        print("overall_matching_score", overall_matching_score)
+
+        
+        
 
         # Generate feedback for rejection if score < 70
         if 1 <= overall_matching_score < 70:
@@ -120,7 +133,7 @@ def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted
                 f" Never use speculative phrases like 'resume shows' or 'appears to have' — state facts directly with calling candidate name.\n"
             )
 
-            content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:")
+            content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:")
             # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
             completion_text_rejection = json.dumps(content)
 
@@ -133,7 +146,7 @@ def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted
                 prompt = (f"{final_completion_text}, {completion_text_rejection}\n"
                          f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                          f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Email feedback for 1 <= overall_matching_score < 70:",want_json=False)
+                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Email feedback for 1 <= overall_matching_score < 70:",want_json=False)
                 # emailFeedback = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Email feedback for 1 <= overall_matching_score < 70:",want_json=False)
                 print("feedback_for_email:-",emailFeedback)
 
@@ -197,7 +210,7 @@ def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted
                         f"19. Output format must be **valid JSON only**, no text outside JSON."   
 	
                     )
-            content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
+            content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
             # content = OpenAIClient.invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
             completion_text_approval = json.dumps(content)
 
@@ -209,7 +222,7 @@ def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted
                      f"Based on the above content, write a one-line summary in 20-25 words that highlights ONLY the positive qualities and strengths that make this candidate suitable for the job.\n"
                      f"Focus exclusively on positive aspects - exclude any negative feedback or criticisms.")
 
-            emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt, Task="Email Feedback",want_json=False)
+            emailFeedback = gcp_models[0].invoke_model_with_backoff(prompt, Task="Email Feedback",want_json=False)
             # emailFeedback = OpenAIClient.invoke_model_with_backoff(prompt, Task="Email Feedback",want_json=False)
             print("feedback_for_email:-",emailFeedback)
             
@@ -245,8 +258,10 @@ def jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted
     return {"statusCode": 200, "body": 
         {"Overall Matching Score": overall_matching_score}
     }
-
+gcp_credentials = None
+gcp_credentials_firstore = None
 def lambda_handler(event, context):
+    global gcp_credentials, gcp_credentials_firstore
     print(f"got a event : -  {event}") 
     global DBManager,update_doc_id
     # Get environment
@@ -302,16 +317,30 @@ def lambda_handler(event, context):
         # print(AZURE_openai_secret)
         # OpenAIClient = AzureOpenAIClient(AZURE_openai_secret)
 
-        azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
-        azure_openai_secret = get_secret(azure_openai_secret_name)
-        gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
-        gpt_models = [gpt4]
-        cv_extract, cv_extracted_parsed = process_cv(processed_text,gpt_models)
+        # azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+        # azure_openai_secret = get_secret(azure_openai_secret_name)
+        # gpt4 = AzureOpenAIClient(azure_openai_secret,model="gpt-4o")
+        # gpt_models = [gpt4]
+
+        if not gcp_credentials:
+            GCP_secret_name ="GCP-aiplatform-secrect-"+env
+            gcp_credentials = get_secret(GCP_secret_name)
+        else:    
+            print("Using cached GCP credentials")
+        
+        if not gcp_credentials_firstore:
+            gcp_credentials_secrect_name= "GCP-firestore-secret-"+env
+            gcp_credentials_firstore = get_secret(gcp_credentials_secrect_name)
+
+        gcp = GeminiClient(gcp_credentials,env,model="gemini-3.5-flash")
+        gcp_models = [gcp] 
+
+        cv_extract, cv_extracted_parsed = process_cv(processed_text,gcp_models)
         print(f"Successfully processed resume: {processed_text[:200]}..")
-        GCP_secret_name = "GCP-firestore-secret-"+env
+        # GCP_secret_name = "GCP-firestore-secret-"+env
         GCP_DATABASE_NAME = "worko-corp-db-" +env 
         
-        DBManager = FirestoreManagerAgency(GCP_secret_name,GCP_DATABASE_NAME)
+        DBManager = FirestoreManagerAgency(gcp_credentials_firstore,GCP_DATABASE_NAME)
 
         update_data = {
             "updatedAt": datetime.now().isoformat(),
@@ -383,7 +412,7 @@ def lambda_handler(event, context):
         print("updating firestore document before scoring with IN-PROGRESS status and cv cv_extracted_parsed :--",cv_extracted_parsed)
         DBManager.update_firestore_document_with_scoring_data(update_collection_name, update_doc_id, cv_extracted_parsed,processingStatus)
 
-        score = jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,update_doc_id,agencyBulkJdResumeId)
+        score = jd_resume_matching_agency(job_desc, processed_text, cv_extract, cv_extracted_parsed,gcp_models,update_doc_id,agencyBulkJdResumeId)
         return {
             "statusCode": 200,
             "body": json.dumps({

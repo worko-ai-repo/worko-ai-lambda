@@ -19,7 +19,8 @@ if __name__ == "__main__":
 
 # Import from shared-core-layer
 
-from ai_clients import AzureOpenAIClient
+# from ai_clients import AzureOpenAIClient
+from ai_clients.gcp_client import GeminiClient
 from feedback.feedback_generator import get_reason_from_rejection_data
 from parsers import extract_text_from_pdf, extract_text_from_docx
 from utils import *
@@ -46,9 +47,10 @@ def determine_type(input_string):
         return "REF"
     else:
         return "UNKNOWN"
-
+gcp_credentials = None
 
 def lambda_handler(event, context):
+    global gcp_credentials
     print("Got event:-", event)
     # Environment variables
     table_name = os.environ.get('DYNAMO_TABLE_NAME',"worko")
@@ -56,10 +58,20 @@ def lambda_handler(event, context):
     s3_bucket_name = os.environ.get('S3_BUCKET_NAME',"worko-app-dev")
     print(f"DYNAMO_TABLE_NAME {table_name} JOBS_DYNAMO_TABLE_NAME {jobs_table_name} s3_bucket_name {s3_bucket_name}")
     env = os.environ.get("ENVIRONMENT", "dev")
-    azure_openai_secret_name = "AZURE-openai-secret-multimodel-" + env
-    azure_openai_secret = get_secret(azure_openai_secret_name)
-    gpt4 = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
-    gpt_models = [gpt4]
+    # azure_openai_secret_name = "AZURE-openai-secret-multimodel-" + env
+    # azure_openai_secret = get_secret(azure_openai_secret_name)
+    # gpt4 = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
+    # gpt_models = [gpt4]
+
+    if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
+        gcp_credentials = get_secret(GCP_secret_name)
+    else:    
+        print("Using cached GCP credentials")
+    gcp = GeminiClient(gcp_credentials,env,model="gemini-3.5-flash")
+
+
+    gcp_models = [gcp]
     otherRequirements=""
 
     partition_key_value = event.get('USER_PK')
@@ -330,7 +342,7 @@ def lambda_handler(event, context):
                 }}"""
 
 
-                requirementsFormFeedback = gpt_models[0].invoke_model_with_backoff(prompt=collect_requiremet_from_feedback_prompt, Task="AI for feedback Extraction.")
+                requirementsFormFeedback = gcp_models[0].invoke_model_with_backoff(prompt=collect_requiremet_from_feedback_prompt, Task="AI for feedback Extraction.")
                 mandatoryRequirementsFromFeedback = requirementsFormFeedback.get("repeatedmandatoryRequirements","") + requirementsFormFeedback.get("feedbackmandatoryRequirements","")
                 
                 print(f'requirementsFormFeedback :-- {requirementsFormFeedback}')
@@ -384,7 +396,7 @@ def lambda_handler(event, context):
                 ]
                 }}"""
 
-                mandatoryRequirementsFromFeedback = gpt_models[0].invoke_model_with_backoff(prompt=make_feedback_summarised_reuirements_prompt, Task="AI for feedback summarization.")
+                mandatoryRequirementsFromFeedback = gcp_models[0].invoke_model_with_backoff(prompt=make_feedback_summarised_reuirements_prompt, Task="AI for feedback summarization.")
                 print("mandatoryRequirementsFromFeedback  :--",mandatoryRequirementsFromFeedback)
 
                 mandatoryRequirementsFromFeedback = " ".join(mandatoryRequirementsFromFeedback.get("feedbackMandatoryRequirements",""))
@@ -454,7 +466,7 @@ def lambda_handler(event, context):
         f"}}"
         )
 
-        completion_text_rejection =  gpt_models[0].invoke_model_with_backoff(check_department_alignment_prompt,Task= "check Department id Suitable or not from Ai",want_json=True)
+        completion_text_rejection =  gcp_models[0].invoke_model_with_backoff(check_department_alignment_prompt,Task= "check Department id Suitable or not from Ai",want_json=True)
         print(completion_text_rejection)
 
         if not reject_on_ctc_or_exp and completion_text_rejection['AlignedOrNot'].lower()=='no':
@@ -517,7 +529,7 @@ def lambda_handler(event, context):
             f" - In entire feedback never talk about number of years experience. you can talk about domain experience if needed"
             f"10. Output must be valid JSON only — no text outside JSON"
             )
-        completion_text_approval= gpt_models[0].invoke_model_with_backoff(feedback_for_department_or_ctc_mismatched_prompt,Task= "Score feedback for 50 caped case ")
+        completion_text_approval= gcp_models[0].invoke_model_with_backoff(feedback_for_department_or_ctc_mismatched_prompt,Task= "Score feedback for 50 caped case ")
         print_completion_text(completion_text_approval)
         scoreDetails = completion_text_approval.get("feedback_Recruiter")
         scoreDetails = json.dumps(scoreDetails)
@@ -528,7 +540,7 @@ def lambda_handler(event, context):
     if not reject_on_ctc_or_exp and not department_mismatch:
         
         try:
-            score_obj = get_score(processed_text, job_desc)
+            score_obj = get_score(processed_text, job_desc,gcp_models)
             overall_matching_score = score_obj["overall_matching_score"]
 
             print("overall_matching_score in lambda", overall_matching_score, type(overall_matching_score))
@@ -564,7 +576,7 @@ def lambda_handler(event, context):
                         f'    "Requirements": ["Must have experience in SQL", "candidate msut know python language"]\n'
                         f"  }},\n"
                     )
-                    candidate_feedbacks_requirements =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Ask ai, extract candidate feedback",want_json=False)
+                    candidate_feedbacks_requirements =  gcp_models[0].invoke_model_with_backoff(prompt,Task= "Ask ai, extract candidate feedback",want_json=False)
                     print("candidate_feedbacks_requirements : -",candidate_feedbacks_requirements)
 
                     prompt = (
@@ -604,7 +616,7 @@ def lambda_handler(event, context):
                     f"]\n\n"
                     f"Now, analyze the Requirements **against each JobDescription one by one** and provide your final JSON response below — strictly following the above format."
                     )
-                    candidate_feedbacks_requirements_MetOrNot =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Ask ai, extract candidate feedback")
+                    candidate_feedbacks_requirements_MetOrNot =  gcp_models[0].invoke_model_with_backoff(prompt,Task= "Ask ai, extract candidate feedback")
                     print("candidate_feedbacks_requirements_MetOrNot :--",candidate_feedbacks_requirements_MetOrNot)
                     number_of_candidate_feedbacks_requirements_MetOrNot=False
                     try:
@@ -674,7 +686,7 @@ def lambda_handler(event, context):
                     f"Now, analyze the candidate’s resume **against each job requirement one by one** and provide your final JSON response below — strictly following the above format."
                     )
 
-                    feedbackMachingWithCandidate =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Ask ai, feedback matching or not")
+                    feedbackMachingWithCandidate =  gcp_models[0].invoke_model_with_backoff(prompt,Task= "Ask ai, feedback matching or not")
                     print('feedbackMachingWithCandidate :- ' ,feedbackMachingWithCandidate)
                     number_of_requirements_not_met = False 
                     try:
@@ -703,7 +715,7 @@ def lambda_handler(event, context):
                                                      jdItem_extracted=jdItem_extracted, 
                                                      overall_Analysis=overall_Analysis)
                 
-                completion_text_rejection = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
+                completion_text_rejection = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Rejection for 1 <= overall_matching_score < 70:" )
                 completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
                 completion_text_rejection= completion_text_rejection.get("feedback_Recruiter")
                 
@@ -722,7 +734,7 @@ def lambda_handler(event, context):
                                                            job_desc=jdItem_extracted, 
                                                            overall_Analysis=overall_Analysis)
     
-                    completion_text_approval= gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback  for >40")
+                    completion_text_approval= gcp_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback  for >40")
                     print_completion_text(completion_text_approval)
                     scoreDetails = completion_text_approval.get("feedback_Recruiter")
                     scoreDetailsForApplicant = completion_text_approval.get("feedback_Candidate")
@@ -732,7 +744,7 @@ def lambda_handler(event, context):
 
 
                     prompt = feedback_email_greaterthen_40_prompt.format(completion_text_approval=completion_text_approval)
-                    emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt,want_json=False)
+                    emailFeedback = gcp_models[0].invoke_model_with_backoff(prompt,want_json=False)
                     print("feedback_for_email:-",emailFeedback)
             
             elif overall_matching_score >= 70:
@@ -744,7 +756,7 @@ def lambda_handler(event, context):
                     overall_Analysis=overall_Analysis
                 )
 
-                completion_text_approval =gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
+                completion_text_approval =gcp_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70")
 
 
                 ###########################################
@@ -763,7 +775,7 @@ def lambda_handler(event, context):
                 ###########################################
 
                 prompt = feedback_email_greaterthen_70_prompt.format(completion_text_approval=completion_text_approval)
-                emailFeedback = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70",want_json=False)
+                emailFeedback = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Score feedback for >70",want_json=False)
 
                 print("feedback_for_email:-", emailFeedback)
                 
@@ -771,7 +783,7 @@ def lambda_handler(event, context):
                 print("otherRequirements:-", otherRequirements)
                 if otherRequirements:
                     prompt = check_mandatory_requirement_prompt.format(processed_text=processed_text, otherRequirements=otherRequirements)
-                    analysis_result_json  = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Cheching Mandatoey Requirements") 
+                    analysis_result_json  = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Cheching Mandatoey Requirements") 
 
                     print("analysis_result",analysis_result_json)
                     requirements_missing = analysis_result_json["analysis"]["requirements_missing"]
@@ -787,7 +799,7 @@ def lambda_handler(event, context):
                             jdItem_extracted=jdItem_extracted, 
                             requirements_missing=requirements_missing)
 
-                        completion_text_rejection =  gpt_models[0].invoke_model_with_backoff(prompt,Task= "Rejection when amndatory Not met")
+                        completion_text_rejection =  gcp_models[0].invoke_model_with_backoff(prompt,Task= "Rejection when amndatory Not met")
 
 
                         completion_text_rejection_for_candidate = completion_text_rejection.get("feedback_Candidate")
@@ -863,9 +875,15 @@ if __name__ == "__main__":
     # event ={'USER_PK': 'USR#EML#syadavendra@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJC783RRGAJ1EXXEV9KARE8X', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KJC77XNPRW652J3GSYCDXREP', 'sourceTypeCvAwsS3Details': {'resourceType': 'CAND_SUBMIT_CV_JOB', 'bucketName': 'worko-app-dev', 'filePath': 'candidate-submit-cvs/companies/01K47MSBKS79ACY0BM6Z8VS3F5/jobs/01KHZVWRAG1H29PNBX6FQ4RYJW/cvs', 'fileName': '01KJC779BZ9D6J9YA75T30P7WD.pdf'}}
     
     #request from move to aplicant from my database
-    event = {'USER_PK': 'USR#EML#sahanasgp7@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJPQ9GK51XSH4JBDP6FKJRGB', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KHXASXJ694280F3KY45AK6MR', 'sourceTypeCvAwsS3Details': {'resourceType': 'CORP_CAND_BULK_CV_UPLOAD', 'bucketName': 'worko-corporate-cand-profile-dev', 'filePath': 'companies/01K47MSBKS79ACY0BM6Z8VS3F5/bulk-cvs', 'fileName': '01KHXAS6YPNDWRDTJ1GVECX7G1.pdf'}}
+    # event = {'USER_PK': 'USR#EML#sahanasgp7@gmail.com', 'USER_DETAIL_SK': 'ID#', 'ENTITY_SK': 'JOB#APP#ID#01KJPQ9GK51XSH4JBDP6FKJRGB', 'MATCHING_ENTITY': 'SOURCE_TYPE_JOB_APP', 'candidateParsedCvId': '01KHXASXJ694280F3KY45AK6MR', 'sourceTypeCvAwsS3Details': {'resourceType': 'CORP_CAND_BULK_CV_UPLOAD', 'bucketName': 'worko-corporate-cand-profile-dev', 'filePath': 'companies/01K47MSBKS79ACY0BM6Z8VS3F5/bulk-cvs', 'fileName': '01KHXAS6YPNDWRDTJ1GVECX7G1.pdf'}}
+    event = {'USER_PK': 'USR#EML#shaukt1998+34@gmail.com', 'USER_DETAIL_SK': 'ID#', 'MATCHING_ENTITY': 'JOB_APP', 'ENTITY_SK': 'JOB#APP#ID#01KSZ9FSGDY3VFC15BRPDNSZJW'}    # form submit flow event
 
     lambda_handler(event, None)
+
+
+
+    
+    # event = {'USER_PK': 'USR#EML#shaukt1998+34@gmail.com', 'USER_DETAIL_SK': 'ID#', 'MATCHING_ENTITY': 'JOB_APP', 'ENTITY_SK': 'JOB#APP#ID#01KSZ9FSGDY3VFC15BRPDNSZJW'}    # form submit flow event
 
 
 

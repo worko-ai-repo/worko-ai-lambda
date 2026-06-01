@@ -64,8 +64,8 @@ def process_parsed_cv_json(cv_obj):
         return cv_obj
 
 class FirestoreManager:
-    def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
-        self.GCP_secret_name = GCP_secret_name
+    def __init__(self,GCP_secret,GCP_DATABASE_NAME):
+        self.GCP_secret = GCP_secret
         self.GCP_DATABASE_NAME = GCP_DATABASE_NAME
         self.db = self._initialize_firestore()
 
@@ -89,7 +89,8 @@ class FirestoreManager:
             raise
 
     def _initialize_firestore(self):
-        creds_dict = self.get_secret(self.GCP_secret_name)
+        # creds_dict = self.get_secret(self.GCP_secret_name)
+        creds_dict =self.GCP_secret 
         FIRESTORE_PROJECT_ID =creds_dict.get("project_id")
 
         # GCP_DATABASE_NAME ="worko-corp-db-" +self.env 

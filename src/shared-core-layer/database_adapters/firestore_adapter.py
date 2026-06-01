@@ -11,8 +11,8 @@ from datetime import datetime
 
      
 class FirestoreManagerAgency:
-    def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
-        self.GCP_secret_name = GCP_secret_name
+    def __init__(self,GCP_secret,GCP_DATABASE_NAME):
+        self.GCP_secret = GCP_secret
         self.GCP_DATABASE_NAME = GCP_DATABASE_NAME
         self.db = self._initialize_firestore()
 
@@ -37,7 +37,8 @@ class FirestoreManagerAgency:
                 }
 
     def _initialize_firestore(self):
-        creds_dict = self.get_secret(self.GCP_secret_name)
+        # creds_dict = self.get_secret(self.GCP_secret_name)
+        creds_dict = self.GCP_secret
         FIRESTORE_PROJECT_ID =creds_dict.get("project_id")
 
         # GCP_DATABASE_NAME ="worko-corp-db-" +self.env 
@@ -80,8 +81,8 @@ class FirestoreManagerAgency:
         return doc_ref.get().to_dict()
   
 class FirestoreManagerSourcetype:
-    def __init__(self,GCP_secret_name,GCP_DATABASE_NAME):
-        self.GCP_secret_name = GCP_secret_name
+    def __init__(self,GCP_secret_creds,GCP_DATABASE_NAME):
+        self.GCP_secret_creds = GCP_secret_creds
         self.GCP_DATABASE_NAME = GCP_DATABASE_NAME
         self.db = self._initialize_firestore()
 
@@ -105,10 +106,8 @@ class FirestoreManagerSourcetype:
                     "body": json.dumps({"error": f"Secret '{secret_name}' not found"})
                 }
 
-
-
     def _initialize_firestore(self):
-        creds_dict = self.get_secret(self.GCP_secret_name)
+        creds_dict = self.GCP_secret_creds
         FIRESTORE_PROJECT_ID =creds_dict.get("project_id")
 
         # GCP_DATABASE_NAME ="worko-corp-db-" +self.env 

@@ -1,4 +1,4 @@
-from utils import *
+from utilsLocal import *
 import os
 from dataclasses import dataclass
 import ast
@@ -204,17 +204,35 @@ def apply_threshold_adjustments(parsed_query: Dict) -> Dict:
     return parsed_dict
     
 
+import sys
+from pathlib import Path
 
+if __name__ == "__main__":
+    shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
+    sys.path.insert(0, str(shared_layer_path))
+from ai_clients.gcp_client import GeminiClient
+from utils import get_secret
+
+gcp_credentials = None
 def lambda_handler(event, context):
+    global gcp_credentials
     print("Got a event :- ",event)
 
     searchByPrompt = event.get("searchByPrompt")
     env = os.environ.get("ENVIRONMENT", "dev")
-    GCP_secret_name = "AZURE-openai-secret-multimodel-"+env
-    azure_secret = get_secret(GCP_secret_name)
-    gptclient = AzureOpenAIClient(azure_secret, model="gpt-4o")
+    # GCP_secret_name = "AZURE-openai-secret-multimodel-"+env
+    # azure_secret = get_secret(GCP_secret_name)
+    # gptclient = AzureOpenAIClient(azure_secret, model="gpt-4o")
+    if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
+        gcp_credentials = get_secret(GCP_secret_name)
+    else:    
+        print("Using cached GCP credentials")
+    gcp = GeminiClient(gcp_credentials,env,model="gemini-3.5-flash")
 
-    query_parser = QueryParser(gptclient)
+    # query_parser = QueryParser(gptclient)
+    query_parser = QueryParser(gcp)
+
     parsed_query = query_parser.parse_query(searchByPrompt)
     
     # Apply threshold adjustments based on check_ctc and check_experience logic
@@ -226,12 +244,12 @@ def lambda_handler(event, context):
         "body": json.dumps(adjusted_query)  # Convert the dictionary to a JSON string
     }
 
-# if __name__ == "__main__":
-#     # Test the function with a sample event
-#     test_event = {
-#         "searchByPrompt": "need a software Engineer with 3+ years of experience in java and python with ctc 40"
-#     }
-#     result = lambda_handler(test_event, None)
-#     print(result)
+if __name__ == "__main__":
+    # Test the function with a sample event
+    test_event = {
+        "searchByPrompt": "need a software Engineer with 3+ years of experience in java and python with ctc 40"
+    }
+    result = lambda_handler(test_event, None)
+    print(result)
 
 

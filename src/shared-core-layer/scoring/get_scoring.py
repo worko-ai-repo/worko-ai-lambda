@@ -8,7 +8,8 @@ if __name__ == "__main__":
     shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
     sys.path.insert(0, str(shared_layer_path))
 
-from ai_clients import AzureOpenAIClient
+# from ai_clients import AzureOpenAIClient
+from ai_clients.gcp_client import GeminiClient
 from prompt.prompts import *
 
 # Import only specific functions to avoid circular imports
@@ -20,15 +21,17 @@ from utils.utils import (
 )
 
 # Initialize AI client
-env = os.environ.get("ENVIRONMENT", "dev")
-azure_openai_secret_name = "AZURE-openai-secret-multimodel-" + env
-azure_openai_secret = get_secret(azure_openai_secret_name)
-gpt4 = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
-gpt_models = [gpt4]
+# env = os.environ.get("ENVIRONMENT", "dev")
+# azure_openai_secret_name = "AZURE-openai-secret-multimodel-" + env
+# azure_openai_secret = get_secret(azure_openai_secret_name)
+# gpt4 = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
+# gpt_models = [gpt4]
+
+# gcp_models =
 
 
 
-def get_score(processed_text,job_desc):
+def get_score(processed_text,job_desc,gcp_models):
     # return {"overall_matching_score": ensure_decimal(81)} #for debugging
     """Calculate matching score for job description and resume.
     
@@ -45,7 +48,7 @@ def get_score(processed_text,job_desc):
         exp_prompt = get_experience_level.format(job_desc=job_desc)
 
         # Get experience level
-        content = gpt_models[0].invoke_model_with_backoff(
+        content = gcp_models[0].invoke_model_with_backoff(
             exp_prompt, 
             Task="Extracting experience level for Non-Tech job",
             want_json=True
@@ -58,7 +61,7 @@ def get_score(processed_text,job_desc):
         tech_prompt = get_tech_non_tech.format(job_desc=job_desc)
         
         # Get tech/non-tech classification
-        completion_text = gpt_models[0].invoke_model_with_backoff(
+        completion_text = gcp_models[0].invoke_model_with_backoff(
             tech_prompt, 
             Task="checking for tech or non-tech job",
             want_json=False
@@ -111,7 +114,7 @@ def get_score(processed_text,job_desc):
             # Use different model invocation functions for each step
             if i == 0:
                 # Adding code for Open AI processing
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
+                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -126,7 +129,7 @@ def get_score(processed_text,job_desc):
             elif i == 1:
 
                 # Adding code for Open AI processing
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
+                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -140,7 +143,7 @@ def get_score(processed_text,job_desc):
 
             elif i == 2:
 
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
+                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -154,7 +157,7 @@ def get_score(processed_text,job_desc):
 
             elif i == 3:
 
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
+                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
                 print("Open AI content",content)
                 overall_Analysis = overall_Analysis + content
                 temp_score = extract_score_from_OpenAI_response(content)
@@ -167,7 +170,7 @@ def get_score(processed_text,job_desc):
                     temp_score = 18
             else:
                 # Fallback to original function if there are more steps than defined functions
-                content = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Fallback to original function if there are more steps than defined functions", want_json=False)
+                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Fallback to original function if there are more steps than defined functions", want_json=False)
 
             # If temp_score is coming from the JSON as a list
             if isinstance(temp_score, list) and len(temp_score) > 0:

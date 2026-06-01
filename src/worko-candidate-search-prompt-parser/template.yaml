@@ -48,6 +48,18 @@ Resources:
     Metadata:
       BuildMethod: python3.10
 
+  SharedCoreLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "worko-shared-core-${Environment}"
+      Description: Shared core business logic for JD-Resume matching
+      ContentUri: ../shared-core-layer/
+      CompatibleRuntimes:
+        - python3.10
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.10
+
   CandidateSearchPromptParserFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -57,6 +69,7 @@ Resources:
       Role: !GetAtt CandidateSearchPromptParserRole.Arn
       Layers:
         - !Ref PythonDependenciesLayer
+        - !Ref SharedCoreLayer
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment

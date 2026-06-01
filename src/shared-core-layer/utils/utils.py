@@ -1841,7 +1841,7 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
         return "Error processing CV", cv_parsed_template
 
 
-def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,otherRequirements,jdItem_extracted):
+def jd_resume_matching(table_name, partition_key_value, gcp_models, sort_key_prefix, job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,otherRequirements,jdItem_extracted):
     # Import here to avoid circular imports
     from scoring.get_scoring import get_score
     from feedback.feedback_generator import get_feedback_for_bulk_upload
@@ -1851,7 +1851,7 @@ def jd_resume_matching(table_name, partition_key_value, sort_key_prefix, job_des
     try:
 
         print(type(job_desc),type(processed_text), str(job_desc)[:100], str(processed_text)[:100])
-        score_obj = get_score(processed_text, job_desc)
+        score_obj = get_score(processed_text, job_desc, gcp_models)
         overall_matching_score = score_obj["overall_matching_score"]
 
         print("overall_matching_score in lambda", overall_matching_score, type(overall_matching_score))

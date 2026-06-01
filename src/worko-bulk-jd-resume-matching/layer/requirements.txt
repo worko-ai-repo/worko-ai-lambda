@@ -1,2 +1,4 @@
 # HTTP requests
 requests>=2.28.0
+google-auth==2.36.0
+google-genai==1.0.0

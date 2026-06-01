@@ -23,7 +23,8 @@ if __name__ == "__main__":
     shared_layer_path = Path(__file__).parent.parent / "shared-core-layer"
     sys.path.insert(0, str(shared_layer_path))
 
-from ai_clients import AzureOpenAIClient
+# from ai_clients import AzureOpenAIClient
+from ai_clients.gcp_client import GeminiClient
 from utils import get_secret
 from scoring.get_scoring import get_score
 from database_adapters import FirestoreManagerSourcetype
@@ -1176,7 +1177,7 @@ def get_cv(s3_bucket_name,cvAwsS3FilePath,cvAwsS3FileName):
 #     return int(overall_matching_score),rejection_feedback,rejectionFeedbackBySystemForApplicant,scoreDetailsForApplicant,scoreDetails,emailFeedback
 
 
-def get_score_and_feedback(processed_text,jdItem_extracted,gpt_models,job_desc,jobs_id,otherRequirements=""):
+def get_score_and_feedback(processed_text,jdItem_extracted,models,job_desc,jobs_id,otherRequirements=""):
     final_completion_text = ""
     rejection_feedback = ""
     rejectionFeedbackBySystemForApplicant=""   #
@@ -1192,11 +1193,11 @@ def get_score_and_feedback(processed_text,jdItem_extracted,gpt_models,job_desc,j
     feedbackMachingWithCandidate = False
     try:
     
-        score_obj = get_score(processed_text, job_desc)
+        score_obj = get_score(processed_text, job_desc,models)
         overall_Analysis = score_obj.get("overall_Analysis","")
         overall_matching_score = score_obj["overall_matching_score"]
         print("final score: ---",overall_matching_score)
-        feedback_result = get_detailed_feedback(processed_text, jdItem_extracted, overall_Analysis, overall_matching_score, otherRequirements,gpt_models)
+        feedback_result = get_detailed_feedback(processed_text, jdItem_extracted, overall_Analysis, overall_matching_score, otherRequirements,models)
         
         rejection_feedback = feedback_result["rejection_feedback"]
         rejectionFeedbackBySystemForApplicant = feedback_result["rejectionFeedbackBySystemForApplicant"]
@@ -1211,18 +1212,34 @@ def get_score_and_feedback(processed_text,jdItem_extracted,gpt_models,job_desc,j
 
 
 # def main(evant):
+gcp_credentials = None
+gcp_credentials_firstore = None
+
 def lambda_handler(event, context):
+    global gcp_credentials,gcp_credentials_firstore 
     print("Got event:", event)
     env = os.environ.get("ENVIRONMENT","dev")
-    GCP_secret_name = "GCP-firestore-secret-"+env
     GCP_DATABASE_NAME = "worko-corp-db-" +env
     current_datetime = datetime.now()
     iso_string = current_datetime.isoformat()
 
-    azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
-    azure_openai_secret = get_secret(azure_openai_secret_name)
-    gpt4 = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
-    gpt_models = [gpt4] 
+    # azure_openai_secret_name = "AZURE-openai-secret-multimodel-"+env
+    # azure_openai_secret = get_secret(azure_openai_secret_name)
+    # gpt4 = AzureOpenAIClient(azure_openai_secret, model="gpt-4o")
+    # gpt_models = [gpt4] 
+
+    if not gcp_credentials:
+        GCP_secret_name ="GCP-aiplatform-secrect-"+env
+        gcp_credentials = get_secret(GCP_secret_name)
+    else:    
+        print("Using cached GCP credentials")
+    
+    if not gcp_credentials_firstore:
+        gcp_credentials_secrect_name= "GCP-firestore-secret-"+env
+        gcp_credentials_firstore = get_secret(gcp_credentials_secrect_name)
+
+    gcp = GeminiClient(gcp_credentials,env,model="gemini-3.5-flash")
+    gcp_models = [gcp] 
     
     USER_JOB_APPLICATION = event.get("sourceTypeMatchingScoreEntity","")
     if USER_JOB_APPLICATION=="USER_JOB_APPLICATION":
@@ -1250,11 +1267,11 @@ def lambda_handler(event, context):
         jdItem,jdItem_extracted,job_desc,experienceRange,softSkills,technicalSkills,coreSkills,otherRequirements,salaryRange,experienceRange,department,jobTitle = get_jd(jobs_id)
         
         try:
-            overall_matching_score,rejection_feedback,rejectionFeedbackBySystemForApplicant,scoreDetailsForApplicant,scoreDetails,emailFeedback = get_score_and_feedback(processed_text,jdItem_extracted,gpt_models,job_desc,jobs_id,otherRequirements)
+            overall_matching_score,rejection_feedback,rejectionFeedbackBySystemForApplicant,scoreDetailsForApplicant,scoreDetails,emailFeedback = get_score_and_feedback(processed_text,jdItem_extracted,gcp_models,job_desc,jobs_id,otherRequirements)
             
             Rejection_object = False
             if partition_key_value:
-                Rejection_object = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text,gpt_models)
+                Rejection_object = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text,gcp_models)
             
             update_data = {
                 'isFindMatchingScoreInProgress': False,
@@ -1312,12 +1329,12 @@ def lambda_handler(event, context):
         # Initialize Azure OpenAI Client
 
         if candidateJobMatchingId: #update flag in case of candidateJobMatchingId
-            DBManager = FirestoreManagerSourcetype(GCP_secret_name,GCP_DATABASE_NAME)
+            DBManager = FirestoreManagerSourcetype(gcp_credentials_firstore,GCP_DATABASE_NAME)
             collection_name = "candidateJobMatchings" 
             DBManager.update_firestore_document_with_scoring_data(collection_name, candidateJobMatchingId,"","",False)
 
         else:
-            DBManager = FirestoreManagerSourcetype(GCP_secret_name,GCP_DATABASE_NAME)
+            DBManager = FirestoreManagerSourcetype(gcp_credentials_firstore,GCP_DATABASE_NAME)
             collection_name = "agencyUserSubmissions" 
             DBManager.update_firestore_document_with_scoring_data(collection_name, Doc_ID,"","",False)
 
@@ -1328,15 +1345,15 @@ def lambda_handler(event, context):
         jdItem,jdItem_extracted,job_desc,experienceRange,softSkills,technicalSkills,coreSkills,otherRequirements,salaryRange,experienceRange,department,jobTitle =get_jd(jobs_id)
 
         try:   
-            overall_matching_score,rejection_feedback,rejectionFeedbackBySystemForApplicant,scoreDetailsForApplicant,scoreDetails,emailFeedback = get_score_and_feedback(processed_text,jdItem_extracted,gpt_models,job_desc,jobs_id,otherRequirements)
+            overall_matching_score,rejection_feedback,rejectionFeedbackBySystemForApplicant,scoreDetailsForApplicant,scoreDetails,emailFeedback = get_score_and_feedback(processed_text,jdItem_extracted,gcp_models,job_desc,jobs_id,otherRequirements)
 
             Rejection_object=False
             
             if partition_key_value:
-                Rejection_object  = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text,gpt_models)
+                Rejection_object  = Registered_user_analysis(jobs_id,jdItem,jdItem_extracted,partition_key_value,processed_text,gcp_models)
 
             if candidateJobMatchingId:
-                DBManager = FirestoreManagerSourcetype(GCP_secret_name,GCP_DATABASE_NAME)
+                DBManager = FirestoreManagerSourcetype(gcp_credentials_firstore,GCP_DATABASE_NAME)
                 collection_name = "candidateJobMatchings" 
 
                 if actionByCorporateUserId:
