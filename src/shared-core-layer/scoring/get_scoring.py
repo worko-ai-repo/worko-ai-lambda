@@ -86,27 +86,31 @@ def get_score(processed_text,job_desc,gcp_models):
 
             
             if "superior" in experience_level:
-                print("Superior level - work in progress")
+                print("Superior level - superior")
                 steps = non_tech_superior
             elif "senior" in experience_level:
-                print("Senior level - work in progress")
+                print("Senior level - senior")
                 steps = non_tech_senior
             elif "junior" in experience_level:
-                print("Junior level - work in progress")
+                print("Junior level - junior")
                 steps = non_tech_junior 
             elif "fresher" in experience_level:
-                print("Fresher level - work in progress")
+                print("Fresher level - fresher")
                 steps = non_tech_fresher
         else:
             print("Technical role detected")
             if "superior" in experience_level:
                 steps = tech_superior
+                print("Superior level - superior")
             elif "senior" in experience_level:
                 steps = tech_senior
+                print("Superior level - senior")
             elif "junior" in experience_level:
                 steps = tech_junior
+                print("Superior level - junior")
             elif "fresher" in experience_level:
                 steps = tech_fresher
+                print("Superior level - fresher")
         for i, step in enumerate(steps):
 
             prompt = create_prompt(processed_text, job_desc, step)
