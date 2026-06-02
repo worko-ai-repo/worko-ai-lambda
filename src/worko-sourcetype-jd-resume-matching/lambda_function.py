@@ -646,7 +646,7 @@ class FirestoreManager:
                 if jobMatched:
                     doc_ref = self.db.collection(collection_name).document(doc_id)
                     doc_ref.update(update_data)
-                    print(f"Updated Firestore document {doc_id} isFindMatchingScoreInProgress: False and update_data : {update_data}")
+                    print(f"Updated Firestore document {doc_id} in collection {collection_name} and isFindMatchingScoreInProgress: False and update_data : {update_data}")
                     return True
 
                 
@@ -659,7 +659,7 @@ class FirestoreManager:
                         "isFindMatchingScoreInProgress":isFindMatchingScoreInProgress
 
                     })
-                    print(f"Updated Firestore document {doc_id} isFindMatchingScoreInProgress: False and update_data : {matchingScoreDetails}")
+                    print(f"Updated Firestore document {doc_id} in collection {collection_name} and isFindMatchingScoreInProgress: False and update_data : {matchingScoreDetails}")
                     return True
 
                 elif updatedByUserId: #if you receive actionByUserId in payload then  updatedByUserId 
@@ -673,7 +673,7 @@ class FirestoreManager:
                         "isFindMatchingScoreInProgress":isFindMatchingScoreInProgress
 
                     })
-                    print(f"Updated Firestore document {doc_id} isFindMatchingScoreInProgress: False and update_data {matchingScoreDetails}")
+                    print(f"Updated Firestore document {doc_id} in collection {collection_name} and isFindMatchingScoreInProgress: False and update_data {matchingScoreDetails}")
                     return True
 
             else:
@@ -683,7 +683,7 @@ class FirestoreManager:
                     "isFindMatchingScoreInProgress":True
 
                 })
-                print(f"Updated Firestore document {doc_id} with  isFindMatchingScoreInProgress :True ")
+                print(f"Updated Firestore document {doc_id} in collection {collection_name} with  isFindMatchingScoreInProgress :True ")
                 return True
 
         except Exception as e:
