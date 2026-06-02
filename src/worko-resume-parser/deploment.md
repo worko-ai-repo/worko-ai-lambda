@@ -49,3 +49,9 @@ sam deploy \
 09/03/2026
 added this line in the prompt
  6) location must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"
+
+
+02/06/2026
+remove these env variables from template.yaml
+          AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_DEPLOYMENT
+          AZURE_OPENAI_API_KEY,AZURE_OPENAI_API_VERSION

@@ -1,0 +1,7 @@
+
+
+
+02/06/2026
+remove these env variables from template.yaml
+          AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_DEPLOYMENT
+          AZURE_OPENAI_API_KEY,AZURE_OPENAI_API_VERSION

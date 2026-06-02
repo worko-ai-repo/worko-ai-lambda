@@ -54,6 +54,8 @@ sam deploy \
 - `AZURE_OPENAI_*`: Azure OpenAI configuration
 
 
-##############################  30-05-2026 ###################################
-1) add new env variable as ENVIRONMENT = "dev"
-2) in template add core shared layer
+##############################      ###################################
+02/06/2026
+1) add new env variable as ENVIRONMENT = "dev" (in template.yaml )
+2) add core shared layer in template.yaml 
+3) remove these env varials from template.yaml AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_DEPLOYMENT,AZURE_OPENAI_API_KEY,AZURE_OPENAI_API_VERSION

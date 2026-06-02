@@ -97,4 +97,75 @@ Jobs are classified into experience levels:
 ## 6. feedback based on score
 
 
+############################     02-06-2026     ##################################
+deployment for azure to gcp migration + secrect manager caching (only code changes + lambda template changes) no new lambda only added a new common layer for all (shared-core-layer)
+check below things if needed after you deploy all lambdas.
+
+***common changes for all.***
+
+1) add SharedCoreLayer in template.yaml if its not there( need to add twice in (1) layer name, (2) layer details.)
+2) every lambda should contain these two library in lambda_name/layer/rquirements.txt
+google-auth==2.36.0
+google-genai==1.0.0
+
+***these are all lambdas which needs to be deployed with specific changes***
+
+1) worko-job-description parser
+2) worko-resume-parser
+** remove these env variables from template.yaml
+          AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_DEPLOYMENT
+          AZURE_OPENAI_API_KEY,AZURE_OPENAI_API_VERSION
+
+3) worko-resume-sign-up-skills-parser
+** add new env variable as ENVIRONMENT = "dev" (in template.yaml )
+
+** remove these env variables from template.yaml
+          AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_DEPLOYMENT
+          AZURE_OPENAI_API_KEY,AZURE_OPENAI_API_VERSION
+
+4) worko-cand-profile-parser
+5) worko-candidate-search-prompt-parser
+6) worko-referrel-source-cand-profile-parser
+7) worko-jd-resume-matching
+** remove these env variables from template.yaml
+          AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_DEPLOYMENT
+          AZURE_OPENAI_API_KEY,AZURE_OPENAI_API_VERSION
+
+8) worko-bulk-jd-resume-matchig
+9) worko-sourcetype-jd-resume-matching
+** remove these env variables from template.yaml
+          AZURE_OPENAI_ENDPOINT,AZURE_OPENAI_DEPLOYMENT
+          AZURE_OPENAI_API_KEY,AZURE_OPENAI_API_VERSION
+
+10) worko-agency-bulk-jd-resume-matching
+
+
+***commands example*** 
+(checkout  ,'codecatalyst/workflows/lambda_name' for exact commands)
+
+
+## Lambda 2: worko-resume-parser-prod (EXISTING LAMBDA - REPLACEMENT)
+
+### Navigate to Directory
+```bash
+cd src/worko-resume-parser
+```
+
+### Build
+```bash
+mac -->> sam build / windows -->> sam build --use-container 
+```
+
+### Deploy
+```bash
+sam deploy \
+  --stack-name worko-resume-parser-dev-stack \ ##your lambda name with suffix stack
+  --region ap-south-1 \
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides Environment=prod\ ## put prod here
+  --s3-bucket aws-sam-cli-managed-default-samclisourcebucket-mpwvaft0yfqx \  ## put one s3 bucket name
+  --no-confirm-changeset
+```
+
+
 

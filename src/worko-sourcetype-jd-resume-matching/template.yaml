@@ -97,10 +97,7 @@ Resources:
           JOBS_DYNAMO_TABLE_NAME: "worko-job-app"
           S3_VECTOR_BUCKET_NAME: "worko-s3-vector-bucket"
           S3_VECTOR_INDEX_NAME: "collegelist-s3-vector-index"
-          AZURE_OPENAI_ENDPOINT: "https://aif-wrk-dev-sin-01.openai.azure.com"
-          AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
-          AZURE_OPENAI_API_KEY: "REDACTED"
-          AZURE_OPENAI_API_VERSION: "2025-01-01-preview"
+ 
 
 Outputs:
   WorkoAILambdaFunctionArn:
