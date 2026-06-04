@@ -1675,170 +1675,176 @@ def process_cv(processed_text: str,gpt_models) -> Tuple[str, Dict[str, str]]:
     if not processed_text:
         return "Unfortunately, we are not able to read your resume", cv_parsed_template
 
-    try:
-        # First extraction for CV details
-        cv_prompt = (f"Extract professional CV/resume information from the following text. "
-                    f"This is for legitimate recruitment purposes.\n\n"
-                    f"CV TEXT: {processed_text}\n\n"
-                    f"EXTRACTION TEMPLATE:\n{cv_extract_template}")
-        cv_extract = gpt_models[0].invoke_model_with_backoff(cv_prompt,Task= "get cv_extract",want_json=False)
+    for model in gpt_models:
+
+        try:
+            # First extraction for CV details
+            cv_prompt = (f"Extract professional CV/resume information from the following text. "
+                        f"This is for legitimate recruitment purposes.\n\n"
+                        f"CV TEXT: {processed_text}\n\n"
+                        f"EXTRACTION TEMPLATE:\n{cv_extract_template}")
+            cv_extract = model.invoke_model_with_backoff(cv_prompt,Task= "get cv_extract",want_json=False)
+            
+            # cv_extract = clean_text(cv_extract)
+            print("cv_extract-------",cv_extract)
+            
         
-        # cv_extract = clean_text(cv_extract)
-        print("cv_extract-------",cv_extract)
-        
-       
-            # f"  \"candidateCurrentCTC\": 0,\n"
-            # f"  \"candidateExpectedCTC\": 0,\n"
-         # Second extraction for parsed details
-        parsed_prompt = (
-            f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
+                # f"  \"candidateCurrentCTC\": 0,\n"
+                # f"  \"candidateExpectedCTC\": 0,\n"
+            # Second extraction for parsed details
+            parsed_prompt = (
+                f"You are an expert HR specialized in resume analysis and extracting structured data.\n\n"
 
-            f"Resume text:\n{processed_text}\n\n"
+                f"Resume text:\n{processed_text}\n\n"
 
-            f"*** RULE: If you don't find any data in the resume ***\n"
-            f"- If the value is a number → use 0\n"
-            f"- If the value is a boolean → use false\n"
-            f"- If the value is a string → use an empty string \"\"\n"
-            f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
+                f"*** RULE: If you don't find any data in the resume ***\n"
+                f"- If the value is a number → use 0\n"
+                f"- If the value is a boolean → use false\n"
+                f"- If the value is a string → use an empty string \"\"\n"
+                f"- If the candidate is a fresher or not currently working → set candidateCurrentCompany = \"\"\n\n"
 
-            f"*** Mandatory data to find in the resume ***\n"
-            f"These fields MUST always be present in the output:\n"
-            f"1. candidateName\n"
-            f"2. candidateCurrentDesignation\n"
-            f"3. candidateCurrentCompany\n"
-            f"4. candidateTotalYOE\n"
-            f"5. candidateLocation\n\n"
+                f"*** Mandatory data to find in the resume ***\n"
+                f"These fields MUST always be present in the output:\n"
+                f"1. candidateName\n"
+                f"2. candidateCurrentDesignation\n"
+                f"3. candidateCurrentCompany\n"
+                f"4. candidateTotalYOE\n"
+                f"5. candidateLocation\n\n"
 
-            f"*** Last Check ***\n"
-            f"- All numbers must be integers.\n"
-            f"- Ensure ALL mandatory fields are present.\n"
-            f"- Output must be valid JSON only.\n"
-            f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
-            f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
-            f"- if Phone number is give the you must fill all three variables"
-            f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int), 4.candidateNoticePeriod int or Null"
-            f"Rule to return null values:\n"
-            f" if any str key is not given in in resume text just return Null for that partcular fild "
-            f" example :candidateNoticePeriod,candidateLocation"
-            f" candidateLocation must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"
+                f"*** Last Check ***\n"
+                f"- All numbers must be integers.\n"
+                f"- Ensure ALL mandatory fields are present.\n"
+                f"- Output must be valid JSON only.\n"
+                f"- candidateExperience must be a numeric value (int or decimal like 6, 6.5, 10.2).\n"
+                f"- candidatePhoneNumber must be in format: +91XXXXXXXXXX (no spaces).\n\n"
+                f"- if Phone number is give the you must fill all three variables"
+                f"1. candidatePhoneNumber: number with country code (string), 2. candidateNumber:  number only without country code (int), 3. candidatePhoneCountryCode (int), 4.candidateNoticePeriod int or Null"
+                f"Rule to return null values:\n"
+                f" if any str key is not given in in resume text just return Null for that partcular fild "
+                f" example :candidateNoticePeriod,candidateLocation"
+                f" candidateLocation must be only city name followed by state name examples. Mumbai, Maharahstra,  Bengaluru Karnataka"
 
 
-            f"*** Output Format (JSON only) ***\n"
-            f"{{{{\n"
-            f"  \"candidateName\": \"\",\n"
-            f"  \"about\":\"extract about me or summary or profile or objective from resume\",\n"
-            f"  \"education\": [\n"
-            f"    {{\n"
-            f"      \"collage\": \"[INSTITUTION_NAME or COLLEGE_NAME]\",\n"
-            f"      \"degree\": \"[DEGREE_NAME]\",\n"
-            f"      \"startedYear\": \"[STARTED_YEAR]\",\n"
-            f"      \"passingYear\": \"[GRADUATION_YEAR]\"\n"
-            f"    }}\n"
-            f"  ],\n"
-            f"  \"candidateEmail\": \"\",\n"
-            f"  \"candidatePhoneNumber\": \"\",\n"
-            f"  \"candidateNumber\": 0,\n"
-            f"  \"candidatePhoneCountryCode\": 0,\n"
-            f"  \"candidateCurrentCompany\": \"\",\n"
-            f"  \"candidateCurrentDesignation\": \"\",\n"
-            f"  \"candidateExperience\": 0,\n"
-            f"  \"candidateTotalYOE\": 0,\n"
-            f"  \"candidateRelevantYOE\": 0,\n"
+                f"*** Output Format (JSON only) ***\n"
+                f"{{{{\n"
+                f"  \"candidateName\": \"\",\n"
+                f"  \"about\":\"extract about me or summary or profile or objective from resume\",\n"
+                f"  \"education\": [\n"
+                f"    {{\n"
+                f"      \"collage\": \"[INSTITUTION_NAME or COLLEGE_NAME]\",\n"
+                f"      \"degree\": \"[DEGREE_NAME]\",\n"
+                f"      \"startedYear\": \"[STARTED_YEAR]\",\n"
+                f"      \"passingYear\": \"[GRADUATION_YEAR]\"\n"
+                f"    }}\n"
+                f"  ],\n"
+                f"  \"candidateEmail\": \"\",\n"
+                f"  \"candidatePhoneNumber\": \"\",\n"
+                f"  \"candidateNumber\": 0,\n"
+                f"  \"candidatePhoneCountryCode\": 0,\n"
+                f"  \"candidateCurrentCompany\": \"\",\n"
+                f"  \"candidateCurrentDesignation\": \"\",\n"
+                f"  \"candidateExperience\": 0,\n"
+                f"  \"candidateTotalYOE\": 0,\n"
+                f"  \"candidateRelevantYOE\": 0,\n"
 
-            f"  \"candidateNoticePeriod\":  \"\",\n"
-            f"  \"candidateLocation\": \"\",\n"
-            f"  \"candidateReadyToRelocate\": false,\n"
-            f"  \"isNoticePeriodNegotiable\": false\n"
-            f"}}}}\n"
-        )
+                f"  \"candidateNoticePeriod\":  \"\",\n"
+                f"  \"candidateLocation\": \"\",\n"
+                f"  \"candidateReadyToRelocate\": false,\n"
+                f"  \"isNoticePeriodNegotiable\": false\n"
+                f"}}}}\n"
+            )
 
 
-        # cv_extracted_parsed = invoke_model_with_backoff_OpenAI(parsed_prompt,Task= "get cvExtractparsed" )
-        cv_extracted_parsed = gpt_models[0].invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed " )
-        current_timestamp = datetime.now().isoformat()
-        prompt = (
-            f"**Extract the following details from the resume extract:**\n"
-            f"- Core Skills (max 30 chars each)\n"
-            f"- Soft Skills (max 30 chars each)\n"
-            f"- Preferred departments (0–5, based on experience & skills)\n"
-            f"- Years of Experience (YOE)\n\n"
+            # cv_extracted_parsed = invoke_model_with_backoff_OpenAI(parsed_prompt,Task= "get cvExtractparsed" )
+            cv_extracted_parsed = model.invoke_model_with_backoff(parsed_prompt,Task= "get cvExtractparsed " )
+            current_timestamp = datetime.now().isoformat()
+            prompt = (
+                f"**Extract the following details from the resume extract:**\n"
+                f"- Core Skills (max 30 chars each)\n"
+                f"- Soft Skills (max 30 chars each)\n"
+                f"- Preferred departments (0–5, based on experience & skills)\n"
+                f"- Years of Experience (YOE)\n\n"
 
-            f"**Instructions**:\n"
-            f"- Use ONLY information explicitly written in the resume.\n"
-            f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
-            f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
-            f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
-            f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
-            f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
-            f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
-            f"- Add YOE for Core Skills if mentioned, else 0.\n"
-            f"- Calculate total YOE from roles or dates.\n\n"
+                f"**Instructions**:\n"
+                f"- Use ONLY information explicitly written in the resume.\n"
+                f"- Extract ONLY the top 20 Core Skills and top 10 Soft Skills.\n"
+                f"- **Core Skills (TECH)** = high-level domains only (System Architecture, Microservices Design).\n"
+                f"- **Technical Skills** = tools, languages, frameworks, cloud, DBs, certifications.\n"
+                f"- **Core Skills (NON-TECH)** = business/functional domains only.\n"
+                f"- **Technical Skills (NON-TECH)** = tools/platforms (Excel, SQL, Salesforce, SAP).\n"
+                f"- Soft Skills = interpersonal traits (Communication, Leadership, Problem Solving).\n"
+                f"- Add YOE for Core Skills if mentioned, else 0.\n"
+                f"- Calculate total YOE from roles or dates.\n\n"
 
-            f"**Mandatory Rules**:\n"
-            f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
-            f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
-            f"- Core Skills must NOT include:\n"
-            f"  • Job titles (Project Manager)\n"
-            f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
-            f"  • Interpersonal traits (Leadership, Mentoring)\n"
-            f"  • Tools/software (Excel, SAP, Salesforce)\n"
-            f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
+                f"**Mandatory Rules**:\n"
+                f"- ALWAYS Soft Skills (never Core): Managing Escalations, Team Mentoring, Leadership, Strategic Planning,\n"
+                f"  Stakeholder Management, Goal Setting, Problem Solving, Quick Learner, Data-driven decision-making.\n"
+                f"- Core Skills must NOT include:\n"
+                f"  • Job titles (Project Manager)\n"
+                f"  • Action phrases (Managing Escalations, Driving Initiatives)\n"
+                f"  • Interpersonal traits (Leadership, Mentoring)\n"
+                f"  • Tools/software (Excel, SAP, Salesforce)\n"
+                f"- Use timestamp for createdAt & updatedAt: {current_timestamp}\n\n"
 
-            f"**STRICT Example**:\n"
-            f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
-            f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
-            f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
-            f"technicalSkills: CRM tools\n\n"
+                f"**STRICT Example**:\n"
+                f"coreSkills: AWS or Cloud, Web App Design, Sales, Marketing\n"
+                f"softSkills: Escalation handling, Strategy & Execution, Team mentoring, Presentation skills,\n"
+                f"            Budget Management, Problem Solving, Quick Learner, Time management\n"
+                f"technicalSkills: CRM tools\n\n"
 
-            f"**STRICT RULES**:\n"
-            f"- If more than 20 skills exist, pick the 20 most relevant.\n"
-            f"- Do NOT invent skills.\n"
-            f"- A skill MUST appear only once across all categories.\n"
-            f"- Never include responsibilities/duties as skills.\n"
-            f"- Skills must be concise names.\n"
-            f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
-            f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
+                f"**STRICT RULES**:\n"
+                f"- If more than 20 skills exist, pick the 20 most relevant.\n"
+                f"- Do NOT invent skills.\n"
+                f"- A skill MUST appear only once across all categories.\n"
+                f"- Never include responsibilities/duties as skills.\n"
+                f"- Skills must be concise names.\n"
+                f"- For NON-TECH profiles: Core = domain/business expertise only.\n"
+                f"- Terms with verbs like Managing/Handling/Driving/Mentoring → Soft Skill.\n\n"
 
-            f"Resume extract:\n\n{processed_text}\n\n"
+                f"Resume extract:\n\n{processed_text}\n\n"
 
-            f"Return JSON only:\n"
-            f"{{{{\n"
-            f"  \"coreSkills\": [\n"
-            f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-            f"  ],\n"
-            f"  \"technicalSkills\": [\n"
-            f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
-            f"  ],\n"
-            f"  \"softSkills\": [\n"
-            f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
-            f"  ],\n"
-            f"  \"userPreferredDepartments\": [\n"
-            f"    \"List the department names based on resume designations and core skills\"\n"
-            f"  ],\n"
-            f"  \"userPreferredIndustries\": [\n"
-            f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
-            f"  ],\n"
-            f"  \"userPreferredlocations\": [\n"
-            f"    \"Extract if mentioned; else return empty list\"\n"
-            f"  ],\n"
-            f"  \"userPreferredRoles\": [\n"
-            f"    \"Extract roles/designations from resume\"\n"
-            f"  ]\n"
-            f"}}}}\n"
-        )
+                f"Return JSON only:\n"
+                f"{{{{\n"
+                f"  \"coreSkills\": [\n"
+                f"    {{{{\"skillName\": \"[CORE_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+                f"  ],\n"
+                f"  \"technicalSkills\": [\n"
+                f"    {{{{\"skillName\": \"[TECHNICAL_SKILL_NAME]\", \"years\": [YEARS_OF_EXPERIENCE]}}}}\n"
+                f"  ],\n"
+                f"  \"softSkills\": [\n"
+                f"    {{{{\"skillName\": \"[SOFT_SKILL_NAME]\"}}}}\n"
+                f"  ],\n"
+                f"  \"userPreferredDepartments\": [\n"
+                f"    \"List the department names based on resume designations and core skills\"\n"
+                f"  ],\n"
+                f"  \"userPreferredIndustries\": [\n"
+                f"    \"Extract up to 3 industries such as Information Technology, Banking, Healthcare\"\n"
+                f"  ],\n"
+                f"  \"userPreferredlocations\": [\n"
+                f"    \"Extract if mentioned; else return empty list\"\n"
+                f"  ],\n"
+                f"  \"userPreferredRoles\": [\n"
+                f"    \"Extract roles/designations from resume\"\n"
+                f"  ]\n"
+                f"}}}}\n"
+            )
 
-        # cv_extracted_parsed2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
-        cv_extracted_parsed2 = gpt_models[0].invoke_model_with_backoff(prompt,Task= "Resume parsing for skills and pref " )
-        merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
-        merged = process_parsed_cv_json(merged)
-        return cv_extract, merged
-        
-    except requests.exceptions.HTTPError as e:
-        print(" Error occured : from open ai asuure.",e)
-        return "Error processing CV", cv_parsed_template
-    except Exception as e:
-        print(f"Error processing CV: {str(e)}")
-        return "Error processing CV", cv_parsed_template
+            # cv_extracted_parsed2 = invoke_model_with_backoff_OpenAI(prompt,Task = "Agency Resume parsing for skills and pref")
+            cv_extracted_parsed2 = model.invoke_model_with_backoff(prompt,Task= "Resume parsing for skills and pref " )
+            merged = {**cv_extracted_parsed, **cv_extracted_parsed2}
+            merged = process_parsed_cv_json(merged)
+            return cv_extract, merged
+            
+        except requests.exceptions.HTTPError as e:
+            print(" Error occured : gcp",e)
+            return "Error processing CV", cv_parsed_template
+        except Exception as execution_error:
+            if any(term in str(execution_error).lower() for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429', 'quota', 'resource exhausted']):
+                print(f"Throttling error for {model.model}: {execution_error}, sending to retry queue")
+                continue
+
+            print(f"Error processing CV: {str(execution_error)}")
+            return "Error processing CV", cv_parsed_template
 
 
 def jd_resume_matching(table_name, partition_key_value, gcp_models, sort_key_prefix, job_desc, processed_text, cv_extract, cv_extracted_parsed,gpt_models,otherRequirements,jdItem_extracted):

@@ -1117,3 +1117,19 @@ If issues occur:
 8) worko-bulk-jd-resume-matchig
 9) worko-sourcetype-jd-resume-matching
 10) worko-agency-bulk-jd-resume-matching
+
+
+<!-- test on prod -->
+
+1) worko-job-description parser  
+2) worko-resume-parser
+3) worko-resume-sign-up-skills-parser
+4) worko-cand-profile-parser  (neeeds to test)
+5) worko-candidate-search-prompt-parser
+6) worko-referrel-source-cand-profile-parser (neeeds to test)
+
+7) worko-jd-resume-matching ###(not working due to layer issue)  -- resolved working fine now
+
+8) worko-bulk-jd-resume-matchig   ( handle 429 error by retry logic)
+9) worko-sourcetype-jd-resume-matching
+10) worko-agency-bulk-jd-resume-matching (needs to test)
