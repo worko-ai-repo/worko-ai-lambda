@@ -1238,8 +1238,9 @@ def lambda_handler(event, context):
         gcp_credentials_secrect_name= "GCP-firestore-secret-"+env
         gcp_credentials_firstore = get_secret(gcp_credentials_secrect_name)
 
-    gcp = GeminiClient(gcp_credentials,env,model="gemini-3.5-flash")
-    gcp_models = [gcp] 
+    model_names =[ "gemini-3.5-flash","gemini-2.5-flash-lite","gemini-2.5-flash"]
+    gcp_models = [GeminiClient(gcp_credentials,env,model =model_names[0]), GeminiClient(gcp_credentials,env,model =model_names[1]),
+                  GeminiClient(gcp_credentials,env,model =model_names[2])] 
     
     USER_JOB_APPLICATION = event.get("sourceTypeMatchingScoreEntity","")
     if USER_JOB_APPLICATION=="USER_JOB_APPLICATION":

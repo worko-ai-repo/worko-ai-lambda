@@ -68,10 +68,9 @@ def lambda_handler(event, context):
         gcp_credentials = get_secret(GCP_secret_name)
     else:    
         print("Using cached GCP credentials")
-    gcp = GeminiClient(gcp_credentials,env,model="gemini-3.5-flash")
-
-
-    gcp_models = [gcp]
+    model_names =[ "gemini-3.5-flash","gemini-2.5-flash-lite","gemini-2.5-flash"]
+    gcp_models = [GeminiClient(gcp_credentials,env,model =model_names[0]), GeminiClient(gcp_credentials,env,model =model_names[1]),
+                  GeminiClient(gcp_credentials,env,model =model_names[2])]
     otherRequirements=""
 
     partition_key_value = event.get('USER_PK')

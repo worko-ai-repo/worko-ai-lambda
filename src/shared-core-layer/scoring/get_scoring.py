@@ -31,7 +31,7 @@ from utils.utils import (
 
 
 
-def get_score(processed_text,job_desc,gcp_models):
+def get_score(processed_text,job_desc,AI_models):
     # return {"overall_matching_score": ensure_decimal(81)} #for debugging
     """Calculate matching score for job description and resume.
     
@@ -44,165 +44,170 @@ def get_score(processed_text,job_desc,gcp_models):
     overall_Analysis = ""
     temp_score = 0
     overall_matching_score = 0
-    try:
-        exp_prompt = get_experience_level.format(job_desc=job_desc)
+    for model in AI_models:
 
-        # Get experience level
-        content = gcp_models[0].invoke_model_with_backoff(
-            exp_prompt, 
-            Task="Extracting experience level for Non-Tech job",
-            want_json=True
-        )
-        print("Experience level response:", content)
-        
-        # Check experience level in the response content, not completion_text
-        experience_level = content.get("experience_level", "").lower()
-        # Format the prompt with job description
-        tech_prompt = get_tech_non_tech.format(job_desc=job_desc)
-        
-        # Get tech/non-tech classification
-        completion_text = gcp_models[0].invoke_model_with_backoff(
-            tech_prompt, 
-            Task="checking for tech or non-tech job",
-            want_json=False
-        )
 
-        found_text = ""
-        position = completion_text.find("Non-Technical")
+        try:
+            exp_prompt = get_experience_level.format(job_desc=job_desc)
 
-        if position != -1:
-            found_text = completion_text[position:position+len("Non-Technical")]
-            print("The text '{}' is present.".format(found_text))
-        else:
-            print("The text 'Non-Technical' is not present.")
-        
-        # Initialize steps to avoid unassigned reference
-        steps = []
-        
-        if found_text == "Non-Technical":
-            print("I am in Non-Tech")
+            # Get experience level
+            content = model.invoke_model_with_backoff(
+                exp_prompt, 
+                Task="Extracting experience level for Non-Tech job",
+                want_json=True
+            )
+            print("Experience level response:", content)
             
-            # Format experience level prompt
-
+            # Check experience level in the response content, not completion_text
+            experience_level = content.get("experience_level", "").lower()
+            # Format the prompt with job description
+            tech_prompt = get_tech_non_tech.format(job_desc=job_desc)
             
-            if "superior" in experience_level:
-                print("Superior level - superior")
-                steps = non_tech_superior
-            elif "senior" in experience_level:
-                print("Senior level - senior")
-                steps = non_tech_senior
-            elif "junior" in experience_level:
-                print("Junior level - junior")
-                steps = non_tech_junior 
-            elif "fresher" in experience_level:
-                print("Fresher level - fresher")
-                steps = non_tech_fresher
-        else:
-            print("Technical role detected")
-            if "superior" in experience_level:
-                steps = tech_superior
-                print("Superior level - superior")
-            elif "senior" in experience_level:
-                steps = tech_senior
-                print("Superior level - senior")
-            elif "junior" in experience_level:
-                steps = tech_junior
-                print("Superior level - junior")
-            elif "fresher" in experience_level:
-                steps = tech_fresher
-                print("Superior level - fresher")
-        for i, step in enumerate(steps):
+            # Get tech/non-tech classification
+            completion_text = model.invoke_model_with_backoff(
+                tech_prompt, 
+                Task="checking for tech or non-tech job",
+                want_json=False
+            )
 
-            prompt = create_prompt(processed_text, job_desc, step)
-            
-            # Use different model invocation functions for each step
-            if i == 0:
-                # Adding code for Open AI processing
-                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
+            found_text = ""
+            position = completion_text.find("Non-Technical")
 
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-
-                # Cap temp_score at 27 if it's greater than 27
-                if temp_score is not None and temp_score > 27:
-                    temp_score = 27
-
-            elif i == 1:
-
-                # Adding code for Open AI processing
-                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
-
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-                
-                # Cap temp_score at 36 if it's greater than 36
-                if temp_score is not None and temp_score > 36:
-                    temp_score = 36
-
-            elif i == 2:
-
-                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
-
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-
-                # Cap temp_score at 9 if it's greater than 9
-                if temp_score is not None and temp_score > 9:
-                    temp_score = 9
-
-            elif i == 3:
-
-                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
-                print("Open AI content",content)
-                overall_Analysis = overall_Analysis + content
-                temp_score = extract_score_from_OpenAI_response(content)
-
-                if temp_score is None:
-                    temp_score = extract_score_from_OpenAI_response(content)
-                
-                # Cap temp_score at 18 if it's greater than 18
-                if temp_score is not None and temp_score > 18:
-                    temp_score = 18
+            if position != -1:
+                found_text = completion_text[position:position+len("Non-Technical")]
+                print("The text '{}' is present.".format(found_text))
             else:
-                # Fallback to original function if there are more steps than defined functions
-                content = gcp_models[0].invoke_model_with_backoff(prompt,Task= "Fallback to original function if there are more steps than defined functions", want_json=False)
-
-            # If temp_score is coming from the JSON as a list
-            if isinstance(temp_score, list) and len(temp_score) > 0:
-                temp_score = temp_score[0]
-            # If it's already been converted to a string representation of a list
-            elif isinstance(temp_score, str) and temp_score.startswith('[') and temp_score.endswith(']'):
-                temp_score = temp_score.strip('[]')
-
-            print("temp_score", temp_score)
+                print("The text 'Non-Technical' is not present.")
             
-            if temp_score is not None:
-                overall_matching_score = ensure_decimal(overall_matching_score)
-                temp_score = ensure_decimal(temp_score)
-                overall_matching_score = overall_matching_score + temp_score
+            # Initialize steps to avoid unassigned reference
+            steps = []
+            
+            if found_text == "Non-Technical":
+                print("I am in Non-Tech")
+                
+                # Format experience level prompt
+
+                
+                if "superior" in experience_level:
+                    print("Superior level - superior")
+                    steps = non_tech_superior
+                elif "senior" in experience_level:
+                    print("Senior level - senior")
+                    steps = non_tech_senior
+                elif "junior" in experience_level:
+                    print("Junior level - junior")
+                    steps = non_tech_junior 
+                elif "fresher" in experience_level:
+                    print("Fresher level - fresher")
+                    steps = non_tech_fresher
             else:
-                print("No valid score found in this response")
-        overall_matching_score = ensure_decimal(overall_matching_score)
-        return {
-            "overall_Analysis": overall_Analysis,
-            "overall_matching_score": overall_matching_score
-        }
-        
-    except Exception as e:
-        print(f"An error occurred, during score calculation: {e}")
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+                print("Technical role detected")
+                if "superior" in experience_level:
+                    steps = tech_superior
+                    print("Superior level - superior")
+                elif "senior" in experience_level:
+                    steps = tech_senior
+                    print("Superior level - senior")
+                elif "junior" in experience_level:
+                    steps = tech_junior
+                    print("Superior level - junior")
+                elif "fresher" in experience_level:
+                    steps = tech_fresher
+                    print("Superior level - fresher")
+            for i, step in enumerate(steps):
+
+                prompt = create_prompt(processed_text, job_desc, step)
+                
+                # Use different model invocation functions for each step
+                if i == 0:
+                    # Adding code for Open AI processing
+                    content = model.invoke_model_with_backoff(prompt,Task= "step 1 for score calculations" ,want_json=False)
+                    print("Open AI content",content)
+                    overall_Analysis = overall_Analysis + content
+                    temp_score = extract_score_from_OpenAI_response(content)
+
+                    if temp_score is None:
+                        temp_score = extract_score_from_OpenAI_response(content)
+
+                    # Cap temp_score at 27 if it's greater than 27
+                    if temp_score is not None and temp_score > 27:
+                        temp_score = 27
+
+                elif i == 1:
+
+                    # Adding code for Open AI processing
+                    content = model.invoke_model_with_backoff(prompt,Task= "step 2 for score calculations", want_json=False)
+                    print("Open AI content",content)
+                    overall_Analysis = overall_Analysis + content
+                    temp_score = extract_score_from_OpenAI_response(content)
+
+                    if temp_score is None:
+                        temp_score = extract_score_from_OpenAI_response(content)
+                    
+                    # Cap temp_score at 36 if it's greater than 36
+                    if temp_score is not None and temp_score > 36:
+                        temp_score = 36
+
+                elif i == 2:
+
+                    content = model.invoke_model_with_backoff(prompt,Task= "step 3 for score calculations", want_json=False)
+                    print("Open AI content",content)
+                    overall_Analysis = overall_Analysis + content
+                    temp_score = extract_score_from_OpenAI_response(content)
+
+                    if temp_score is None:
+                        temp_score = extract_score_from_OpenAI_response(content)
+
+                    # Cap temp_score at 9 if it's greater than 9
+                    if temp_score is not None and temp_score > 9:
+                        temp_score = 9
+
+                elif i == 3:
+
+                    content = model.invoke_model_with_backoff(prompt,Task= "step 4 for score calculations", want_json=False)
+                    print("Open AI content",content)
+                    overall_Analysis = overall_Analysis + content
+                    temp_score = extract_score_from_OpenAI_response(content)
+
+                    if temp_score is None:
+                        temp_score = extract_score_from_OpenAI_response(content)
+                    
+                    # Cap temp_score at 18 if it's greater than 18
+                    if temp_score is not None and temp_score > 18:
+                        temp_score = 18
+                else:
+                    # Fallback to original function if there are more steps than defined functions
+                    content = model.invoke_model_with_backoff(prompt,Task= "Fallback to original function if there are more steps than defined functions", want_json=False)
+
+                # If temp_score is coming from the JSON as a list
+                if isinstance(temp_score, list) and len(temp_score) > 0:
+                    temp_score = temp_score[0]
+                # If it's already been converted to a string representation of a list
+                elif isinstance(temp_score, str) and temp_score.startswith('[') and temp_score.endswith(']'):
+                    temp_score = temp_score.strip('[]')
+
+                print("temp_score", temp_score)
+                
+                if temp_score is not None:
+                    overall_matching_score = ensure_decimal(overall_matching_score)
+                    temp_score = ensure_decimal(temp_score)
+                    overall_matching_score = overall_matching_score + temp_score
+                else:
+                    print("No valid score found in this response")
+            overall_matching_score = ensure_decimal(overall_matching_score)
+            return {
+                "overall_Analysis": overall_Analysis,
+                "overall_matching_score": overall_matching_score
+            }
+            
+        except Exception as execution_error:
+            if any(term in str(execution_error).lower() for term in ['throttling', 'throttled', 'rate limit', 'too many requests', '429', 'quota', 'resource exhausted']):
+                print(f"Throttling error for {model.model}: {execution_error}, sending to retry queue")
+                continue
+            else:
+                print(f"An error occurred: {execution_error}")
+                # update_cv_extract_in_dynamodb(table_name, partition_key_value, sort_key_prefix, str(execution_error) , 251, -1)
+                return {"statusCode": 500, "body": {"error": str(execution_error)}}
 
 
 
