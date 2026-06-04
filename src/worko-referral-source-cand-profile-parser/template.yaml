@@ -83,7 +83,7 @@ Resources:
       ContentUri: ../shared-core-layer/
       CompatibleRuntimes:
         - python3.10
-      RetentionPolicy: Retain
+      RetentionPolicy: Delete
     Metadata:
       BuildMethod: python3.10
 
